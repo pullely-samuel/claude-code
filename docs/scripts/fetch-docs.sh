@@ -13,9 +13,13 @@ set -euo pipefail
 LLMS_TXT_URL="https://code.claude.com/docs/llms.txt"
 BASE_URL="https://code.claude.com/docs/en"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOCS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Files to skip (maintained elsewhere in the repo)
+# Files to skip downloading (maintained elsewhere in the repo)
 SKIP_FILES=("changelog.md")
+
+# Files to preserve during cleanup (manually maintained)
+PRESERVE_FILES=("README.md")
 
 # Colors for output (disabled if not a terminal)
 if [[ -t 1 ]]; then
@@ -86,15 +90,35 @@ check_dependencies() {
     fi
 }
 
-# Clean existing markdown files (except this script)
+# Check if a file should be preserved during cleanup
+should_preserve() {
+    local filename="$1"
+    for preserve in "${PRESERVE_FILES[@]}"; do
+        if [[ "$filename" == "$preserve" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Clean existing markdown files (preserves README.md and other manually maintained files)
 clean_existing_docs() {
     log_info "Cleaning existing documentation files..."
 
     local count=0
-    for file in "$SCRIPT_DIR"/*.md; do
+    for file in "$DOCS_DIR"/*.md; do
         if [[ -f "$file" ]]; then
+            local filename
+            filename=$(basename "$file")
+
+            # Skip files that should be preserved
+            if should_preserve "$filename"; then
+                log_info "Preserving: $filename"
+                continue
+            fi
+
             if [[ "${DRY_RUN:-false}" == "true" ]]; then
-                log_info "Would remove: $(basename "$file")"
+                log_info "Would remove: $filename"
             else
                 rm "$file"
             fi
@@ -143,7 +167,7 @@ download_file() {
     local url="$1"
     local filename
     filename=$(basename "$url")
-    local output_path="$SCRIPT_DIR/$filename"
+    local output_path="$DOCS_DIR/$filename"
 
     # Skip files that are maintained elsewhere in the repo
     if should_skip "$filename"; then
@@ -168,7 +192,7 @@ download_file() {
 # Create index.md with local relative paths
 create_index() {
     local content="$1"
-    local index_path="$SCRIPT_DIR/index.md"
+    local index_path="$DOCS_DIR/index.md"
 
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
         log_info "Would create: index.md"
@@ -224,7 +248,7 @@ main() {
     check_dependencies
 
     log_info "Starting Claude Code documentation fetch..."
-    log_info "Target directory: $SCRIPT_DIR"
+    log_info "Target directory: $DOCS_DIR"
 
     # Clean existing docs first (clean slate approach)
     clean_existing_docs
@@ -280,7 +304,7 @@ main() {
         if [[ $failed -gt 0 ]]; then
             log_warn "Failed: $failed files"
         fi
-        log_info "Location: $SCRIPT_DIR"
+        log_info "Location: $DOCS_DIR"
     fi
 }
 
