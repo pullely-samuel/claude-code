@@ -1,6 +1,10 @@
-# Claude Code Documentation (Local Copy)
+# Claude Code Documentation
 
 This folder contains a local copy of the official [Claude Code documentation](https://code.claude.com/docs/en/overview) for faster access by Claude Code and other LLMs.
+
+## For LLMs
+
+**Start here:** Read [documentation-map.md](documentation-map.md) first. It provides a structured overview of all documentation with headings and keywords, making it easier to navigate and find relevant sections.
 
 ## Why Local Docs?
 
@@ -8,6 +12,7 @@ LLMs can access local markdown files much faster than fetching from the web. By 
 
 ## Contents
 
+- `documentation-map.md` - Structured documentation map with headings (read this first)
 - `index.md` - Documentation index with links to all doc files
 - `*.md` - Individual documentation pages
 - `scripts/fetch-docs.sh` - Script to update documentation
@@ -25,6 +30,7 @@ The script will:
 2. Fetch the latest docs from [llms.txt](https://code.claude.com/docs/llms.txt)
 3. Download all markdown files
 4. Create an updated `index.md` with local paths
+5. Create `documentation-map.md` with structured navigation
 
 ### Script Options
 

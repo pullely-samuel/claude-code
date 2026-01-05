@@ -11,6 +11,7 @@ set -euo pipefail
 
 # Configuration
 LLMS_TXT_URL="https://code.claude.com/docs/llms.txt"
+DOCS_MAP_URL="https://code.claude.com/docs/en/claude_code_docs_map.md"
 BASE_URL="https://code.claude.com/docs/en"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -215,6 +216,37 @@ create_index() {
     log_success "Created: index.md"
 }
 
+# Create documentation-map.md with local relative paths
+create_documentation_map() {
+    local map_path="$DOCS_DIR/documentation-map.md"
+
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+        log_info "Would create: documentation-map.md"
+        return 0
+    fi
+
+    log_info "Fetching documentation map..."
+
+    local content
+    if ! content=$(curl -fsSL "$DOCS_MAP_URL" 2>&1); then
+        log_warn "Failed to fetch documentation map: $content"
+        return 1
+    fi
+
+    # Transform the content:
+    # 1. Remove "# null" and blank lines before the actual title
+    # 2. Replace full URLs with relative paths
+    # 3. Point changelog.md to repo root's CHANGELOG.md
+    local transformed
+    transformed=$(echo "$content" | sed \
+        -e '1,/^# Claude Code Documentation Map$/{ /^# Claude Code Documentation Map$/!d; }' \
+        -e 's|https://code\.claude\.com/docs/en/changelog\.md|../CHANGELOG.md|g' \
+        -e 's|https://code\.claude\.com/docs/en/||g')
+
+    echo "$transformed" > "$map_path"
+    log_success "Created: documentation-map.md"
+}
+
 # Main function
 main() {
     local QUIET=false
@@ -290,6 +322,9 @@ main() {
 
     # Create index.md
     create_index "$llms_content"
+
+    # Create documentation-map.md
+    create_documentation_map
 
     # Summary
     echo ""
