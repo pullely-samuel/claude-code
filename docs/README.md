@@ -61,4 +61,6 @@ The `docs/` folder won't conflict since it doesn't exist in the upstream reposit
 
 ## Source
 
-Documentation is fetched from: https://code.claude.com/docs/llms.txt
+Documentation is fetched from:
+- https://code.claude.com/docs/llms.txt
+- https://code.claude.com/docs/en/claude_code_docs_map.md
