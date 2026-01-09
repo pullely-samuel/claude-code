@@ -366,7 +366,7 @@ This map uses a hierarchical structure:
   * Reference MCP resources
 * Use MCP prompts as slash commands
   * Execute MCP prompts
-* Enterprise MCP configuration
+* Managed MCP configuration
   * Setting up enterprise MCP configuration
   * Restricting MCP servers with allowlists and denylists
 
@@ -558,7 +558,7 @@ This map uses a hierarchical structure:
     * Working directories
     * Tool-specific permission rules
   * Additional permission control with hooks
-  * Enterprise managed policy settings
+  * Managed policy settings
   * Settings precedence
 * Credential management
 
@@ -880,11 +880,11 @@ This map uses a hierarchical structure:
     * Naming conventions
   * Managing MCP connections
   * MCP permissions and wildcards
-* `SlashCommand` tool
-  * `SlashCommand` tool supported commands
-  * Disable `SlashCommand` tool
+* `Skill` tool
+  * `Skill` tool supported commands
+  * Disable `Skill` tool
   * Disable specific commands only
-  * `SlashCommand` permission rules
+  * `Skill` permission rules
   * Character budget limit
 * Skills vs slash commands
   * Use slash commands for

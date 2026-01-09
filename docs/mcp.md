@@ -277,21 +277,22 @@ Stdio servers run as local processes on your machine. They're ideal for tools th
 
 ```bash  theme={null}
 # Basic syntax
-claude mcp add --transport stdio <name> <command> [args...]
+claude mcp add [options] <name> -- <command> [args...]
 
 # Real example: Add Airtable server
-claude mcp add --transport stdio airtable --env AIRTABLE_API_KEY=YOUR_KEY \
+claude mcp add --transport stdio --env AIRTABLE_API_KEY=YOUR_KEY airtable \
   -- npx -y airtable-mcp-server
 ```
 
 <Note>
-  **Understanding the "--" parameter:**
-  The `--` (double dash) separates Claude's own CLI flags from the command and arguments that get passed to the MCP server. Everything before `--` are options for Claude (like `--env`, `--scope`), and everything after `--` is the actual command to run the MCP server.
+  **Important: Option ordering**
+
+  All options (`--transport`, `--env`, `--scope`, `--header`) must come **before** the server name. The `--` (double dash) then separates the server name from the command and arguments that get passed to the MCP server.
 
   For example:
 
   * `claude mcp add --transport stdio myserver -- npx server` → runs `npx server`
-  * `claude mcp add --transport stdio myserver --env KEY=value -- python server.py --port 8080` → runs `python server.py --port 8080` with `KEY=value` in environment
+  * `claude mcp add --transport stdio --env KEY=value myserver -- python server.py --port 8080` → runs `python server.py --port 8080` with `KEY=value` in environment
 
   This prevents conflicts between Claude's flags and the server's flags.
 </Note>
@@ -313,6 +314,10 @@ claude mcp remove github
 # (within Claude Code) Check server status
 /mcp
 ```
+
+### Dynamic tool updates
+
+Claude Code supports MCP `list_changed` notifications, allowing MCP servers to dynamically update their available tools, prompts, and resources without requiring you to disconnect and reconnect. When an MCP server sends a `list_changed` notification, Claude Code automatically refreshes the available capabilities from that server.
 
 <Tip>
   Tips:
@@ -466,7 +471,7 @@ Select your scope based on:
 
   * **User and local scope**: `~/.claude.json` (in the `mcpServers` field or under project paths)
   * **Project scope**: `.mcp.json` in your project root (checked into source control)
-  * **Enterprise managed**: `managed-mcp.json` in system directories (see [Enterprise MCP configuration](#enterprise-mcp-configuration))
+  * **Managed**: `managed-mcp.json` in system directories (see [Managed MCP configuration](#managed-mcp-configuration))
 </Note>
 
 ### Scope hierarchy and precedence
@@ -831,9 +836,9 @@ MCP servers can expose prompts that become available as slash commands in Claude
   * Server and prompt names are normalized (spaces become underscores)
 </Tip>
 
-## Enterprise MCP configuration
+## Managed MCP configuration
 
-For organizations that need centralized control over MCP servers, Claude Code supports two enterprise configuration options:
+For organizations that need centralized control over MCP servers, Claude Code supports two configuration options:
 
 1. **Exclusive control with `managed-mcp.json`**: Deploy a fixed set of MCP servers that users cannot modify or extend
 2. **Policy-based control with allowlists/denylists**: Allow users to add their own servers, but restrict which ones are permitted
@@ -1051,12 +1056,12 @@ URL patterns support wildcards using `*` to match any sequence of characters. Th
 
 #### Important notes
 
-* **Option 1 and Option 2 can be combined**: If `managed-mcp.json` exists, it has exclusive control and users cannot add servers. Allowlists/denylists still apply to the enterprise servers themselves.
+* **Option 1 and Option 2 can be combined**: If `managed-mcp.json` exists, it has exclusive control and users cannot add servers. Allowlists/denylists still apply to the managed servers themselves.
 * **Denylist takes absolute precedence**: If a server matches a denylist entry (by name, command, or URL), it will be blocked even if it's on the allowlist
 * Name-based, command-based, and URL-based restrictions work together: a server passes if it matches **either** a name entry, a command entry, or a URL pattern (unless blocked by denylist)
 
 <Note>
-  **When using `managed-mcp.json`**: Users cannot add MCP servers through `claude mcp add` or configuration files. The `allowedMcpServers` and `deniedMcpServers` settings still apply to filter which enterprise servers are actually loaded.
+  **When using `managed-mcp.json`**: Users cannot add MCP servers through `claude mcp add` or configuration files. The `allowedMcpServers` and `deniedMcpServers` settings still apply to filter which managed servers are actually loaded.
 </Note>
 
 

@@ -13,7 +13,7 @@ Claude Code hooks are configured in your [settings files](/en/settings):
 * `~/.claude/settings.json` - User settings
 * `.claude/settings.json` - Project settings
 * `.claude/settings.local.json` - Local project settings (not committed)
-* Enterprise managed policy settings
+* Managed policy settings
 
 <Note>
   Enterprise administrators can use `allowManagedHooksOnly` to block user, project, and plugin hooks. See [Hook configuration](/en/settings#hook-configuration).
@@ -145,6 +145,48 @@ ensuring they work regardless of Claude's current directory:
 * All standard environment variables are available
 
 See the [plugin components reference](/en/plugins-reference#hooks) for details on creating plugin hooks.
+
+### Hooks in Skills, Agents, and Slash Commands
+
+In addition to settings files and plugins, hooks can be defined directly in [Skills](/en/skills), [subagents](/en/sub-agents), and [slash commands](/en/slash-commands) using frontmatter. These hooks are scoped to the component's lifecycle and only run when that component is active.
+
+**Supported events**: `PreToolUse`, `PostToolUse`, and `Stop`
+
+**Example in a Skill**:
+
+```yaml  theme={null}
+---
+name: secure-operations
+description: Perform operations with security checks
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "./scripts/security-check.sh"
+---
+```
+
+**Example in an agent**:
+
+```yaml  theme={null}
+---
+name: code-reviewer
+description: Review code changes
+hooks:
+  PostToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: command
+          command: "./scripts/run-linter.sh"
+---
+```
+
+Component-scoped hooks follow the same configuration format as settings-based hooks but are automatically cleaned up when the component finishes executing.
+
+**Additional option for skills and slash commands:**
+
+* `once`: Set to `true` to run the hook only once per session. After the first successful execution, the hook is removed. Note: This option is currently only supported for skills and slash commands, not for agents.
 
 ## Prompt-Based Hooks
 
@@ -685,14 +727,15 @@ to Claude.
 
 Additionally, hooks can modify tool inputs before execution using `updatedInput`:
 
-* `updatedInput` allows you to modify the tool's input parameters before the tool executes.
-* This is most useful with `"permissionDecision": "allow"` to modify and approve tool calls.
+* `updatedInput` modifies the tool's input parameters before the tool executes
+* Combine with `"permissionDecision": "allow"` to modify the input and auto-approve the tool call
+* Combine with `"permissionDecision": "ask"` to modify the input and show it to the user for confirmation
 
 ```json  theme={null}
 {
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
-    "permissionDecision": "allow"
+    "permissionDecision": "allow",
     "permissionDecisionReason": "My reason here",
     "updatedInput": {
       "field_to_modify": "new value"
