@@ -45,7 +45,7 @@ The script will:
 ```bash
 git add -A docs/
 git commit -m "Update Claude Code documentation"
-git push
+git push origin main
 ```
 
 ## Syncing with Upstream
