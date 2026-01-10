@@ -48,7 +48,7 @@
 - [Claude Code in Slack](slack.md): Delegate coding tasks directly from your Slack workspace
 - [Slash commands](slash-commands.md): Control Claude's behavior during an interactive session with slash commands.
 - [Status line configuration](statusline.md): Create a custom status line for Claude Code to display contextual information
-- [Subagents](sub-agents.md): Create and use specialized AI subagents in Claude Code for task-specific workflows and improved context management.
+- [Create custom subagents](sub-agents.md): Create and use specialized AI subagents in Claude Code for task-specific workflows and improved context management.
 - [Optimize your terminal setup](terminal-config.md): Claude Code works best when your terminal is properly configured. Follow these guidelines to optimize your experience.
 - [Enterprise deployment overview](third-party-integrations.md): Learn how Claude Code can integrate with various third-party services and infrastructure to meet enterprise deployment requirements.
 - [Troubleshooting](troubleshooting.md): Discover solutions to common issues with Claude Code installation and usage.
