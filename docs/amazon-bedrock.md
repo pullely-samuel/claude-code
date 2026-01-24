@@ -1,3 +1,7 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
 # Claude Code on Amazon Bedrock
 
 > Learn about configuring Claude Code through Amazon Bedrock, including setup, IAM configuration, and troubleshooting.
@@ -209,6 +213,20 @@ For details, see [Bedrock IAM documentation](https://docs.aws.amazon.com/bedrock
   We recommend creating a dedicated AWS account for Claude Code to simplify cost tracking and access control.
 </Note>
 
+## AWS Guardrails
+
+[Amazon Bedrock Guardrails](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html) let you implement content filtering for Claude Code. Create a Guardrail in the [Amazon Bedrock console](https://console.aws.amazon.com/bedrock/), publish a version, then add the Guardrail headers to your [settings file](/en/settings). Enable Cross-Region inference on your Guardrail if you're using cross-region inference profiles.
+
+Example configuration:
+
+```json  theme={null}
+{
+  "env": {
+    "ANTHROPIC_CUSTOM_HEADERS": "X-Amzn-Bedrock-GuardrailIdentifier: your-guardrail-id\nX-Amzn-Bedrock-GuardrailVersion: 1"
+  }
+}
+```
+
 ## Troubleshooting
 
 If you encounter region issues:
@@ -229,8 +247,3 @@ Claude Code uses the Bedrock [Invoke API](https://docs.aws.amazon.com/bedrock/la
 * [Bedrock pricing](https://aws.amazon.com/bedrock/pricing/)
 * [Bedrock inference profiles](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html)
 * [Claude Code on Amazon Bedrock: Quick Setup Guide](https://community.aws/content/2tXkZKrZzlrlu0KfH8gST5Dkppq/claude-code-on-amazon-bedrock-quick-setup-guide)- [Claude Code Monitoring Implementation (Bedrock)](https://github.com/aws-solutions-library-samples/guidance-for-claude-code-with-amazon-bedrock/blob/main/assets/docs/MONITORING.md)
-
-
----
-
-> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://code.claude.com/docs/llms.txt

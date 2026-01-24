@@ -1,3 +1,7 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
 # Identity and Access Management
 
 > Learn how to configure user authentication, authorization, and access controls for Claude Code in your organization.
@@ -70,15 +74,22 @@ Claude Code uses a tiered permission system to balance power and safety:
 
 You can view & manage Claude Code's tool permissions with `/permissions`. This UI lists all permission rules and the settings.json file they are sourced from.
 
-* **Allow** rules will allow Claude Code to use the specified tool without further manual approval.
-* **Ask** rules will ask the user for confirmation whenever Claude Code tries to use the specified tool. Ask rules take precedence over allow rules.
-* **Deny** rules will prevent Claude Code from using the specified tool. Deny rules take precedence over allow and ask rules.
+* **Allow** rules let Claude Code use the specified tool without manual approval.
+* **Ask** rules prompt for confirmation whenever Claude Code tries to use the specified tool.
+* **Deny** rules prevent Claude Code from using the specified tool.
+
+Rules are evaluated in order: **deny → ask → allow**. The first matching rule wins, so deny rules always take precedence.
+
 * **Additional directories** extend Claude's file access to directories beyond the initial working directory.
 * **Default mode** controls Claude's permission behavior when encountering new requests.
 
 Permission rules use the format: `Tool` or `Tool(optional-specifier)`
 
-A rule that is just the tool name matches any use of that tool. For example, adding `Bash` to the list of allow rules would allow Claude Code to use the Bash tool without requiring user approval.
+A rule that is just the tool name matches any use of that tool. For example, adding `Bash` to the allow list allows Claude Code to use the Bash tool without requiring user approval. Note that `Bash(*)` does **not** match all Bash commands. Use `Bash` without parentheses to match all uses.
+
+<Note>
+  For a quick reference on permission rule syntax including wildcards, see [Permission rule syntax](/en/settings#permission-rule-syntax) in the settings documentation.
+</Note>
 
 #### Permission modes
 
@@ -97,7 +108,7 @@ Claude Code supports several permission modes that can be set as the `defaultMod
 By default, Claude has access to files in the directory where it was launched. You can extend this access:
 
 * **During startup**: Use `--add-dir <path>` CLI argument
-* **During session**: Use `/add-dir` slash command
+* **During session**: Use `/add-dir` command
 * **Persistent configuration**: Add to `additionalDirectories` in [settings files](/en/settings#settings-files)
 
 Files in additional directories follow the same permission rules as the original working directory - they become readable without prompts, and file editing permissions follow the current permission mode.
@@ -115,6 +126,8 @@ Bash permission rules support both prefix matching with `:*` and wildcard matchi
 * `Bash(npm *)` Matches any command starting with `npm ` (e.g., `npm install`, `npm run build`)
 * `Bash(* install)` Matches any command ending with ` install` (e.g., `npm install`, `yarn install`)
 * `Bash(git * main)` Matches commands like `git checkout main`, `git merge main`
+
+The key difference between `:*` and `*`: the `:*` suffix enforces a word boundary, requiring the prefix to be followed by a space or end-of-string. For example, `Bash(ls:*)` matches `ls -la` but not `lsof`. In contrast, `Bash(ls*)` with a bare `*` matches both `ls -la` and `lsof` because `*` has no word boundary constraint.
 
 <Tip>
   Claude Code is aware of shell operators (like `&&`) so a prefix match rule like `Bash(safe-cmd:*)` won't give it permission to run the command `safe-cmd && other-cmd`
@@ -134,9 +147,11 @@ Bash permission rules support both prefix matching with `:*` and wildcard matchi
 
   For more reliable URL filtering, consider:
 
-  * Using the WebFetch tool with `WebFetch(domain:github.com)` permission
+  * **Restrict Bash network tools**: Use deny rules to block `curl`, `wget`, and similar commands, then use the WebFetch tool with `WebFetch(domain:github.com)` permission for allowed domains
+  * **Use PreToolUse hooks**: Implement a hook that validates URLs in Bash commands and blocks disallowed domains
   * Instructing Claude Code about your allowed curl patterns via CLAUDE.md
-  * Using hooks for custom permission validation
+
+  Note that using WebFetch alone does not prevent network access. If Bash is allowed, Claude can still use `curl`, `wget`, or other tools to reach any URL.
 </Warning>
 
 **Read & Edit**
@@ -160,6 +175,10 @@ Read & Edit rules both follow the [gitignore](https://git-scm.com/docs/gitignore
 * `Read(~/.zshrc)` - Reads your home directory's `.zshrc`
 * `Edit(//tmp/scratch.txt)` - Edits the absolute path `/tmp/scratch.txt`
 * `Read(src/**)` - Reads from `<current-directory>/src/`
+
+<Note>
+  In gitignore patterns, `*` matches files in a single directory while `**` matches recursively across directories. To allow all file access, use just the tool name without parentheses: `Read`, `Edit`, or `Write`.
+</Note>
 
 **WebFetch**
 
@@ -217,8 +236,3 @@ Claude Code securely manages your authentication credentials:
 * **Supported authentication types**: Claude.ai credentials, Claude API credentials, Azure Auth, Bedrock Auth, and Vertex Auth.
 * **Custom credential scripts**: The [`apiKeyHelper`](/en/settings#available-settings) setting can be configured to run a shell script that returns an API key.
 * **Refresh intervals**: By default, `apiKeyHelper` is called after 5 minutes or on HTTP 401 response. Set `CLAUDE_CODE_API_KEY_HELPER_TTL_MS` environment variable for custom refresh intervals.
-
-
----
-
-> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://code.claude.com/docs/llms.txt

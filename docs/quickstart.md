@@ -1,3 +1,7 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
 # Quickstart
 
 > Welcome to Claude Code!
@@ -35,18 +39,30 @@ To install Claude Code, use one of the following methods:
     ```batch  theme={null}
     curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd
     ```
+
+    <Info>
+      Native installations automatically update in the background to keep you on the latest version.
+    </Info>
   </Tab>
 
   <Tab title="Homebrew">
     ```sh  theme={null}
     brew install --cask claude-code
     ```
+
+    <Info>
+      Homebrew installations do not auto-update. Run `brew upgrade claude-code` periodically to get the latest features and security fixes.
+    </Info>
   </Tab>
 
   <Tab title="WinGet">
     ```powershell  theme={null}
     winget install Anthropic.ClaudeCode
     ```
+
+    <Info>
+      WinGet installations do not auto-update. Run `winget upgrade Anthropic.ClaudeCode` periodically to get the latest features and security fixes.
+    </Info>
   </Tab>
 </Tabs>
 
@@ -123,7 +139,7 @@ You can also ask Claude about its own capabilities:
 ```
 
 ```
-> how do I use slash commands in Claude Code?
+> how do I create custom skills in Claude Code?
 ```
 
 ```
@@ -293,7 +309,7 @@ See the [CLI reference](/en/cli-reference) for a complete list of commands.
     * Press `?` to see all available keyboard shortcuts
     * Use Tab for command completion
     * Press ↑ for command history
-    * Type `/` to see all slash commands
+    * Type `/` to see all commands and skills
   </Accordion>
 </AccordionGroup>
 
@@ -328,8 +344,3 @@ Now that you've learned the basics, explore more advanced features:
 * **In Claude Code**: Type `/help` or ask "how do I..."
 * **Documentation**: You're here! Browse other guides
 * **Community**: Join our [Discord](https://www.anthropic.com/discord) for tips and support
-
-
----
-
-> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://code.claude.com/docs/llms.txt

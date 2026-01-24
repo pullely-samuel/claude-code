@@ -1,8 +1,12 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
 # Common workflows
 
-> Learn about common workflows with Claude Code.
+> Step-by-step guides for exploring codebases, fixing bugs, refactoring, testing, and other everyday tasks with Claude Code.
 
-Each task in this document includes clear instructions, example commands, and best practices to help you get the most from Claude Code.
+This page covers practical workflows for everyday development: exploring unfamiliar code, debugging, refactoring, writing tests, creating PRs, and managing sessions. Each section includes example prompts you can adapt to your own projects. For higher-level patterns and tips, see [Best practices](/en/best-practices).
 
 ## Understand new codebases
 
@@ -81,6 +85,7 @@ Suppose you need to locate code related to a specific feature or functionality.
 
   * Be specific about what you're looking for
   * Use domain language from the project
+  * Install a [code intelligence plugin](/en/discover-plugins#code-intelligence) for your language to give Claude precise "go to definition" and "find references" navigation
 </Tip>
 
 ***
@@ -282,34 +287,6 @@ Claude analyzes the current implementation and create a comprehensive plan. Refi
 ```
 
 See [settings documentation](/en/settings#available-settings) for more configuration options.
-
-## Let Claude interview you
-
-For large features, start with a minimal spec and let Claude interview you to fill in the details:
-
-```
-> Interview me about this feature before you start: user notification system
-```
-
-```
-> Help me think through the requirements for authentication by asking questions
-```
-
-```
-> Ask me clarifying questions to build out this spec: payment processing
-```
-
-Claude uses the [`AskUserQuestion`](/en/settings#tools-available-to-claude) tool to ask you multiple-choice questions for gathering requirements, clarifying ambiguity, and understanding your preferences before writing any code. This collaborative approach produces better specs than trying to anticipate every requirement upfront.
-
-This behavior is most active in Plan Mode. To encourage it in other modes, add guidance to your `CLAUDE.md` file:
-
-```markdown  theme={null}
-Always ask clarifying questions when there are multiple valid approaches to a task.
-```
-
-<Note>
-  If you're building applications with the Agent SDK and want to surface clarifying questions to your users programmatically, see [Handle approvals and user input](https://platform.claude.com/docs/en/agent-sdk/user-input#handle-clarifying-questions).
-</Note>
 
 ***
 
@@ -530,39 +507,25 @@ Use @ to quickly include files or directories without waiting for Claude to read
 
 ## Use extended thinking (thinking mode)
 
-[Extended thinking](https://docs.claude.com/en/docs/build-with-claude/extended-thinking) reserves a portion of the total output token budget for Claude to reason through complex problems step-by-step. This reasoning is visible in verbose mode, which you can toggle on with `Ctrl+O`.
+[Extended thinking](https://docs.claude.com/en/docs/build-with-claude/extended-thinking) is enabled by default, reserving a portion of the output token budget (up to 31,999 tokens) for Claude to reason through complex problems step-by-step. This reasoning is visible in verbose mode, which you can toggle on with `Ctrl+O`.
 
 Extended thinking is particularly valuable for complex architectural decisions, challenging bugs, multi-step implementation planning, and evaluating tradeoffs between different approaches. It provides more space for exploring multiple solutions, analyzing edge cases, and self-correcting mistakes.
 
 <Note>
-  Sonnet 4.5 and Opus 4.5 have thinking enabled by default. All other models have thinking disabled by default. Use `/model` to view or switch your current model.
+  Phrases like "think", "think hard", "ultrathink", and "think more" are interpreted as regular prompt instructions and don't allocate thinking tokens.
 </Note>
 
-You can configure thinking mode for Claude Code in several ways:
+### Configure thinking mode
 
-| Scope                             | How to enable                                                                        | Details                                                                                                                                          |
-| --------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Toggle shortcut**               | Press `Option+T` (macOS) or `Alt+T` (Windows/Linux)                                  | Toggle thinking on/off. May require [terminal configuration](/en/terminal-config) to enable Option key shortcuts                                 |
-| **Global default**                | Use `/config` to toggle thinking mode on                                             | Sets your default across all projects.<br />Saved as `alwaysThinkingEnabled` in `~/.claude/settings.json`                                        |
-| **Environment variable override** | Set [`MAX_THINKING_TOKENS`](/en/settings#environment-variables) environment variable | When set, applies a custom token budget to all requests, overriding your thinking mode configuration. Example: `export MAX_THINKING_TOKENS=1024` |
+Thinking is enabled by default, but you can adjust or disable it.
 
-### Per-request thinking with `ultrathink`
-
-You can include `ultrathink` as a keyword in your message to enable thinking for a single request:
-
-```
-> ultrathink: design a caching layer for our API
-```
-
-Note that `ultrathink` both allocates the thinking budget AND semantically signals to Claude to reason more thoroughly, which may result in deeper thinking than necessary for your task.
-
-The `ultrathink` keyword only works when `MAX_THINKING_TOKENS` is not set. When `MAX_THINKING_TOKENS` is configured, it takes priority and controls the thinking budget for all requests.
-
-Other phrases like "think", "think hard", and "think more" are interpreted as regular prompt instructions and don't allocate thinking tokens.
+| Scope                  | How to configure                                                                     | Details                                                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Toggle shortcut**    | Press `Option+T` (macOS) or `Alt+T` (Windows/Linux)                                  | Toggle thinking on/off for the current session. May require [terminal configuration](/en/terminal-config) to enable Option key shortcuts |
+| **Global default**     | Use `/config` to toggle thinking mode                                                | Sets your default across all projects.<br />Saved as `alwaysThinkingEnabled` in `~/.claude/settings.json`                                |
+| **Limit token budget** | Set [`MAX_THINKING_TOKENS`](/en/settings#environment-variables) environment variable | Limit the thinking budget to a specific number of tokens. Example: `export MAX_THINKING_TOKENS=10000`                                    |
 
 To view Claude's thinking process, press `Ctrl+O` to toggle verbose mode and see the internal reasoning displayed as gray italic text.
-
-See the [token budget section below](#how-extended-thinking-token-budgets-work) for detailed budget information and cost implications.
 
 ### How extended thinking token budgets work
 
@@ -576,13 +539,13 @@ A larger thinking token budget provides:
 
 Token budgets for thinking mode:
 
-* When thinking is **enabled** (via `/config` or `ultrathink`), Claude can use up to **31,999 tokens** from your output budget for internal reasoning
-* When thinking is **disabled**, Claude uses **0 tokens** for thinking
+* When thinking is **enabled**, Claude can use up to **31,999 tokens** from your output budget for internal reasoning
+* When thinking is **disabled** (via toggle or `/config`), Claude uses **0 tokens** for thinking
 
-**Custom token budgets:**
+**Limit the thinking budget:**
 
-* You can set a custom thinking token budget using the [`MAX_THINKING_TOKENS` environment variable](/en/settings#environment-variables)
-* This takes highest priority and overrides the default 31,999 token budget
+* Use the [`MAX_THINKING_TOKENS` environment variable](/en/settings#environment-variables) to cap the thinking budget
+* When set, this value limits the maximum tokens Claude can use for thinking
 * See the [extended thinking documentation](https://docs.claude.com/en/docs/build-with-claude/extended-thinking) for valid token ranges
 
 <Warning>
@@ -836,115 +799,6 @@ Suppose you need Claude's output in a specific format, especially when integrati
 
 ***
 
-## Create custom slash commands
-
-Claude Code supports custom slash commands that you can create to quickly execute specific prompts or tasks.
-
-For more details, see the [Slash commands](/en/slash-commands) reference page.
-
-### Create project-specific commands
-
-Suppose you want to create reusable slash commands for your project that all team members can use.
-
-<Steps>
-  <Step title="Create a commands directory in your project">
-    ```bash  theme={null}
-    mkdir -p .claude/commands
-    ```
-  </Step>
-
-  <Step title="Create a Markdown file for each command">
-    ```bash  theme={null}
-    echo "Analyze the performance of this code and suggest three specific optimizations:" > .claude/commands/optimize.md 
-    ```
-  </Step>
-
-  <Step title="Use your custom command in Claude Code">
-    ```
-    > /optimize 
-    ```
-  </Step>
-</Steps>
-
-<Tip>
-  Tips:
-
-  * Command names are derived from the filename (for example, `optimize.md` becomes `/optimize`)
-  * You can organize commands in subdirectories (for example, `.claude/commands/frontend/component.md` creates `/component` with "(project:frontend)" shown in the description)
-  * Project commands are available to everyone who clones the repository
-  * The Markdown file content becomes the prompt sent to Claude when the command is invoked
-</Tip>
-
-### Add command arguments with \$ARGUMENTS
-
-Suppose you want to create flexible slash commands that can accept additional input from users.
-
-<Steps>
-  <Step title="Create a command file with the $ARGUMENTS placeholder">
-    ```bash  theme={null}
-    echo 'Find and fix issue #$ARGUMENTS. Follow these steps: 1.
-    Understand the issue described in the ticket 2. Locate the relevant code in
-    our codebase 3. Implement a solution that addresses the root cause 4. Add
-    appropriate tests 5. Prepare a concise PR description' >
-    .claude/commands/fix-issue.md 
-    ```
-  </Step>
-
-  <Step title="Use the command with an issue number">
-    In your Claude session, use the command with arguments.
-
-    ```
-    > /fix-issue 123 
-    ```
-
-    This replaces \$ARGUMENTS with "123" in the prompt.
-  </Step>
-</Steps>
-
-<Tip>
-  Tips:
-
-  * The \$ARGUMENTS placeholder is replaced with any text that follows the command
-  * You can position \$ARGUMENTS anywhere in your command template
-  * Other useful applications: generating test cases for specific functions, creating documentation for components, reviewing code in particular files, or translating content to specified languages
-</Tip>
-
-### Create personal slash commands
-
-Suppose you want to create personal slash commands that work across all your projects.
-
-<Steps>
-  <Step title="Create a commands directory in your home folder">
-    ```bash  theme={null}
-    mkdir -p ~/.claude/commands 
-    ```
-  </Step>
-
-  <Step title="Create a Markdown file for each command">
-    ```bash  theme={null}
-    echo "Review this code for security vulnerabilities, focusing on:" >
-    ~/.claude/commands/security-review.md 
-    ```
-  </Step>
-
-  <Step title="Use your personal custom command">
-    ```
-    > /security-review 
-    ```
-  </Step>
-</Steps>
-
-<Tip>
-  Tips:
-
-  * Personal commands show "(user)" in their description when listed with `/help`
-  * Personal commands are only available to you and not shared with your team
-  * Personal commands work across all your projects
-  * You can use these for consistent workflows across different codebases
-</Tip>
-
-***
-
 ## Ask Claude about its capabilities
 
 Claude has built-in access to its documentation and can answer questions about its own features and limitations.
@@ -960,7 +814,7 @@ Claude has built-in access to its documentation and can answer questions about i
 ```
 
 ```
-> what slash commands are available?
+> what skills are available?
 ```
 
 ```
@@ -991,11 +845,20 @@ Claude has built-in access to its documentation and can answer questions about i
 
 ## Next steps
 
-<Card title="Claude Code reference implementation" icon="code" href="https://github.com/anthropics/claude-code/tree/main/.devcontainer">
-  Clone our development container reference implementation.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Best practices" icon="lightbulb" href="/en/best-practices">
+    Patterns for getting the most out of Claude Code
+  </Card>
 
+  <Card title="How Claude Code works" icon="gear" href="/en/how-claude-code-works">
+    Understand the agentic loop and context management
+  </Card>
 
----
+  <Card title="Extend Claude Code" icon="puzzle-piece" href="/en/features-overview">
+    Add skills, hooks, MCP, subagents, and plugins
+  </Card>
 
-> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://code.claude.com/docs/llms.txt
+  <Card title="Reference implementation" icon="code" href="https://github.com/anthropics/claude-code/tree/main/.devcontainer">
+    Clone our development container reference implementation
+  </Card>
+</CardGroup>

@@ -1,3 +1,7 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
 # Manage Claude's memory
 
 > Learn how to manage Claude Code's memory across sessions with different memory locations and best practices.
@@ -10,7 +14,7 @@ Claude Code offers four memory locations in a hierarchical structure, each servi
 
 | Memory Type                | Location                                                                                                                                                        | Purpose                                             | Use Case Examples                                                    | Shared With                     |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------- |
-| **Enterprise policy**      | • macOS: `/Library/Application Support/ClaudeCode/CLAUDE.md`<br />• Linux: `/etc/claude-code/CLAUDE.md`<br />• Windows: `C:\Program Files\ClaudeCode\CLAUDE.md` | Organization-wide instructions managed by IT/DevOps | Company coding standards, security policies, compliance requirements | All users in organization       |
+| **Managed policy**         | • macOS: `/Library/Application Support/ClaudeCode/CLAUDE.md`<br />• Linux: `/etc/claude-code/CLAUDE.md`<br />• Windows: `C:\Program Files\ClaudeCode\CLAUDE.md` | Organization-wide instructions managed by IT/DevOps | Company coding standards, security policies, compliance requirements | All users in organization       |
 | **Project memory**         | `./CLAUDE.md` or `./.claude/CLAUDE.md`                                                                                                                          | Team-shared instructions for the project            | Project architecture, coding standards, common workflows             | Team members via source control |
 | **Project rules**          | `./.claude/rules/*.md`                                                                                                                                          | Modular, topic-specific project instructions        | Language-specific guidelines, testing conventions, API standards     | Team members via source control |
 | **User memory**            | `~/.claude/CLAUDE.md`                                                                                                                                           | Personal preferences for all projects               | Code styling preferences, personal tooling shortcuts                 | Just you (all projects)         |
@@ -56,7 +60,7 @@ Claude will also discover CLAUDE.md nested in subtrees under your current workin
 
 ## Directly edit memories with `/memory`
 
-Use the `/memory` slash command during a session to open any memory file in your system editor for more extensive additions or organization.
+Use the `/memory` command during a session to open any memory file in your system editor for more extensive additions or organization.
 
 ## Set up project memory
 
@@ -219,8 +223,3 @@ To set up organization-level memory management:
 * **Be specific**: "Use 2-space indentation" is better than "Format code properly".
 * **Use structure to organize**: Format each individual memory as a bullet point and group related memories under descriptive markdown headings.
 * **Review periodically**: Update memories as your project evolves to ensure Claude is always using the most up to date information and context.
-
-
----
-
-> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://code.claude.com/docs/llms.txt

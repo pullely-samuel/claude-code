@@ -1,10 +1,14 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
 # Set up Claude Code
 
 > Install, authenticate, and start using Claude Code on your development machine.
 
 ## System requirements
 
-* **Operating Systems**: macOS 10.15+, Ubuntu 20.04+/Debian 10+, or Windows 10+ (with WSL 1, WSL 2, or Git for Windows)
+* **Operating Systems**: macOS 13.0+, Ubuntu 20.04+/Debian 10+, or Windows 10+ (with WSL 1, WSL 2, or Git for Windows)
 * **Hardware**: 4 GB+ RAM
 * **Network**: Internet connection required (see [network configuration](/en/network-config#network-access-requirements))
 * **Shell**: Works best in Bash or Zsh
@@ -38,18 +42,30 @@ To install Claude Code, use one of the following methods:
     ```batch  theme={null}
     curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd
     ```
+
+    <Info>
+      Native installations automatically update in the background to keep you on the latest version.
+    </Info>
   </Tab>
 
   <Tab title="Homebrew">
     ```sh  theme={null}
     brew install --cask claude-code
     ```
+
+    <Info>
+      Homebrew installations do not auto-update. Run `brew upgrade claude-code` periodically to get the latest features and security fixes.
+    </Info>
   </Tab>
 
   <Tab title="WinGet">
     ```powershell  theme={null}
     winget install Anthropic.ClaudeCode
     ```
+
+    <Info>
+      WinGet installations do not auto-update. Run `winget upgrade Anthropic.ClaudeCode` periodically to get the latest features and security fixes.
+    </Info>
   </Tab>
 </Tabs>
 
@@ -172,7 +188,7 @@ npm install -g @anthropic-ai/claude-code
 
 <Warning>
   Do NOT use `sudo npm install -g` as this can lead to permission issues and security risks.
-  If you encounter permission errors, see [configure Claude Code](/en/troubleshooting#linux-permission-issues) for recommended solutions.
+  If you encounter permission errors, see [troubleshooting permission errors](/en/troubleshooting#command-not-found-claude-or-permission-errors) for recommended solutions.
 </Warning>
 
 ## Windows setup
@@ -180,6 +196,7 @@ npm install -g @anthropic-ai/claude-code
 **Option 1: Claude Code within WSL**
 
 * Both WSL 1 and WSL 2 are supported
+* WSL 2 supports [sandboxing](/en/sandboxing) for enhanced security. WSL 1 does not support sandboxing.
 
 **Option 2: Claude Code on native Windows with Git Bash**
 
@@ -327,8 +344,3 @@ REM Remove project-specific settings (run from your project directory)
 rmdir /s /q ".claude"
 del ".mcp.json"
 ```
-
-
----
-
-> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://code.claude.com/docs/llms.txt

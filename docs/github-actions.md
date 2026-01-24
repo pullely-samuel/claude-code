@@ -1,3 +1,7 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
 # Claude Code GitHub Actions
 
 > Learn about integrating Claude Code into your development workflow with Claude Code GitHub Actions
@@ -89,17 +93,17 @@ All beta users must make these changes to their workflow files in order to upgra
 
 ### Breaking Changes Reference
 
-| Old Beta Input        | New v1.0 Input                   |
-| --------------------- | -------------------------------- |
-| `mode`                | *(Removed - auto-detected)*      |
-| `direct_prompt`       | `prompt`                         |
-| `override_prompt`     | `prompt` with GitHub variables   |
-| `custom_instructions` | `claude_args: --system-prompt`   |
-| `max_turns`           | `claude_args: --max-turns`       |
-| `model`               | `claude_args: --model`           |
-| `allowed_tools`       | `claude_args: --allowedTools`    |
-| `disallowed_tools`    | `claude_args: --disallowedTools` |
-| `claude_env`          | `settings` JSON format           |
+| Old Beta Input        | New v1.0 Input                        |
+| --------------------- | ------------------------------------- |
+| `mode`                | *(Removed - auto-detected)*           |
+| `direct_prompt`       | `prompt`                              |
+| `override_prompt`     | `prompt` with GitHub variables        |
+| `custom_instructions` | `claude_args: --append-system-prompt` |
+| `max_turns`           | `claude_args: --max-turns`            |
+| `model`               | `claude_args: --model`                |
+| `allowed_tools`       | `claude_args: --allowedTools`         |
+| `disallowed_tools`    | `claude_args: --disallowedTools`      |
+| `claude_env`          | `settings` JSON format                |
 
 ### Before and After Example
 
@@ -124,7 +128,7 @@ All beta users must make these changes to their workflow files in order to upgra
     prompt: "Review this PR for security issues"
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
     claude_args: |
-      --system-prompt "Follow our coding standards"
+      --append-system-prompt "Follow our coding standards"
       --max-turns 10
       --model claude-sonnet-4-5-20250929
 ```
@@ -156,7 +160,7 @@ jobs:
           # Responds to @claude mentions in comments
 ```
 
-### Using slash commands
+### Using skills
 
 ```yaml  theme={null}
 name: Code Review
@@ -266,7 +270,7 @@ The Claude Code Action v1 simplifies configuration with unified parameters:
 Key features:
 
 * **Unified prompt interface** - Use `prompt` for all instructions
-* **Slash commands** - Pre-built prompts like `/review` or `/fix`
+* **Commands** - Prebuilt prompts like `/review` or `/fix`
 * **CLI passthrough** - Any Claude Code CLI argument via `claude_args`
 * **Flexible triggers** - Works with any GitHub event
 
@@ -623,15 +627,15 @@ Confirm API key is valid and has sufficient permissions. For Bedrock/Vertex, che
 
 The Claude Code Action v1 uses a simplified configuration:
 
-| Parameter           | Description                                     | Required |
-| ------------------- | ----------------------------------------------- | -------- |
-| `prompt`            | Instructions for Claude (text or slash command) | No\*     |
-| `claude_args`       | CLI arguments passed to Claude Code             | No       |
-| `anthropic_api_key` | Claude API key                                  | Yes\*\*  |
-| `github_token`      | GitHub token for API access                     | No       |
-| `trigger_phrase`    | Custom trigger phrase (default: "@claude")      | No       |
-| `use_bedrock`       | Use AWS Bedrock instead of Claude API           | No       |
-| `use_vertex`        | Use Google Vertex AI instead of Claude API      | No       |
+| Parameter           | Description                                            | Required |
+| ------------------- | ------------------------------------------------------ | -------- |
+| `prompt`            | Instructions for Claude (text or skill like `/review`) | No\*     |
+| `claude_args`       | CLI arguments passed to Claude Code                    | No       |
+| `anthropic_api_key` | Claude API key                                         | Yes\*\*  |
+| `github_token`      | GitHub token for API access                            | No       |
+| `trigger_phrase`    | Custom trigger phrase (default: "@claude")             | No       |
+| `use_bedrock`       | Use AWS Bedrock instead of Claude API                  | No       |
+| `use_vertex`        | Use Google Vertex AI instead of Claude API             | No       |
 
 \*Prompt is optional - when omitted for issue/PR comments, Claude responds to trigger phrase\
 \*\*Required for direct Claude API, not for Bedrock/Vertex
@@ -670,8 +674,3 @@ You can configure Claude's behavior in two ways:
 2. **Custom prompts**: Use the `prompt` parameter in the workflow file to provide workflow-specific instructions. This allows you to customize Claude's behavior for different workflows or tasks.
 
 Claude will follow these guidelines when creating PRs and responding to requests.
-
-
----
-
-> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://code.claude.com/docs/llms.txt
