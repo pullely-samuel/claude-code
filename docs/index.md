@@ -5,7 +5,7 @@
 ## Docs
 
 - [Claude Code on Amazon Bedrock](amazon-bedrock.md): Learn about configuring Claude Code through Amazon Bedrock, including setup, IAM configuration, and troubleshooting.
-- [Analytics](analytics.md): View detailed usage insights and productivity metrics for your organization's Claude Code deployment.
+- [Track team usage with analytics](analytics.md): View Claude Code usage metrics, track adoption, and measure engineering velocity in the analytics dashboard.
 - [Best Practices for Claude Code](best-practices.md): Tips and patterns for getting the most out of Claude Code, from configuring your environment to scaling across parallel sessions.
 - [Changelog](../CHANGELOG.md)
 - [Checkpointing](checkpointing.md): Automatically track and rewind Claude's edits to quickly recover from unwanted changes.
@@ -29,6 +29,7 @@
 - [Identity and Access Management](iam.md): Learn how to configure user authentication, authorization, and access controls for Claude Code in your organization.
 - [Interactive mode](interactive-mode.md): Complete reference for keyboard shortcuts, input modes, and interactive features in Claude Code sessions.
 - [JetBrains IDEs](jetbrains.md): Use Claude Code with JetBrains IDEs including IntelliJ, PyCharm, WebStorm, and more
+- [Customize keyboard shortcuts](keybindings.md): Customize keyboard shortcuts in Claude Code with a keybindings configuration file.
 - [Legal and compliance](legal-and-compliance.md): Legal agreements, compliance certifications, and security information for Claude Code.
 - [LLM gateway configuration](llm-gateway.md): Learn how to configure Claude Code to work with LLM gateway solutions. Covers gateway requirements, authentication configuration, model selection, and provider-specific endpoint setup.
 - [Connect Claude Code to tools via MCP](mcp.md): Learn how to connect Claude Code to your tools with the Model Context Protocol.
