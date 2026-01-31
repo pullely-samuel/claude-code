@@ -23,8 +23,8 @@
 - [Claude Code GitLab CI/CD](gitlab-ci-cd.md): Learn about integrating Claude Code into your development workflow with GitLab CI/CD
 - [Claude Code on Google Vertex AI](google-vertex-ai.md): Learn about configuring Claude Code through Google Vertex AI, including setup, IAM configuration, and troubleshooting.
 - [Run Claude Code programmatically](headless.md): Use the Agent SDK to run Claude Code programmatically from the CLI, Python, or TypeScript.
-- [Hooks reference](hooks.md): This page provides reference documentation for implementing hooks in Claude Code.
-- [Get started with Claude Code hooks](hooks-guide.md): Learn how to customize and extend Claude Code's behavior by registering shell commands
+- [Hooks reference](hooks.md): Reference for Claude Code hook events, configuration schema, JSON input/output formats, exit codes, async hooks, prompt hooks, and MCP tool hooks.
+- [Automate workflows with hooks](hooks-guide.md): Run shell commands automatically when Claude Code edits files, finishes tasks, or needs input. Format code, send notifications, validate commands, and enforce project rules.
 - [How Claude Code works](how-claude-code-works.md): Understand the agentic loop, built-in tools, and how Claude Code interacts with your project.
 - [Identity and Access Management](iam.md): Learn how to configure user authentication, authorization, and access controls for Claude Code in your organization.
 - [Interactive mode](interactive-mode.md): Complete reference for keyboard shortcuts, input modes, and interactive features in Claude Code sessions.
