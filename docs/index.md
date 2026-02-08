@@ -4,12 +4,14 @@
 
 ## Docs
 
+- [Orchestrate teams of Claude Code sessions](agent-teams.md): Coordinate multiple Claude Code instances working together as a team, with shared tasks, inter-agent messaging, and centralized management.
 - [Claude Code on Amazon Bedrock](amazon-bedrock.md): Learn about configuring Claude Code through Amazon Bedrock, including setup, IAM configuration, and troubleshooting.
 - [Track team usage with analytics](analytics.md): View Claude Code usage metrics, track adoption, and measure engineering velocity in the analytics dashboard.
+- [Authentication](authentication.md): Learn how to configure user authentication and credential management for Claude Code in your organization.
 - [Best Practices for Claude Code](best-practices.md): Tips and patterns for getting the most out of Claude Code, from configuring your environment to scaling across parallel sessions.
 - [Changelog](../CHANGELOG.md)
-- [Checkpointing](checkpointing.md): Automatically track and rewind Claude's edits to quickly recover from unwanted changes.
-- [Use Claude Code with Chrome (beta)](chrome.md): Connect Claude Code to your browser to test web apps, debug with console logs, and automate browser tasks.
+- [Checkpointing](checkpointing.md): Track, rewind, and summarize Claude's edits and conversation to manage session state.
+- [Use Claude Code with Chrome (beta)](chrome.md): Connect Claude Code to your Chrome browser to test web apps, debug with console logs, automate form filling, and extract data from web pages.
 - [Claude Code on the web](claude-code-on-the-web.md): Run Claude Code tasks asynchronously on secure cloud infrastructure
 - [CLI reference](cli-reference.md): Complete reference for Claude Code command-line interface, including commands and flags.
 - [Common workflows](common-workflows.md): Step-by-step guides for exploring codebases, fixing bugs, refactoring, testing, and other everyday tasks with Claude Code.
@@ -18,6 +20,7 @@
 - [Claude Code on desktop](desktop.md): Run Claude Code tasks locally or on secure cloud infrastructure with the Claude desktop app
 - [Development containers](devcontainer.md): Learn about the Claude Code development container for teams that need consistent, secure environments.
 - [Discover and install prebuilt plugins through marketplaces](discover-plugins.md): Find and install plugins from marketplaces to extend Claude Code with new commands, agents, and capabilities.
+- [Speed up responses with fast mode](fast-mode.md): Get faster Opus 4.6 responses in Claude Code by toggling fast mode.
 - [Extend Claude Code](features-overview.md): Understand when to use CLAUDE.md, Skills, subagents, hooks, MCP, and plugins.
 - [Claude Code GitHub Actions](github-actions.md): Learn about integrating Claude Code into your development workflow with Claude Code GitHub Actions
 - [Claude Code GitLab CI/CD](gitlab-ci-cd.md): Learn about integrating Claude Code into your development workflow with GitLab CI/CD
@@ -26,7 +29,6 @@
 - [Hooks reference](hooks.md): Reference for Claude Code hook events, configuration schema, JSON input/output formats, exit codes, async hooks, prompt hooks, and MCP tool hooks.
 - [Automate workflows with hooks](hooks-guide.md): Run shell commands automatically when Claude Code edits files, finishes tasks, or needs input. Format code, send notifications, validate commands, and enforce project rules.
 - [How Claude Code works](how-claude-code-works.md): Understand the agentic loop, built-in tools, and how Claude Code interacts with your project.
-- [Identity and Access Management](iam.md): Learn how to configure user authentication, authorization, and access controls for Claude Code in your organization.
 - [Interactive mode](interactive-mode.md): Complete reference for keyboard shortcuts, input modes, and interactive features in Claude Code sessions.
 - [JetBrains IDEs](jetbrains.md): Use Claude Code with JetBrains IDEs including IntelliJ, PyCharm, WebStorm, and more
 - [Customize keyboard shortcuts](keybindings.md): Customize keyboard shortcuts in Claude Code with a keybindings configuration file.
@@ -39,7 +41,8 @@
 - [Monitoring](monitoring-usage.md): Learn how to enable and configure OpenTelemetry for Claude Code.
 - [Enterprise network configuration](network-config.md): Configure Claude Code for enterprise environments with proxy servers, custom Certificate Authorities (CA), and mutual Transport Layer Security (mTLS) authentication.
 - [Output styles](output-styles.md): Adapt Claude Code for uses beyond software engineering
-- [Claude Code overview](overview.md): Learn about Claude Code, Anthropic's agentic coding tool that lives in your terminal and helps you turn ideas into code faster than ever before.
+- [Claude Code overview](overview.md): Learn about Claude Code, Anthropic's agentic coding tool that works in your terminal, IDE, desktop app, and browser to help you turn ideas into code faster than ever before.
+- [Configure permissions](permissions.md): Control what Claude Code can access and do with fine-grained permission rules, modes, and managed policies.
 - [Create and distribute a plugin marketplace](plugin-marketplaces.md): Build and host plugin marketplaces to distribute Claude Code extensions across teams and communities.
 - [Create plugins](plugins.md): Create custom plugins to extend Claude Code with skills, agents, hooks, and MCP servers.
 - [Plugins reference](plugins-reference.md): Complete technical reference for Claude Code plugin system, including schemas, CLI commands, and component specifications.
@@ -50,7 +53,7 @@
 - [Set up Claude Code](setup.md): Install, authenticate, and start using Claude Code on your development machine.
 - [Extend Claude with skills](skills.md): Create, manage, and share skills to extend Claude's capabilities in Claude Code. Includes custom slash commands.
 - [Claude Code in Slack](slack.md): Delegate coding tasks directly from your Slack workspace
-- [Status line configuration](statusline.md): Create a custom status line for Claude Code to display contextual information
+- [Customize your status line](statusline.md): Configure a custom status bar to monitor context window usage, costs, and git status in Claude Code
 - [Create custom subagents](sub-agents.md): Create and use specialized AI subagents in Claude Code for task-specific workflows and improved context management.
 - [Optimize your terminal setup](terminal-config.md): Claude Code works best when your terminal is properly configured. Follow these guidelines to optimize your experience.
 - [Enterprise deployment overview](third-party-integrations.md): Learn how Claude Code can integrate with various third-party services and infrastructure to meet enterprise deployment requirements.
