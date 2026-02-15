@@ -17,7 +17,8 @@
 - [Common workflows](common-workflows.md): Step-by-step guides for exploring codebases, fixing bugs, refactoring, testing, and other everyday tasks with Claude Code.
 - [Manage costs effectively](costs.md): Track token usage, set team spend limits, and reduce Claude Code costs with context management, model selection, extended thinking settings, and preprocessing hooks.
 - [Data usage](data-usage.md): Learn about Anthropic's data usage policies for Claude
-- [Claude Code on desktop](desktop.md): Run Claude Code tasks locally or on secure cloud infrastructure with the Claude desktop app
+- [Use Claude Code Desktop](desktop.md): Get more out of Claude Code Desktop: parallel sessions with Git isolation, visual diff review, permission modes, connectors, and enterprise configuration.
+- [Get started with the desktop app](desktop-quickstart.md): Install Claude Code on desktop and start your first coding session
 - [Development containers](devcontainer.md): Learn about the Claude Code development container for teams that need consistent, secure environments.
 - [Discover and install prebuilt plugins through marketplaces](discover-plugins.md): Find and install plugins from marketplaces to extend Claude Code with new commands, agents, and capabilities.
 - [Speed up responses with fast mode](fast-mode.md): Get faster Opus 4.6 responses in Claude Code by toggling fast mode.
@@ -41,7 +42,7 @@
 - [Monitoring](monitoring-usage.md): Learn how to enable and configure OpenTelemetry for Claude Code.
 - [Enterprise network configuration](network-config.md): Configure Claude Code for enterprise environments with proxy servers, custom Certificate Authorities (CA), and mutual Transport Layer Security (mTLS) authentication.
 - [Output styles](output-styles.md): Adapt Claude Code for uses beyond software engineering
-- [Claude Code overview](overview.md): Learn about Claude Code, Anthropic's agentic coding tool that works in your terminal, IDE, desktop app, and browser to help you turn ideas into code faster than ever before.
+- [Claude Code overview](overview.md): Claude Code is an agentic coding tool that reads your codebase, edits files, runs commands, and integrates with your development tools. Available in your terminal, IDE, desktop app, and browser.
 - [Configure permissions](permissions.md): Control what Claude Code can access and do with fine-grained permission rules, modes, and managed policies.
 - [Create and distribute a plugin marketplace](plugin-marketplaces.md): Build and host plugin marketplaces to distribute Claude Code extensions across teams and communities.
 - [Create plugins](plugins.md): Create custom plugins to extend Claude Code with skills, agents, hooks, and MCP servers.
@@ -49,6 +50,7 @@
 - [Quickstart](quickstart.md): Welcome to Claude Code!
 - [Sandboxing](sandboxing.md): Learn how Claude Code's sandboxed bash tool provides filesystem and network isolation for safer, more autonomous agent execution.
 - [Security](security.md): Learn about Claude Code's security safeguards and best practices for safe usage.
+- [Configure server-managed settings (public beta)](server-managed-settings.md): Centrally configure Claude Code for your organization through server-delivered settings, without requiring device management infrastructure.
 - [Claude Code settings](settings.md): Configure Claude Code with global and project-level settings, and environment variables.
 - [Set up Claude Code](setup.md): Install, authenticate, and start using Claude Code on your development machine.
 - [Extend Claude with skills](skills.md): Create, manage, and share skills to extend Claude's capabilities in Claude Code. Includes custom slash commands.

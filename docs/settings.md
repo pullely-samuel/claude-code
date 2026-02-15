@@ -93,7 +93,7 @@ Code through hierarchical settings:
     These are system-wide paths (not user home directories like `~/Library/...`) that require administrator privileges. They are designed to be deployed by IT administrators.
   </Note>
 
-  See [Managed settings](/en/permissions#managed-settings) and [Managed MCP configuration](/en/mcp#managed-mcp-configuration) for details.
+  See [Managed settings](/en/permissions#managed-settings) and [Managed MCP configuration](/en/mcp#managed-mcp-configuration) for details. For organizations without device management infrastructure, see [server-managed settings](/en/server-managed-settings).
 
   <Note>
     Managed deployments can also restrict **plugin marketplace additions** using
@@ -153,6 +153,7 @@ The `$schema` line in the example above points to the [official JSON schema](htt
 | `allowManagedHooksOnly`           | (Managed settings only) Prevent loading of user, project, and plugin hooks. Only allows managed hooks and SDK hooks. See [Hook configuration](#hook-configuration)                                                                                                              | `true`                                                                  |
 | `allowManagedPermissionRulesOnly` | (Managed settings only) Prevent user and project settings from defining `allow`, `ask`, or `deny` permission rules. Only rules in managed settings apply. See [Managed-only settings](/en/permissions#managed-only-settings)                                                    | `true`                                                                  |
 | `model`                           | Override the default model to use for Claude Code                                                                                                                                                                                                                               | `"claude-sonnet-4-5-20250929"`                                          |
+| `availableModels`                 | Restrict which models users can select via `/model`, `--model`, Config tool, or `ANTHROPIC_MODEL`. Does not affect the Default option. See [Restrict model selection](/en/model-config#restrict-model-selection)                                                                | `["sonnet", "haiku"]`                                                   |
 | `otelHeadersHelper`               | Script to generate dynamic OpenTelemetry headers. Runs at startup and periodically (see [Dynamic headers](/en/monitoring-usage#dynamic-headers))                                                                                                                                | `/bin/generate_otel_headers.sh`                                         |
 | `statusLine`                      | Configure a custom status line to display context. See [`statusLine` documentation](/en/statusline)                                                                                                                                                                             | `{"type": "command", "command": "~/.claude/statusline.sh"}`             |
 | `fileSuggestion`                  | Configure a custom script for `@` file autocomplete. See [File suggestion settings](#file-suggestion-settings)                                                                                                                                                                  | `{"type": "command", "command": "~/.claude/file-suggestion.sh"}`        |
@@ -354,8 +355,8 @@ your-repo-file-index --query "$query" | head -20
 
 Settings apply in order of precedence. From highest to lowest:
 
-1. **Managed settings** (`managed-settings.json`)
-   * Policies deployed by IT/DevOps to system directories
+1. **Managed settings** ([`managed-settings.json`](/en/permissions#managed-settings) or [server-managed settings](/en/server-managed-settings))
+   * Policies deployed by IT/DevOps to system directories, or delivered from Anthropic's servers for Claude for Enterprise customers
    * Cannot be overridden by user or project settings
 
 2. **Command line arguments**
