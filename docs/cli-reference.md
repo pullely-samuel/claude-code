@@ -8,17 +8,18 @@
 
 ## CLI commands
 
-| Command                         | Description                                            | Example                                           |
-| :------------------------------ | :----------------------------------------------------- | :------------------------------------------------ |
-| `claude`                        | Start interactive REPL                                 | `claude`                                          |
-| `claude "query"`                | Start REPL with initial prompt                         | `claude "explain this project"`                   |
-| `claude -p "query"`             | Query via SDK, then exit                               | `claude -p "explain this function"`               |
-| `cat file \| claude -p "query"` | Process piped content                                  | `cat logs.txt \| claude -p "explain"`             |
-| `claude -c`                     | Continue most recent conversation in current directory | `claude -c`                                       |
-| `claude -c -p "query"`          | Continue via SDK                                       | `claude -c -p "Check for type errors"`            |
-| `claude -r "<session>" "query"` | Resume session by ID or name                           | `claude -r "auth-refactor" "Finish this PR"`      |
-| `claude update`                 | Update to latest version                               | `claude update`                                   |
-| `claude mcp`                    | Configure Model Context Protocol (MCP) servers         | See the [Claude Code MCP documentation](/en/mcp). |
+| Command                         | Description                                                        | Example                                           |
+| :------------------------------ | :----------------------------------------------------------------- | :------------------------------------------------ |
+| `claude`                        | Start interactive REPL                                             | `claude`                                          |
+| `claude "query"`                | Start REPL with initial prompt                                     | `claude "explain this project"`                   |
+| `claude -p "query"`             | Query via SDK, then exit                                           | `claude -p "explain this function"`               |
+| `cat file \| claude -p "query"` | Process piped content                                              | `cat logs.txt \| claude -p "explain"`             |
+| `claude -c`                     | Continue most recent conversation in current directory             | `claude -c`                                       |
+| `claude -c -p "query"`          | Continue via SDK                                                   | `claude -c -p "Check for type errors"`            |
+| `claude -r "<session>" "query"` | Resume session by ID or name                                       | `claude -r "auth-refactor" "Finish this PR"`      |
+| `claude update`                 | Update to latest version                                           | `claude update`                                   |
+| `claude agents`                 | List all configured [subagents](/en/sub-agents), grouped by source | `claude agents`                                   |
+| `claude mcp`                    | Configure Model Context Protocol (MCP) servers                     | See the [Claude Code MCP documentation](/en/mcp). |
 
 ## CLI flags
 
@@ -53,7 +54,7 @@ Customize Claude Code's behavior with these command-line flags:
 | `--max-budget-usd`                     | Maximum dollar amount to spend on API calls before stopping (print mode only)                                                                                                                             | `claude -p --max-budget-usd 5.00 "query"`                                                          |
 | `--max-turns`                          | Limit the number of agentic turns (print mode only). Exits with an error when the limit is reached. No limit by default                                                                                   | `claude -p --max-turns 3 "query"`                                                                  |
 | `--mcp-config`                         | Load MCP servers from JSON files or strings (space-separated)                                                                                                                                             | `claude --mcp-config ./mcp.json`                                                                   |
-| `--model`                              | Sets the model for the current session with an alias for the latest model (`sonnet` or `opus`) or a model's full name                                                                                     | `claude --model claude-sonnet-4-5-20250929`                                                        |
+| `--model`                              | Sets the model for the current session with an alias for the latest model (`sonnet` or `opus`) or a model's full name                                                                                     | `claude --model claude-sonnet-4-6`                                                                 |
 | `--no-chrome`                          | Disable [Chrome browser integration](/en/chrome) for this session                                                                                                                                         | `claude --no-chrome`                                                                               |
 | `--no-session-persistence`             | Disable session persistence so sessions are not saved to disk and cannot be resumed (print mode only)                                                                                                     | `claude -p --no-session-persistence "query"`                                                       |
 | `--output-format`                      | Specify output format for print mode (options: `text`, `json`, `stream-json`)                                                                                                                             | `claude -p "query" --output-format json`                                                           |
@@ -74,6 +75,7 @@ Customize Claude Code's behavior with these command-line flags:
 | `--tools`                              | Restrict which built-in tools Claude can use (works in both interactive and print modes). Use `""` to disable all, `"default"` for all, or tool names like `"Bash,Edit,Read"`                             | `claude --tools "Bash,Edit,Read"`                                                                  |
 | `--verbose`                            | Enable verbose logging, shows full turn-by-turn output (helpful for debugging in both print and interactive modes)                                                                                        | `claude --verbose`                                                                                 |
 | `--version`, `-v`                      | Output the version number                                                                                                                                                                                 | `claude -v`                                                                                        |
+| `--worktree`, `-w`                     | Start Claude in an isolated [git worktree](/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees) at `<repo>/.claude/worktrees/<name>`. If no name is given, one is auto-generated    | `claude -w feature-auth`                                                                           |
 
 <Tip>
   The `--output-format json` flag is particularly useful for scripting and

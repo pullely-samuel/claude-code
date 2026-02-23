@@ -17,7 +17,7 @@
 - [Common workflows](common-workflows.md): Step-by-step guides for exploring codebases, fixing bugs, refactoring, testing, and other everyday tasks with Claude Code.
 - [Manage costs effectively](costs.md): Track token usage, set team spend limits, and reduce Claude Code costs with context management, model selection, extended thinking settings, and preprocessing hooks.
 - [Data usage](data-usage.md): Learn about Anthropic's data usage policies for Claude
-- [Use Claude Code Desktop](desktop.md): Get more out of Claude Code Desktop: parallel sessions with Git isolation, visual diff review, permission modes, connectors, and enterprise configuration.
+- [Use Claude Code Desktop](desktop.md): Get more out of Claude Code Desktop: parallel sessions with Git isolation, visual diff review, app previews, PR monitoring, permission modes, connectors, and enterprise configuration.
 - [Get started with the desktop app](desktop-quickstart.md): Install Claude Code on desktop and start your first coding session
 - [Development containers](devcontainer.md): Learn about the Claude Code development container for teams that need consistent, secure environments.
 - [Discover and install prebuilt plugins through marketplaces](discover-plugins.md): Find and install plugins from marketplaces to extend Claude Code with new commands, agents, and capabilities.
