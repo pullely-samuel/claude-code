@@ -19,10 +19,19 @@ LLMs can access local markdown files much faster than fetching from the web. By 
 
 ## Updating Documentation
 
-To fetch the latest documentation:
+If you are also syncing this fork with upstream, merge upstream changes on a
+clean working tree before refreshing the generated docs:
 
 ```bash
-./scripts/fetch-docs.sh
+git fetch upstream
+git merge upstream/main
+./docs/scripts/fetch-docs.sh
+```
+
+For a docs-only refresh from the repository root:
+
+```bash
+./docs/scripts/fetch-docs.sh
 ```
 
 The script will:
@@ -35,9 +44,9 @@ The script will:
 ### Script Options
 
 ```bash
-./scripts/fetch-docs.sh --help      # Show help
-./scripts/fetch-docs.sh --dry-run   # Preview changes without downloading
-./scripts/fetch-docs.sh --quiet     # Suppress progress output
+./docs/scripts/fetch-docs.sh --help      # Show help
+./docs/scripts/fetch-docs.sh --dry-run   # Preview changes without downloading
+./docs/scripts/fetch-docs.sh --quiet     # Suppress progress output
 ```
 
 ### After Updating

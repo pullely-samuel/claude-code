@@ -4,7 +4,7 @@
 
 # Discover and install prebuilt plugins through marketplaces
 
-> Find and install plugins from marketplaces to extend Claude Code with new commands, agents, and capabilities.
+> Find and install plugins from marketplaces to extend Claude Code with new skills, agents, and capabilities.
 
 Plugins extend Claude Code with skills, agents, hooks, and MCP servers. Plugin marketplaces are catalogs that help you discover and install these extensions without building them yourself.
 
@@ -28,13 +28,15 @@ Think of it like adding an app store: adding the store gives you access to brows
 
 ## Official Anthropic marketplace
 
-The official Anthropic marketplace (`claude-plugins-official`) is automatically available when you start Claude Code. Run `/plugin` and go to the **Discover** tab to browse what's available.
+The official Anthropic marketplace (`claude-plugins-official`) is automatically available when you start Claude Code. Run `/plugin` and go to the **Discover** tab to browse what's available, or view the catalog at [claude.com/plugins](https://claude.com/plugins).
 
-To install a plugin from the official marketplace:
+To install a plugin from the official marketplace, use `/plugin install <name>@claude-plugins-official`. For example, to install the GitHub integration:
 
-```shell  theme={null}
-/plugin install plugin-name@claude-plugins-official
+```shell theme={null}
+/plugin install github@claude-plugins-official
 ```
+
+If Claude Code reports that the plugin is not found in any marketplace, your marketplace is either missing or outdated. Run `/plugin marketplace update claude-plugins-official` to refresh it, or `/plugin marketplace add anthropics/claude-plugins-official` if you haven't added it before. Then retry the install.
 
 <Note>
   The official marketplace is maintained by Anthropic. To submit a plugin to the official marketplace, use one of the in-app submission forms:
@@ -95,7 +97,7 @@ These plugins bundle pre-configured [MCP servers](/en/mcp) so you can connect Cl
 
 ### Development workflows
 
-Plugins that add commands and agents for common development tasks:
+Plugins that add skills and agents for common development tasks:
 
 * **commit-commands**: Git commit workflows including commit, push, and PR creation
 * **pr-review-toolkit**: Specialized agents for reviewing pull requests
@@ -117,7 +119,7 @@ Anthropic also maintains a [demo plugins marketplace](https://github.com/anthrop
   <Step title="Add the marketplace">
     From within Claude Code, run the `plugin marketplace add` command for the `anthropics/claude-code` marketplace:
 
-    ```shell  theme={null}
+    ```shell theme={null}
     /plugin marketplace add anthropics/claude-code
     ```
 
@@ -142,11 +144,11 @@ Anthropic also maintains a [demo plugins marketplace](https://github.com/anthrop
     * **Project scope**: install for all collaborators on this repository
     * **Local scope**: install for yourself in this repository only
 
-    For example, select **commit-commands** (a plugin that adds git workflow commands) and install it to your user scope.
+    For example, select **commit-commands** (a plugin that adds git workflow skills) and install it to your user scope.
 
     You can also install directly from the command line:
 
-    ```shell  theme={null}
+    ```shell theme={null}
     /plugin install commit-commands@anthropics-claude-code
     ```
 
@@ -154,17 +156,17 @@ Anthropic also maintains a [demo plugins marketplace](https://github.com/anthrop
   </Step>
 
   <Step title="Use your new plugin">
-    After installing, the plugin's commands are immediately available. Plugin commands are namespaced by the plugin name, so **commit-commands** provides commands like `/commit-commands:commit`.
+    After installing, run `/reload-plugins` to activate the plugin. Plugin skills are namespaced by the plugin name, so **commit-commands** provides skills like `/commit-commands:commit`.
 
     Try it out by making a change to a file and running:
 
-    ```shell  theme={null}
+    ```shell theme={null}
     /commit-commands:commit
     ```
 
     This stages your changes, generates a commit message, and creates the commit.
 
-    Each plugin works differently. Check the plugin's description in the **Discover** tab or its homepage to learn what commands and capabilities it provides.
+    Each plugin works differently. Check the plugin's description in the **Discover** tab or its homepage to learn what skills and capabilities it provides.
   </Step>
 </Steps>
 
@@ -189,7 +191,7 @@ Add a GitHub repository that contains a `.claude-plugin/marketplace.json` file u
 
 For example, `anthropics/claude-code` refers to the `claude-code` repository owned by `anthropics`:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace add anthropics/claude-code
 ```
 
@@ -199,19 +201,19 @@ Add any git repository by providing the full URL. This works with any Git host, 
 
 Using HTTPS:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace add https://gitlab.com/company/plugins.git
 ```
 
 Using SSH:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace add git@gitlab.com:company/plugins.git
 ```
 
 To add a specific branch or tag, append `#` followed by the ref:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace add https://gitlab.com/company/plugins.git#v1.0.0
 ```
 
@@ -219,13 +221,13 @@ To add a specific branch or tag, append `#` followed by the ref:
 
 Add a local directory that contains a `.claude-plugin/marketplace.json` file:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace add ./my-marketplace
 ```
 
 You can also add a direct path to a `marketplace.json` file:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace add ./path/to/marketplace.json
 ```
 
@@ -233,7 +235,7 @@ You can also add a direct path to a `marketplace.json` file:
 
 Add a remote `marketplace.json` file via URL:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace add https://example.com/marketplace.json
 ```
 
@@ -245,7 +247,7 @@ Add a remote `marketplace.json` file via URL:
 
 Once you've added marketplaces, you can install plugins directly (installs to user scope by default):
 
-```shell  theme={null}
+```shell theme={null}
 /plugin install plugin-name@marketplace-name
 ```
 
@@ -257,54 +259,58 @@ To choose a different [installation scope](/en/settings#configuration-scopes), u
 
 You may also see plugins with **managed** scope—these are installed by administrators via [managed settings](/en/settings#settings-files) and cannot be modified.
 
-Run `/plugin` and go to the **Installed** tab to see your plugins grouped by scope.
-
 <Warning>
   Make sure you trust a plugin before installing it. Anthropic does not control what MCP servers, files, or other software are included in plugins and cannot verify that they work as intended. Check each plugin's homepage for more information.
 </Warning>
 
 ## Manage installed plugins
 
-Run `/plugin` and go to the **Installed** tab to view, enable, disable, or uninstall your plugins. Type to filter the list by plugin name or description.
+Run `/plugin` and go to the **Installed** tab to view, enable, disable, or uninstall your plugins. The list is grouped by scope and sorted so you see problems first: plugins with load errors or unresolved dependencies appear at the top, followed by your favorites, with disabled plugins folded behind a collapsed header at the bottom.
+
+From the list you can:
+
+* press `f` to favorite or unfavorite the selected plugin
+* type to filter by plugin name or description
+* press Enter to open a plugin's detail view and enable, disable, or uninstall it
+
+When you install a plugin that declares dependencies, the install output lists which dependencies were auto-installed alongside it.
 
 You can also manage plugins with direct commands.
 
 Disable a plugin without uninstalling:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin disable plugin-name@marketplace-name
 ```
 
 Re-enable a disabled plugin:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin enable plugin-name@marketplace-name
 ```
 
 Completely remove a plugin:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin uninstall plugin-name@marketplace-name
 ```
 
 The `--scope` option lets you target a specific scope with CLI commands:
 
-```shell  theme={null}
+```shell theme={null}
 claude plugin install formatter@your-org --scope project
 claude plugin uninstall formatter@your-org --scope project
 ```
 
 ### Apply plugin changes without restarting
 
-When you install, enable, or disable plugins during a session, some changes (like new commands and hooks) take effect immediately. Others, including LSP server updates, require a restart.
+When you install, enable, or disable plugins during a session, run `/reload-plugins` to pick up all changes without restarting:
 
-To activate all pending plugin changes without restarting, run:
-
-```shell  theme={null}
+```shell theme={null}
 /reload-plugins
 ```
 
-Claude Code reloads all active plugins and reports what was loaded. If any LSP servers were added or updated, it will let you know those require a restart to take effect.
+Claude Code reloads all active plugins and shows counts for plugins, skills, agents, hooks, plugin MCP servers, and plugin LSP servers.
 
 ## Manage marketplaces
 
@@ -325,19 +331,19 @@ You can also manage marketplaces with direct commands.
 
 List all configured marketplaces:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace list
 ```
 
 Refresh plugin listings from a marketplace:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace update marketplace-name
 ```
 
 Remove a marketplace:
 
-```shell  theme={null}
+```shell theme={null}
 /plugin marketplace remove marketplace-name
 ```
 
@@ -360,11 +366,11 @@ Official Anthropic marketplaces have auto-update enabled by default. Third-party
 
 To disable all automatic updates entirely for both Claude Code and all plugins, set the `DISABLE_AUTOUPDATER` environment variable. See [Auto updates](/en/setup#auto-updates) for details.
 
-To keep plugin auto-updates enabled while disabling Claude Code auto-updates, set `FORCE_AUTOUPDATE_PLUGINS=true` along with `DISABLE_AUTOUPDATER`:
+To keep plugin auto-updates enabled while disabling Claude Code auto-updates, set `FORCE_AUTOUPDATE_PLUGINS=1` along with `DISABLE_AUTOUPDATER`:
 
-```shell  theme={null}
-export DISABLE_AUTOUPDATER=true
-export FORCE_AUTOUPDATE_PLUGINS=true
+```bash theme={null}
+export DISABLE_AUTOUPDATER=1
+export FORCE_AUTOUPDATE_PLUGINS=1
 ```
 
 This is useful when you want to manage Claude Code updates manually but still receive automatic plugin updates.
@@ -375,7 +381,7 @@ Team admins can set up automatic marketplace installation for projects by adding
 
 Add `extraKnownMarketplaces` to your project's `.claude/settings.json`:
 
-```json  theme={null}
+```json theme={null}
 {
   "extraKnownMarketplaces": {
     "my-team-tools": {
@@ -400,9 +406,9 @@ Plugins and marketplaces are highly trusted components that can execute arbitrar
 
 If you see "unknown command" or the `/plugin` command doesn't appear:
 
-1. **Check your version**: Run `claude --version`. Plugins require version 1.0.33 or later.
+1. **Check your version**: Run `claude --version` to see what's installed.
 2. **Update Claude Code**:
-   * **Homebrew**: `brew upgrade claude-code`
+   * **Homebrew**: `brew upgrade claude-code` (or `brew upgrade claude-code@latest` if you installed that cask)
    * **npm**: `npm update -g @anthropic-ai/claude-code`
    * **Native installer**: Re-run the install command from [Setup](/en/setup)
 3. **Restart Claude Code**: After updating, restart your terminal and run `claude` again.
