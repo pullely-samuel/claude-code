@@ -93,9 +93,12 @@ check_dependencies() {
 
 # Check if a file should be preserved during cleanup
 should_preserve() {
-    local filename="$1"
+    local file="$1"
+    local filename
+    filename=$(basename "$file")
+
     for preserve in "${PRESERVE_FILES[@]}"; do
-        if [[ "$filename" == "$preserve" ]]; then
+        if [[ "$filename" == "$preserve" && "$file" == "$DOCS_DIR/$preserve" ]]; then
             return 0
         fi
     done
@@ -107,25 +110,29 @@ clean_existing_docs() {
     log_info "Cleaning existing documentation files..."
 
     local count=0
-    for file in "$DOCS_DIR"/*.md; do
+    while IFS= read -r -d '' file; do
         if [[ -f "$file" ]]; then
-            local filename
-            filename=$(basename "$file")
+            local relative_path
+            relative_path="${file#"$DOCS_DIR/"}"
 
             # Skip files that should be preserved
-            if should_preserve "$filename"; then
-                log_info "Preserving: $filename"
+            if should_preserve "$file"; then
+                log_info "Preserving: $relative_path"
                 continue
             fi
 
             if [[ "${DRY_RUN:-false}" == "true" ]]; then
-                log_info "Would remove: $filename"
+                log_info "Would remove: $relative_path"
             else
                 rm "$file"
             fi
             ((count++)) || true
         fi
-    done
+    done < <(find "$DOCS_DIR" -type f -name '*.md' -print0)
+
+    if [[ "${DRY_RUN:-false}" != "true" ]]; then
+        find "$DOCS_DIR" -mindepth 1 -type d -empty -delete
+    fi
 
     if [[ $count -gt 0 ]]; then
         log_info "Cleaned $count existing markdown file(s)"
@@ -168,7 +175,9 @@ download_file() {
     local url="$1"
     local filename
     filename=$(basename "$url")
-    local output_path="$DOCS_DIR/$filename"
+    local relative_path
+    relative_path="${url#"$BASE_URL/"}"
+    local output_path="$DOCS_DIR/$relative_path"
 
     # Skip files that are maintained elsewhere in the repo
     if should_skip "$filename"; then
@@ -177,15 +186,16 @@ download_file() {
     fi
 
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        log_info "Would download: $filename"
+        log_info "Would download: $relative_path"
         return 0
     fi
 
+    mkdir -p "$(dirname "$output_path")"
     if curl -fsSL "$url" -o "$output_path" 2>/dev/null; then
-        log_success "Downloaded: $filename"
+        log_success "Downloaded: $relative_path"
         return 0
     else
-        log_warn "Failed to download: $filename"
+        log_warn "Failed to download: $relative_path"
         return 1
     fi
 }
