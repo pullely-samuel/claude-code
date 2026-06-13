@@ -2,11 +2,11 @@
 > Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt
 > Use this file to discover all available pages before exploring further.
 
-# Use Claude Code Desktop
+# Desktop application
 
 > Get more out of Claude Code Desktop: parallel sessions with Git isolation, drag-and-drop pane layout, integrated terminal and file editor, side chats, computer use, Dispatch sessions from your phone, visual diff review, app previews, PR monitoring, connectors, and enterprise configuration.
 
-The Code tab within the Claude Desktop app lets you use Claude Code through a graphical interface instead of the terminal.
+The Claude Desktop app has three tabs: **Chat** for conversations, **Cowork** for [Dispatch and longer agentic work](https://claude.com/product/cowork), and **Code** for software development. This page is the reference for the Code tab.
 
 <CardGroup cols={2}>
   <Card title="Download for macOS" icon="apple" href="https://claude.ai/api/desktop/darwin/universal/dmg/latest/redirect?utm_source=claude_code&utm_medium=docs">
@@ -18,36 +18,28 @@ The Code tab within the Claude Desktop app lets you use Claude Code through a gr
   </Card>
 </CardGroup>
 
-For Windows ARM64, download the [ARM64 installer](https://claude.ai/api/desktop/win32/arm64/setup/latest/redirect?utm_source=claude_code\&utm_medium=docs). Linux is not supported.
+For Windows ARM64, download the [ARM64 installer](https://claude.ai/api/desktop/win32/arm64/setup/latest/redirect?utm_source=claude_code\&utm_medium=docs). The desktop app is not available on Linux; use the [CLI](/en/quickstart) instead.
 
-After installing, launch Claude, sign in, and click the **Code** tab. See the [Get started guide](/en/desktop-quickstart) for a full walkthrough of your first session.
+After installing, launch Claude, sign in, and click the **Code** tab. The first time you open it on Windows, you need [Git for Windows](https://git-scm.com/downloads/win) installed; restart the app after installing it. For a walkthrough of your first session, see the [Get started guide](/en/desktop-quickstart).
 
-Desktop adds these capabilities on top of the standard Claude Code experience:
+In the Code tab, each conversation is a **session**: it has its own chat history, project folder, and code changes, independent of any other session. The sidebar lists your sessions and lets you run several in parallel. Within a session you can:
 
-* [Parallel sessions](#work-in-parallel-with-sessions) with automatic Git worktree isolation
-* [Drag-and-drop layout](#arrange-your-workspace) with an integrated terminal, file editor, and preview pane
-* [Side chats](#ask-a-side-question-without-derailing-the-session) that branch off without affecting the main thread
-* [Visual diff review](#review-changes-with-diff-view) with inline comments
-* [Live app preview](#preview-your-app) with dev servers, HTML files, and PDFs
-* [Computer use](#let-claude-use-your-computer) to open apps and control your screen on macOS and Windows
-* [GitHub PR monitoring](#monitor-pull-request-status) with auto-fix, auto-merge, and auto-archive
-* [Dispatch](#sessions-from-dispatch) integration: send a task from your phone, get a session here
-* [Scheduled tasks](/en/desktop-scheduled-tasks) that run Claude on a recurring schedule
-* [Connectors](#connect-external-tools) for GitHub, Slack, Linear, and more
-* Local, [SSH](#ssh-sessions), and [cloud](#run-long-running-tasks-remotely) environments
+* [Review and comment on diffs](#review-changes-with-diff-view), then [watch the resulting PR through CI](#monitor-pull-request-status)
+* [Preview your running app](#preview-your-app) in an embedded browser while Claude verifies its own changes
+* [Arrange panes](#arrange-your-workspace) for the chat, diff, preview, terminal, and file editor side by side
+* Ask a [side question](#ask-a-side-question-without-derailing-the-session) that uses the session's context without derailing it
+* [Connect external tools](#connect-external-tools) like GitHub, Slack, and Linear
+* Let Claude [open apps and control your screen](#let-claude-use-your-computer)
+* Run on your machine, in the [cloud](#run-long-running-tasks-remotely), or over [SSH](#ssh-sessions)
 
-<Note>
-  The workspace layout, terminal, file editor, side chats, and view modes described on this page require Claude Desktop v1.2581.0 or later. Open **Claude → Check for Updates** on macOS or **Help → Check for Updates** on Windows to update.
-</Note>
-
-This page covers [working with code](#work-with-code), [arranging your workspace](#arrange-your-workspace), [computer use](#let-claude-use-your-computer), [managing sessions](#manage-sessions), [extending Claude Code](#extend-claude-code), and [configuration](#environment-configuration). It also includes a [CLI comparison](#coming-from-the-cli) and [troubleshooting](#troubleshooting).
+For [scheduled recurring work](/en/desktop-scheduled-tasks), [keyboard shortcuts](#keyboard-shortcuts), or [sending tasks from your phone](#sessions-from-dispatch), see the linked pages and sections. If you already use the terminal-based CLI, see the [CLI comparison](#coming-from-the-cli) for what carries over.
 
 ## Start a session
 
 Before you send your first message, configure four things in the prompt area:
 
 * **Environment**: choose where Claude runs. Select **Local** for your machine, **Remote** for Anthropic-hosted cloud sessions, or an [**SSH connection**](#ssh-sessions) for a remote machine you manage. See [environment configuration](#environment-configuration).
-* **Project folder**: select the folder or repository Claude works in. For remote sessions, you can add [multiple repositories](#run-long-running-tasks-remotely).
+* **Project folder**: select the folder or repository Claude works in. For cloud sessions, you can add [multiple repositories](#run-long-running-tasks-remotely).
 * **Model**: pick a [model](/en/model-config#available-models) from the dropdown next to the send button. You can change this during the session.
 * **Permission mode**: choose how much autonomy Claude has from the [mode selector](#choose-a-permission-mode). You can change this during the session.
 
@@ -59,7 +51,7 @@ Give Claude the right context, control how much it does on its own, and review w
 
 ### Use the prompt box
 
-Type what you want Claude to do and press **Enter** to send. Claude reads your project files, makes changes, and runs commands based on your [permission mode](#choose-a-permission-mode). You can interrupt Claude at any point: click the stop button or type your correction and press **Enter**. Claude stops what it's doing and adjusts based on your input.
+Type what you want Claude to do and press **Enter** to send. Claude reads your project files, makes changes, and runs commands based on your [permission mode](#choose-a-permission-mode). You can redirect Claude at any point: click the stop button to interrupt immediately, or type a correction and press **Enter** to send it without stopping the running action. Claude reads the correction as soon as the current action completes and adjusts before its next step.
 
 The **+** button next to the prompt box gives you access to file attachments, [skills](#use-skills), [connectors](#connect-external-tools), and [plugins](#install-plugins).
 
@@ -67,28 +59,32 @@ The **+** button next to the prompt box gives you access to file attachments, [s
 
 The prompt box supports two ways to bring in external context:
 
-* **@mention files**: type `@` followed by a filename to add a file to the conversation context. Claude can then read and reference that file. @mention is not available in remote sessions.
+* **@mention files**: type `@` followed by a filename to add a file to the conversation context. Claude can then read and reference that file. @mention is not available in cloud sessions.
 * **Attach files**: attach images, PDFs, and other files to your prompt using the attachment button, or drag and drop files directly into the prompt. This is useful for sharing screenshots of bugs, design mockups, or reference documents.
 
 ### Choose a permission mode
 
 Permission modes control how much autonomy Claude has during a session: whether it asks before editing files, running commands, or both. You can switch modes at any time using the mode selector next to the send button. Start with Ask permissions to see exactly what Claude does, then move to Auto accept edits or Plan mode as you get comfortable.
 
-| Mode                   | Settings key        | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ---------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Ask permissions**    | `default`           | Claude asks before editing files or running commands. You see a diff and can accept or reject each change. Recommended for new users.                                                                                                                                                                                                                                                                                                                            |
-| **Auto accept edits**  | `acceptEdits`       | Claude auto-accepts file edits and common filesystem commands like `mkdir`, `touch`, and `mv`, but still asks before running other terminal commands. Use this when you trust file changes and want faster iteration.                                                                                                                                                                                                                                            |
-| **Plan mode**          | `plan`              | Claude reads files and runs commands to explore, then proposes a plan without editing your source code. Good for complex tasks where you want to review the approach first.                                                                                                                                                                                                                                                                                      |
-| **Auto**               | `auto`              | Claude executes all actions with background safety checks that verify alignment with your request. Reduces permission prompts while maintaining oversight. Currently a research preview. Available on Max, Team, Enterprise, and API plans. Requires Claude Sonnet 4.6, Opus 4.6, or Opus 4.7 on Team, Enterprise, and API plans; Claude Opus 4.7 only on Max plans. Not available on Pro plans or third-party providers. Enable in your Settings → Claude Code. |
-| **Bypass permissions** | `bypassPermissions` | Claude runs without any permission prompts, equivalent to `--dangerously-skip-permissions` in the CLI. Enable in your Settings → Claude Code under "Allow bypass permissions mode". Only use this in sandboxed containers or VMs. Enterprise admins can disable this option.                                                                                                                                                                                     |
+| Mode                   | Settings key        | Behavior                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Ask permissions**    | `default`           | Claude asks before editing files or running commands. You see a diff and can accept or reject each change. Recommended for new users.                                                                                                                                                                                                                     |
+| **Auto accept edits**  | `acceptEdits`       | Claude auto-accepts file edits and common filesystem commands like `mkdir`, `touch`, and `mv`, but still asks before running other terminal commands. Use this when you trust file changes and want faster iteration.                                                                                                                                     |
+| **Plan mode**          | `plan`              | Claude reads files and runs commands to explore, then proposes a plan without editing your source code. Good for complex tasks where you want to review the approach first.                                                                                                                                                                               |
+| **Auto**               | `auto`              | Claude executes all actions with background safety checks that verify alignment with your request. Reduces permission prompts while maintaining oversight. Enable in your Settings → Claude Code. See [availability requirements](#auto-mode-availability) below.                                                                                         |
+| **Bypass permissions** | `bypassPermissions` | Claude runs without permission prompts, except those forced by explicit [ask rules](/en/permissions#manage-permissions); equivalent to `--dangerously-skip-permissions` in the CLI. Enable in your Settings → Claude Code under "Allow bypass permissions mode". Only use this in sandboxed containers or VMs. Enterprise admins can disable this option. |
 
 The `dontAsk` permission mode is available only in the [CLI](/en/permission-modes#allow-only-pre-approved-tools-with-dontask-mode).
+
+<span id="auto-mode-availability" />
+
+Auto mode is a research preview available to all users on the Anthropic API and requires Claude Opus 4.6 or later, or Sonnet 4.6. In Enterprise deployments that route Desktop to Google Cloud Vertex AI, auto mode is off until you [set `CLAUDE_CODE_ENABLE_AUTO_MODE`](/en/permission-modes#enable-auto-mode-on-bedrock-vertex-ai-or-foundry), and only Claude Opus 4.7 and Opus 4.8 are supported there.
 
 <Tip title="Best practice">
   Start complex tasks in Plan mode so Claude maps out an approach before making changes. Once you approve the plan, switch to Auto accept edits or Ask permissions to execute it. See [explore first, then plan, then code](/en/best-practices#explore-first-then-plan-then-code) for more on this workflow.
 </Tip>
 
-Remote sessions support Auto accept edits and Plan mode. Ask permissions is not available because remote sessions auto-accept file edits by default, and Bypass permissions is not available because the remote environment is already sandboxed.
+Cloud sessions support Accept edits, Plan mode, and Auto mode. Accept edits corresponds to `default` mode: cloud sessions pre-approve file edits, so the selector shows Accept edits instead of Ask permissions. Bypass permissions is not available because the cloud environment is already sandboxed.
 
 Enterprise admins can restrict which permission modes are available. See [enterprise configuration](#enterprise-configuration) for details.
 
@@ -96,7 +92,7 @@ Enterprise admins can restrict which permission modes are available. See [enterp
 
 Claude can start a dev server and open an embedded browser to verify its changes. This works for frontend web apps as well as backend servers: Claude can test API endpoints, view server logs, and iterate on issues it finds. In most cases, Claude starts the server automatically after editing project files. You can also ask Claude to preview at any time. By default, Claude [auto-verifies](#auto-verify-changes) changes after every edit.
 
-The preview pane can also open static HTML files, PDFs, and images from your project. Click an HTML, PDF, or image path in the chat to open it in preview.
+The preview pane can also open static HTML files, PDFs, images, and videos from your project. Click an HTML, PDF, image, or video path in the chat to open it in preview.
 
 From the preview pane, you can:
 
@@ -144,17 +140,21 @@ Use the **Auto-fix** and **Auto-merge** toggles in the CI status bar to enable e
 
 ## Arrange your workspace
 
-The desktop app is built around panes you can arrange in any layout: chat, diff, preview, terminal, file, plan, tasks, and subagent. Drag a pane by its header to reposition it, or drag a pane edge to resize it. Press **Cmd+\\** on macOS or **Ctrl+\\** on Windows to close the focused pane. Open additional panes from the **Views** menu in the session toolbar.
+The Code tab is built around panes you can arrange in any layout: chat, diff, preview, terminal, file, plan, tasks, and subagent. Drag a pane by its header to reposition it, or drag a pane edge to resize it. Press **Cmd+\\** on macOS or **Ctrl+\\** on Windows to close the focused pane. Open additional panes from the **Views** menu in the session toolbar.
+
+<Note>
+  The pane layout, terminal, file editor, and view modes in this section require Claude Desktop v1.2581.0 or later. Open **Claude → Check for Updates** on macOS or **Help → Check for Updates** on Windows to update.
+</Note>
 
 ### Run commands in the terminal
 
-The integrated terminal lets you run commands alongside your session without switching to another app. Open it from the **Views** menu or press **Ctrl+\`** on macOS or Windows. The terminal opens in your session's working directory and shares the same environment as Claude, so commands like `npm test` or `git status` see the same files Claude is editing. The terminal is available in local sessions only.
+The integrated terminal lets you run commands alongside your session without switching to another app. Open it from the **Views** menu or press **Ctrl+\`** on macOS or Windows. The terminal opens in your session's working directory and shares the same environment as Claude, so commands like `npm test` or `git status` see the same files Claude is editing. To open a second terminal tab, click **+** in the terminal pane header or right-click a folder in the chat to choose **Open in terminal**. The terminal is available in local sessions only.
 
 ### Open and edit files
 
-Click a file path in the chat or diff viewer to open it in the file pane. HTML, PDF, and image paths open in the [preview pane](#preview-your-app) instead. Make spot edits and click **Save** to write them back. If the file changed on disk since you opened it, the pane warns you and lets you override or discard. Click **Discard** to revert your edits, or click the path in the pane header to copy the absolute path.
+Click a file path in the chat or diff viewer to open it in the file pane. HTML, PDF, image, and video paths open in the [preview pane](#preview-your-app) instead. Make spot edits and click **Save** to write them back. If the file changed on disk since you opened it, the pane warns you and lets you override or discard. Click **Discard** to revert your edits, or click the path in the pane header to copy the absolute path.
 
-The file pane is available in local and SSH sessions. For remote sessions, ask Claude to make the change.
+The file pane is available in local and SSH sessions. For cloud sessions, ask Claude to make the change.
 
 ### Open files in other apps
 
@@ -282,17 +282,21 @@ Each session is an independent conversation with its own context and changes. Yo
 
 ### Work in parallel with sessions
 
-Click **+ New session** in the sidebar, or press **Cmd+N** on macOS or **Ctrl+N** on Windows, to work on multiple tasks in parallel. Press **Ctrl+Tab** and **Ctrl+Shift+Tab** to cycle through sessions in the sidebar. For Git repositories, each session gets its own isolated copy of your project using [Git worktrees](/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees), so changes in one session don't affect other sessions until you commit them.
+Click **+ New session** in the sidebar, or press **Cmd+N** on macOS or **Ctrl+N** on Windows, to work on multiple tasks in parallel. Press **Ctrl+Tab** and **Ctrl+Shift+Tab** to cycle through sessions in the sidebar. For Git repositories, each session gets its own isolated copy of your project using [Git worktrees](/en/worktrees), so changes in one session don't affect other sessions until you commit them.
+
+To view two sessions at once, hold **Cmd** on macOS or **Ctrl** on Windows and click a session in the sidebar. The session opens in a second pane alongside the one you already have open. While the split is active, clicking another sidebar session replaces whichever pane has focus. Press **Cmd+\\** on macOS or **Ctrl+\\** on Windows to close the focused pane and return to a single session.
 
 Worktrees are stored in `<project-root>/.claude/worktrees/` by default. You can change this to a custom directory in Settings → Claude Code under "Worktree location". You can also set a branch prefix that gets prepended to every worktree branch name, which is useful for keeping Claude-created branches organized. To remove a worktree when you're done, hover over the session in the sidebar and click the archive icon. To have sessions archive themselves when their pull request merges or closes, turn on **Auto-archive after PR merge or close** in Settings → Claude Code. Auto-archive only applies to local sessions that have finished running.
 
-To include gitignored files like `.env` in new worktrees, create a [`.worktreeinclude` file](/en/common-workflows#copy-gitignored-files-to-worktrees) in your project root.
+To include gitignored files like `.env` in new worktrees, create a [`.worktreeinclude` file](/en/worktrees#copy-gitignored-files-into-worktrees) in your project root.
 
 <Note>
-  Session isolation requires [Git](https://git-scm.com/downloads). Most Macs include Git by default. Run `git --version` in Terminal to check. On Windows, Git is required for the Code tab to work: [download Git for Windows](https://git-scm.com/downloads/win), install it, and restart the app. If you run into Git errors, try a Cowork session to help troubleshoot your setup.
+  Session isolation requires [Git](https://git-scm.com/downloads). Most Macs include Git by default. Run `git --version` in Terminal to check. On Windows, Git is required for the Code tab to work: [download Git for Windows](https://git-scm.com/downloads/win), install it, and restart the app. If you run into Git errors, ask Claude in the [Cowork tab](https://claude.com/product/cowork) to help troubleshoot your setup.
 </Note>
 
 Use the controls at the top of the sidebar to filter sessions by status, project, or environment, and to group sessions by project. To rename a session, click the session title in the toolbar at the top of the active session. To check context usage, see [Check usage](#check-usage). When context fills up, Claude automatically summarizes the conversation and continues working. You can also type `/compact` to trigger summarization earlier and free up context space. See [the context window](/en/how-claude-code-works#the-context-window) for details on how compaction works.
+
+The desktop app sends an OS notification when a Code session finishes a task and you aren't currently viewing that session.
 
 ### Ask a side question without derailing the session
 
@@ -302,23 +306,23 @@ Press **Cmd+;** on macOS or **Ctrl+;** on Windows to open a side chat, or type `
 
 ### Watch background tasks
 
-The tasks pane shows the background work running inside the current session: subagents, background shell commands, and workflows. Open it from the **Views** menu or drag it into your layout.
+The tasks pane shows the background work running inside the current session: subagents, background shell commands, and [dynamic workflows](/en/workflows). Open it from the **Views** menu or drag it into your layout.
 
 Click any entry to see its output in the subagent pane or stop it. To see what other sessions are doing, use the [sidebar](#work-in-parallel-with-sessions).
 
 ### Run long-running tasks remotely
 
-For large refactors, test suites, migrations, or other long-running tasks, select **Remote** instead of **Local** when starting a session. Remote sessions run on Anthropic's cloud infrastructure and continue even if you close the app or shut down your computer. Check back anytime to see progress or steer Claude in a different direction. You can also monitor remote sessions from [claude.ai/code](https://claude.ai/code) or the Claude iOS app.
+For large refactors, test suites, migrations, or other long-running tasks, select **Remote** instead of **Local** when starting a session. Cloud sessions run on Anthropic's cloud infrastructure and continue even if you close the app or shut down your computer. Check back anytime to see progress or steer Claude in a different direction. You can also monitor cloud sessions from [claude.ai/code](https://claude.ai/code) or the Claude iOS app.
 
-Remote sessions also support multiple repositories. After selecting a cloud environment, click the **+** button next to the repo pill to add additional repositories to the session. Each repo gets its own branch selector. This is useful for tasks that span multiple codebases, such as updating a shared library and its consumers.
+Cloud sessions also support multiple repositories. After selecting a cloud environment, click the **+** button next to the repo pill to add additional repositories to the session. Each repo gets its own branch selector. This is useful for tasks that span multiple codebases, such as updating a shared library and its consumers.
 
-See [Claude Code on the web](/en/claude-code-on-the-web) for more on how remote sessions work.
+See [Claude Code on the web](/en/claude-code-on-the-web) for more on how cloud sessions work.
 
 ### Continue in another surface
 
 The **Continue in** menu, accessible from the VS Code icon in the bottom right of the session toolbar, lets you move your session to another surface:
 
-* **Claude Code on the Web**: sends your local session to continue running remotely. Desktop pushes your branch, generates a summary of the conversation, and creates a new remote session with the full context. You can then choose to archive the local session or keep it. This requires a clean working tree, and is not available for SSH sessions.
+* **Claude Code on the Web**: sends your local session to continue running remotely. Desktop pushes your branch, generates a summary of the conversation, and creates a new cloud session with the full context. You can then choose to archive the local session or keep it. This requires a clean working tree, and is not available for SSH sessions.
 * **Your IDE**: opens your project in a supported IDE at the current working directory.
 
 ### Sessions from Dispatch
@@ -337,11 +341,11 @@ Dispatch is one of several ways to work with Claude when you're away from your t
 
 ## Extend Claude Code
 
-Connect external services, add reusable workflows, customize Claude's behavior, and configure preview servers.
+Connect external services, add reusable workflows, customize Claude's behavior, and configure preview servers. To manage connectors, skills, and plugins in one place, click **Customize** in the sidebar.
 
 ### Connect external tools
 
-For local and [SSH](#ssh-sessions) sessions, click the **+** button next to the prompt box and select **Connectors** to add integrations like Google Calendar, Slack, GitHub, Linear, Notion, and more. You can add connectors before or during a session. The **+** button is not available in remote sessions, but [routines](/en/routines) configure connectors at routine creation time.
+For local and [SSH](#ssh-sessions) sessions, click the **+** button next to the prompt box and select **Connectors** to add integrations like Google Calendar, Slack, GitHub, Linear, Notion, and more. You can add connectors before or during a session. The **+** button is not available in cloud sessions, but [routines](/en/routines) configure connectors at routine creation time.
 
 To manage or disconnect connectors, go to Settings → Connectors in the desktop app, or select **Manage connectors** from the Connectors menu in the prompt box.
 
@@ -359,7 +363,7 @@ Connectors are [MCP servers](/en/mcp) with a graphical setup flow. Use them for 
 
 For local and [SSH](#ssh-sessions) sessions, click the **+** button next to the prompt box and select **Plugins** to see your installed plugins and their skills. To add a plugin, select **Add plugin** from the submenu to open the plugin browser, which shows available plugins from your configured [marketplaces](/en/plugin-marketplaces) including the official Anthropic marketplace. Select **Manage plugins** to enable, disable, or uninstall plugins.
 
-Plugins can be scoped to your user account, a specific project, or local-only. If your organization manages plugins centrally, those plugins are available in desktop sessions the same way they are in the CLI. Plugins are not available for remote sessions. For the full plugin reference including creating your own plugins, see [plugins](/en/plugins).
+Plugins can be scoped to your user account, a specific project, or local-only. If your organization manages plugins centrally, those plugins are available in desktop sessions the same way they are in the CLI. Plugins are not available for cloud sessions. For the full plugin reference including creating your own plugins, see [plugins](/en/plugins).
 
 ### Configure preview servers
 
@@ -414,6 +418,8 @@ Each entry in the `configurations` array accepts the following fields:
 | `autoPort`          | boolean   | How to handle port conflicts. See below                                                                                                                                                                                                                                  |
 | `program`           | string    | A script to run with `node`. See [when to use `program` vs `runtimeExecutable`](#when-to-use-program-vs-runtimeexecutable)                                                                                                                                               |
 | `args`              | string\[] | Arguments passed to `program`. Only used when `program` is set                                                                                                                                                                                                           |
+
+<a id="when-to-use-program-vs-runtimeexecutable" />
 
 ##### When to use `program` vs `runtimeExecutable`
 
@@ -516,13 +522,13 @@ The desktop app does not always inherit your full shell environment. On macOS, w
 
 To set environment variables for local sessions and dev servers on any platform, open the environment dropdown in the prompt box, hover over **Local**, and click the gear icon to open the local environment editor. Variables you save here are stored encrypted on your machine and apply to every local session and preview server you start. You can also add variables to the `env` key in your `~/.claude/settings.json` file, though these reach Claude sessions only and not dev servers. See [environment variables](/en/env-vars) for the full list of supported variables.
 
-[Extended thinking](/en/common-workflows#use-extended-thinking-thinking-mode) is enabled by default, which improves performance on complex reasoning tasks but uses additional tokens. To disable thinking entirely, set `MAX_THINKING_TOKENS` to `0` in the local environment editor. On models with [adaptive reasoning](/en/model-config#adjust-effort-level), any other `MAX_THINKING_TOKENS` value is ignored because adaptive reasoning controls thinking depth instead. On Opus 4.6 and Sonnet 4.6, set `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` to `1` to use a fixed thinking budget; Opus 4.7 always uses adaptive reasoning and has no fixed-budget mode.
+[Extended thinking](/en/model-config#extended-thinking) is enabled by default, which improves performance on complex reasoning tasks but uses additional tokens. To disable thinking, set `MAX_THINKING_TOKENS` to `0` in the local environment editor; this has no effect on Fable 5, which always uses extended thinking. On [third-party providers](/en/third-party-integrations), `0` omits the `thinking` parameter instead, and adaptive-reasoning models may still think. On models with [adaptive reasoning](/en/model-config#adjust-effort-level), any other `MAX_THINKING_TOKENS` value is ignored because adaptive reasoning controls thinking depth instead. On Opus 4.6 and Sonnet 4.6, set `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` to `1` to use a fixed thinking budget; Opus 4.7 and later always use adaptive reasoning and have no fixed-budget mode.
 
-### Remote sessions
+### Cloud sessions
 
-Remote sessions continue in the background even if you close the app. Usage counts toward your [subscription plan limits](/en/costs) with no separate compute charges.
+Cloud sessions continue in the background even if you close the app. Usage counts toward your [subscription plan limits](/en/costs) with no separate compute charges.
 
-You can create custom cloud environments with different network access levels and environment variables. Select the environment dropdown when starting a remote session and choose **Add environment**. See [the cloud environment](/en/claude-code-on-the-web#the-cloud-environment) for details on configuring network access and environment variables.
+You can create custom cloud environments with different network access levels and environment variables. Select the environment dropdown when starting a cloud session and choose **Add environment**. See [the cloud environment](/en/claude-code-on-the-web#the-cloud-environment) for details on configuring network access and environment variables.
 
 ### SSH sessions
 
@@ -537,7 +543,46 @@ To add an SSH connection, click the environment dropdown before starting a sessi
 
 Once added, the connection appears in the environment dropdown. Select it to start a session on that machine. Claude runs on the remote machine with access to its files and tools.
 
-The remote machine must run Linux or macOS, and Claude Code must be installed on it. Once connected, SSH sessions support permission modes, connectors, plugins, and MCP servers.
+The remote machine must run Linux or macOS. Desktop installs Claude Code on the remote machine automatically the first time you connect. Once connected, SSH sessions support permission modes, connectors, plugins, and MCP servers.
+
+#### Pre-configure SSH connections for your team
+
+Administrators can distribute SSH connections to team members by adding `sshConfigs` to a [managed settings](/en/settings#settings-precedence) file. Connections defined this way appear in each user's environment dropdown automatically and are shown as managed, so users can select them but cannot edit or delete them in the app.
+
+The following example pre-configures a single connection that opens in `~/projects` on the remote host:
+
+```json theme={null}
+{
+  "sshConfigs": [
+    {
+      "id": "shared-dev-vm",
+      "name": "Shared Dev VM",
+      "sshHost": "user@dev.example.com",
+      "sshPort": 22,
+      "sshIdentityFile": "~/.ssh/id_ed25519",
+      "startDirectory": "~/projects"
+    }
+  ]
+}
+```
+
+Each entry requires `id`, `name`, and `sshHost`. The `sshPort`, `sshIdentityFile`, and `startDirectory` fields are optional. Users can also add `sshConfigs` to their own `~/.claude/settings.json`, which is where connections added through the dialog are stored.
+
+#### Restrict which SSH hosts users can connect to
+
+Administrators can limit Desktop's SSH sessions to an approved set of hosts by adding `sshHostAllowlist` to a [managed settings](/en/settings#settings-precedence) file. When set, users can only connect to hosts whose resolved hostname matches one of the patterns. Set it to an empty array to disable SSH sessions entirely.
+
+The following example allows connections to any host under `devboxes.example.com` and to a single named bastion host:
+
+```json theme={null}
+{
+  "sshHostAllowlist": ["*.devboxes.example.com", "bastion.example.com"]
+}
+```
+
+Patterns are case-insensitive. `*` matches any host, and `*.example.com` matches `example.com` and any subdomain. Anything else is an exact match. The check runs against the hostname after `~/.ssh/config` resolution via `ssh -G`, so `Host` aliases and `ProxyCommand`/`ProxyJump` entries are permitted as long as the resolved `HostName` matches.
+
+`sshHostAllowlist` is read from managed settings only; values in user or project settings are ignored. Only the Claude Desktop app honors this setting; the Claude Code CLI and IDE extensions do not read it, and it does not restrict `ssh` commands run through the Bash tool. It governs which hosts the Desktop app connects to, not network egress, so pair it with your organization's network or zero-trust controls if you need a hard boundary.
 
 ## Enterprise configuration
 
@@ -556,21 +601,24 @@ These settings are configured through the [admin settings console](https://claud
 
 Managed settings override project and user settings and apply when Desktop spawns CLI sessions. You can set these keys in your organization's [managed settings](/en/settings#settings-precedence) file or push them remotely through the admin console.
 
-| Key                                        | Description                                                                                                                                                                                   |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `permissions.disableBypassPermissionsMode` | set to `"disable"` to prevent users from enabling Bypass permissions mode.                                                                                                                    |
-| `disableAutoMode`                          | set to `"disable"` to prevent users from enabling [Auto](/en/permission-modes#eliminate-prompts-with-auto-mode) mode. Removes Auto from the mode selector. Also accepted under `permissions`. |
-| `autoMode`                                 | customize what the auto mode classifier trusts and blocks across your organization. See [Configure the auto mode classifier](/en/permissions#configure-the-auto-mode-classifier).             |
+| Key                                        | Description                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `permissions.disableBypassPermissionsMode` | set to `"disable"` to prevent users from enabling Bypass permissions mode.                                                                                                                                                                                                                                              |
+| `disableAutoMode`                          | set to `"disable"` to prevent users from enabling [Auto](/en/permission-modes#eliminate-prompts-with-auto-mode) mode. Removes Auto from the mode selector. Also accepted under `permissions`.                                                                                                                           |
+| `autoMode`                                 | customize what the auto mode classifier trusts and blocks across your organization. See [Configure auto mode](/en/auto-mode-config).                                                                                                                                                                                    |
+| `sshConfigs`                               | pre-configure [SSH connections](#pre-configure-ssh-connections-for-your-team) that appear in the environment dropdown. Users cannot edit or delete managed connections.                                                                                                                                                 |
+| `sshHostAllowlist`                         | restrict [SSH sessions](#restrict-which-ssh-hosts-users-can-connect-to) to hosts whose resolved hostname matches one of these patterns. An empty array disables SSH sessions. Read from managed settings only.                                                                                                          |
+| `managedMcpServers`                        | push MCP server configurations to all users in a third-party deployment. Each entry specifies a transport of `"http"`, `"sse"`, or `"stdio"`, connection details, and optionally a `toolPolicy` map that restricts which tools in that server users can invoke. Available in third-party (3P) Desktop deployments only. |
+
+A managed settings file deployed to disk on each machine applies to Desktop sessions. Managed settings pushed remotely through the admin console currently reach CLI and IDE sessions only, so for Desktop deployments either distribute the file via MDM or use the [admin console controls](#admin-console-controls) above.
 
 `permissions.disableBypassPermissionsMode` and `disableAutoMode` also work in user and project settings, but placing them in managed settings prevents users from overriding them. `autoMode` is read from user settings, `.claude/settings.local.json`, and managed settings, but not from the checked-in `.claude/settings.json`: a cloned repo cannot inject its own classifier rules. For the complete list of managed-only settings including `allowManagedPermissionRulesOnly` and `allowManagedHooksOnly`, see [managed-only settings](/en/permissions#managed-only-settings).
-
-Remote managed settings uploaded through the admin console currently apply to CLI and IDE sessions only. For Desktop-specific restrictions, use the admin console controls above.
 
 ### Device management policies
 
 IT teams can manage the desktop app through MDM on macOS or group policy on Windows. Available policies include enabling or disabling the Claude Code feature, controlling auto-updates, and setting a custom deployment URL.
 
-* **macOS**: configure via `com.anthropic.Claude` preference domain using tools like Jamf or Kandji
+* **macOS**: configure via `com.anthropic.claudefordesktop` preference domain using tools like Jamf or Kandji
 * **Windows**: configure via registry at `SOFTWARE\Policies\Claude`
 
 ### Authentication and SSO
@@ -579,7 +627,7 @@ Enterprise organizations can require SSO for all users. See [authentication](/en
 
 ### Data handling
 
-Claude Code processes your code locally in local sessions or on Anthropic's cloud infrastructure in remote sessions. Conversations and code context are sent to Anthropic's API for processing. See [data handling](/en/data-usage) for details on data retention, privacy, and compliance.
+Claude Code processes your code locally in local sessions or on Anthropic's cloud infrastructure in cloud sessions. Conversations and code context are sent to Anthropic's API for processing. See [data handling](/en/data-usage) for details on data retention, privacy, and compliance.
 
 ### Deployment
 
@@ -596,7 +644,7 @@ For the full enterprise configuration reference, see the [enterprise configurati
 
 If you already use the Claude Code CLI, Desktop runs the same underlying engine with a graphical interface. You can run both simultaneously on the same machine, even on the same project. Each maintains separate session history, but they share configuration and project memory via CLAUDE.md files.
 
-To move a CLI session into Desktop, run `/desktop` in the terminal. Claude saves your session and opens it in the desktop app, then exits the CLI. This command is available on macOS and Windows only.
+To move a CLI session into Desktop, run `/desktop` in the terminal. Claude saves your session and opens it in the desktop app, then exits the CLI. This command is available on macOS and Windows when you are signed in with a Claude subscription. It is not available with API key authentication or on Bedrock, Vertex, or Foundry.
 
 <Tip>
   When to use Desktop vs CLI: use Desktop when you want to manage parallel sessions in one window, arrange panes side by side, or review changes visually. Use the CLI when you need scripting, automation, or prefer a terminal workflow.
@@ -612,8 +660,8 @@ This table shows the desktop app equivalent for common CLI flags. Flags not list
 | `--resume`, `--continue`              | Click a session in the sidebar                                                                                                           |
 | `--permission-mode`                   | Mode selector next to the send button                                                                                                    |
 | `--dangerously-skip-permissions`      | Bypass permissions mode. Enable in Settings → Claude Code → "Allow bypass permissions mode". Enterprise admins can disable this setting. |
-| `--add-dir`                           | Add multiple repos with the **+** button in remote sessions                                                                              |
-| `--allowedTools`, `--disallowedTools` | Not available in Desktop                                                                                                                 |
+| `--add-dir`                           | Add multiple repos with the **+** button in cloud sessions                                                                               |
+| `--allowedTools`, `--disallowedTools` | No per-session equivalent. Permission rules in [settings files](/en/settings) still apply.                                               |
 | `--verbose`                           | [Verbose view mode](#switch-view-modes) in the Transcript view dropdown                                                                  |
 | `--print`, `--output-format`          | Not available. Desktop is interactive only.                                                                                              |
 | `ANTHROPIC_MODEL` env var             | Model dropdown next to the send button                                                                                                   |
@@ -627,40 +675,43 @@ Desktop and CLI read the same configuration files, so your setup carries over:
 * **[MCP servers](/en/mcp)** configured in `~/.claude.json` or `.mcp.json` work in both
 * **[Hooks](/en/hooks)** and **[skills](/en/skills)** defined in settings apply to both
 * **[Settings](/en/settings)** in `~/.claude.json` and `~/.claude/settings.json` are shared. Permission rules, allowed tools, and other settings in `settings.json` apply to Desktop sessions.
-* **Models**: Sonnet, Opus, and Haiku are available in both. In Desktop, select the model from the dropdown next to the send button. You can change the model mid-session from the same dropdown.
+* **Models**: the same [models](/en/model-config#available-models) are available in both. In Desktop, select the model from the dropdown next to the send button. You can change the model mid-session from the same dropdown.
 
 <Note>
-  **MCP servers: desktop chat app vs Claude Code**: MCP servers configured for the Claude Desktop chat app in `claude_desktop_config.json` are separate from Claude Code and will not appear in the Code tab. To use MCP servers in Claude Code, configure them in `~/.claude.json` or your project's `.mcp.json` file. See [MCP configuration](/en/mcp#installing-mcp-servers) for details.
+  **MCP servers from the Claude Desktop chat app**: the Desktop app loads MCP servers from `claude_desktop_config.json` into Code tab sessions, alongside servers from `~/.claude.json` and `.mcp.json`. A server defined in `claude_desktop_config.json` is available in both the Desktop chat surface and the Code tab.
+
+  The standalone CLI does not read `claude_desktop_config.json`. On macOS and WSL, run `claude mcp add-from-claude-desktop` to copy those servers into `~/.claude.json`. See [Import MCP servers from Claude Desktop](/en/mcp#import-mcp-servers-from-claude-desktop) for the import flow and scope options.
 </Note>
 
 ### Feature comparison
 
 This table compares core capabilities between the CLI and Desktop. For a full list of CLI flags, see the [CLI reference](/en/cli-reference).
 
-| Feature                                               | CLI                                                       | Desktop                                                                                                                                                                                                               |
-| ----------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Permission modes                                      | All modes including `dontAsk`                             | Ask permissions, Auto accept edits, Plan mode, Auto, and Bypass permissions via Settings                                                                                                                              |
-| `--dangerously-skip-permissions`                      | CLI flag                                                  | Bypass permissions mode. Enable in Settings → Claude Code → "Allow bypass permissions mode"                                                                                                                           |
-| [Third-party providers](/en/third-party-integrations) | Bedrock, Vertex, Foundry                                  | Anthropic's API by default. Enterprise deployments can configure Vertex AI and gateway providers. See the [enterprise configuration guide](https://support.claude.com/en/articles/12622667-enterprise-configuration). |
-| [MCP servers](/en/mcp)                                | Configure in settings files                               | Connectors UI for local and SSH sessions, or settings files                                                                                                                                                           |
-| [Plugins](/en/plugins)                                | `/plugin` command                                         | Plugin manager UI                                                                                                                                                                                                     |
-| @mention files                                        | Text-based                                                | With autocomplete; local and SSH sessions only                                                                                                                                                                        |
-| File attachments                                      | Not available                                             | Images, PDFs                                                                                                                                                                                                          |
-| Session isolation                                     | [`--worktree`](/en/cli-reference) flag                    | Automatic worktrees                                                                                                                                                                                                   |
-| Multiple sessions                                     | Separate terminals                                        | Sidebar tabs                                                                                                                                                                                                          |
-| Recurring tasks                                       | Cron jobs, CI pipelines                                   | [Scheduled tasks](/en/desktop-scheduled-tasks)                                                                                                                                                                        |
-| Computer use                                          | [Enable via `/mcp`](/en/computer-use) on macOS            | [App and screen control](#let-claude-use-your-computer) on macOS and Windows                                                                                                                                          |
-| Dispatch integration                                  | Not available                                             | [Dispatch sessions](#sessions-from-dispatch) in the sidebar                                                                                                                                                           |
-| Scripting and automation                              | [`--print`](/en/cli-reference), [Agent SDK](/en/headless) | Not available                                                                                                                                                                                                         |
+| Feature                                               | CLI                                                       | Desktop                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Permission modes                                      | All modes including `dontAsk`                             | Ask permissions, Auto accept edits, Plan mode, Auto, and Bypass permissions via Settings                                                                                                                                                                                                                                                                                                     |
+| `--dangerously-skip-permissions`                      | CLI flag                                                  | Bypass permissions mode. Enable in Settings → Claude Code → "Allow bypass permissions mode"                                                                                                                                                                                                                                                                                                  |
+| [Third-party providers](/en/third-party-integrations) | Bedrock, Vertex AI, Foundry                               | Anthropic's API by default. Enterprise deployments can configure Vertex AI and gateway providers. See the [enterprise configuration guide](https://support.claude.com/en/articles/12622667-enterprise-configuration). To run the Code tab on Bedrock, Vertex AI, Foundry, or a self-hosted LLM gateway, see the [Cowork on 3P research preview](https://claude.com/docs/cowork/3p/overview). |
+| [MCP servers](/en/mcp)                                | Configure in settings files                               | Connectors UI for local and SSH sessions, or settings files                                                                                                                                                                                                                                                                                                                                  |
+| [Plugins](/en/plugins)                                | `/plugin` command                                         | Plugin manager UI                                                                                                                                                                                                                                                                                                                                                                            |
+| @mention files                                        | Text-based                                                | With autocomplete; local and SSH sessions only                                                                                                                                                                                                                                                                                                                                               |
+| File attachments                                      | Not available                                             | Images, PDFs                                                                                                                                                                                                                                                                                                                                                                                 |
+| Session isolation                                     | [`--worktree`](/en/cli-reference) flag                    | Automatic worktrees                                                                                                                                                                                                                                                                                                                                                                          |
+| Multiple sessions                                     | Separate terminals                                        | Sidebar tabs                                                                                                                                                                                                                                                                                                                                                                                 |
+| Recurring tasks                                       | Cron jobs, CI pipelines                                   | [Scheduled tasks](/en/desktop-scheduled-tasks)                                                                                                                                                                                                                                                                                                                                               |
+| Computer use                                          | [Enable via `/mcp`](/en/computer-use) on macOS            | [App and screen control](#let-claude-use-your-computer) on macOS and Windows                                                                                                                                                                                                                                                                                                                 |
+| Dispatch integration                                  | Not available                                             | [Dispatch sessions](#sessions-from-dispatch) in the sidebar                                                                                                                                                                                                                                                                                                                                  |
+| Scripting and automation                              | [`--print`](/en/cli-reference), [Agent SDK](/en/headless) | Not available                                                                                                                                                                                                                                                                                                                                                                                |
 
 ### What's not available in Desktop
 
-The following features are only available in the CLI or VS Code extension:
+The following features are only available in the CLI or VS Code extension, except where noted:
 
-* **Third-party providers**: Desktop connects to Anthropic's API by default. Enterprise deployments can configure Vertex AI and gateway providers via [managed settings](https://support.claude.com/en/articles/12622667-enterprise-configuration). For Bedrock or Foundry, use the [CLI](/en/quickstart).
-* **Linux**: the desktop app is available on macOS and Windows only.
+* **Third-party providers**: Desktop connects to Anthropic's API by default. Enterprise deployments can configure Vertex AI and gateway providers via [managed settings](https://support.claude.com/en/articles/12622667-enterprise-configuration). For Bedrock or Foundry in the CLI, see the [quickstart](/en/quickstart). As an exception to the section above, the [Cowork on 3P research preview](https://claude.com/docs/cowork/3p/overview) runs the Code tab on Bedrock, Vertex AI, Foundry, or a self-hosted LLM gateway.
+* **Linux**: the desktop app is available on macOS and Windows only. On Linux, use the [CLI](/en/quickstart).
 * **Inline code suggestions**: Desktop does not provide autocomplete-style suggestions. It works through conversational prompts and explicit code changes.
-* **Agent teams**: multi-agent orchestration is available via the [CLI](/en/agent-teams) and [Agent SDK](/en/headless), not in Desktop.
+* **Agent teams**: parallel Claude Code sessions that message each other are available in the [CLI](/en/agent-teams), not in Desktop. For multi-agent work inside one session, use [dynamic workflows](/en/workflows), which run in Desktop.
+* **Terminal-dialog commands**: built-in commands that open an interactive panel in the terminal, such as `/permissions`, `/config`, `/agents`, and `/doctor`, are not available in the Code tab and reply with `isn't available in this environment`. Edit [settings files](/en/settings) directly to manage permission rules and configuration, or run the command from the standalone CLI.
 
 ## Troubleshooting
 
@@ -722,7 +773,7 @@ If MCP server toggles don't respond or servers fail to connect on Windows, check
 
 ### "Branch doesn't exist yet" when opening in CLI
 
-Remote sessions can create branches that don't exist on your local machine. Click the branch name in the session toolbar to copy it, then fetch it locally:
+Cloud sessions can create branches that don't exist on your local machine. Click the branch name in the session toolbar to copy it, then fetch it locally:
 
 ```bash theme={null}
 git fetch origin <branch-name>

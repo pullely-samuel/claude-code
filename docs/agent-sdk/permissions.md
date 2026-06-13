@@ -18,15 +18,19 @@ When Claude requests a tool, the SDK checks permissions in this order:
 
 <Steps>
   <Step title="Hooks">
-    Run [hooks](/en/agent-sdk/hooks) first, which can allow, deny, or continue to the next step
+    Run [hooks](/en/agent-sdk/hooks) first. A hook can deny the call outright or pass it on. A hook that returns `allow` does not skip the deny and ask rules below; those are evaluated regardless of the hook result.
   </Step>
 
   <Step title="Deny rules">
-    Check `deny` rules (from `disallowed_tools` and [settings.json](/en/settings#permission-settings)). If a deny rule matches, the tool is blocked, even in `bypassPermissions` mode.
+    Check `deny` rules (from `disallowed_tools` and [settings.json](/en/settings#permission-settings)). If a deny rule matches, the tool is blocked, even in `bypassPermissions` mode. Bare-name deny rules like `Bash` remove the tool from Claude's context before this evaluation begins, so only scoped rules like `Bash(rm *)` are checked at this step.
+  </Step>
+
+  <Step title="Ask rules">
+    Check `ask` rules from [settings.json](/en/settings#permission-settings). If an ask rule matches, the call falls through to your [`canUseTool` callback](/en/agent-sdk/user-input) for confirmation, even in `bypassPermissions` mode. In `dontAsk` mode a matching ask rule is denied instead, because that mode never prompts.
   </Step>
 
   <Step title="Permission mode">
-    Apply the active [permission mode](#permission-modes). `bypassPermissions` approves everything that reaches this step. `acceptEdits` approves file operations. Other modes fall through.
+    Apply the active [permission mode](#permission-modes). `bypassPermissions` approves everything that reaches this step. `acceptEdits` approves file operations. `plan` routes file-edit and shell-write tools to your `canUseTool` callback regardless of allow rules, so write operations cannot be auto-approved while planning. Other modes fall through.
   </Step>
 
   <Step title="Allow rules">
@@ -38,7 +42,7 @@ When Claude requests a tool, the SDK checks permissions in this order:
   </Step>
 </Steps>
 
-<img src="https://mintcdn.com/claude-code/gvy2DIUELtNA8qD3/images/agent-sdk/permissions-flow.svg?fit=max&auto=format&n=gvy2DIUELtNA8qD3&q=85&s=0ccd63043a9ffc2a34d863602e043f72" alt="Permission evaluation flow diagram" width="920" height="260" data-path="images/agent-sdk/permissions-flow.svg" />
+<img src="https://mintcdn.com/claude-code/ikqp3_70mqIahteV/images/agent-sdk/permissions-flow.svg?fit=max&auto=format&n=ikqp3_70mqIahteV&q=85&s=cc94220087262cd48c9b64a14c4e1c2c" alt="Diagram of the five-step permission evaluation flow matching the steps above: a tool request passes through hooks, deny rules, permission mode, allow rules, and canUseTool. Hooks, deny rules, and canUseTool can route down to Blocked; permission mode bypass, allow rules, and canUseTool can route up to Execute." width="1024" height="260" data-path="images/agent-sdk/permissions-flow.svg" />
 
 This page focuses on **allow and deny rules** and **permission modes**. For the other steps:
 
@@ -47,12 +51,16 @@ This page focuses on **allow and deny rules** and **permission modes**. For the 
 
 ## Allow and deny rules
 
-`allowed_tools` and `disallowed_tools` (TypeScript: `allowedTools` / `disallowedTools`) add entries to the allow and deny rule lists in the evaluation flow above. They control whether a tool call is approved, not whether the tool is available to Claude.
+`allowed_tools` and `disallowed_tools` (TypeScript: `allowedTools` / `disallowedTools`) add entries to the allow and deny rule lists in the evaluation flow above. Allow rules only affect approval: a tool not listed in `allowed_tools` is still available to Claude and falls through to the permission mode. Deny rules behave differently depending on whether they name a tool or scope a pattern within one.
 
-| Option                           | Effect                                                                                                                           |
-| :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------- |
-| `allowed_tools=["Read", "Grep"]` | `Read` and `Grep` are auto-approved. Tools not listed here still exist and fall through to the permission mode and `canUseTool`. |
-| `disallowed_tools=["Bash"]`      | `Bash` is always denied. Deny rules are checked first and hold in every permission mode, including `bypassPermissions`.          |
+| Option                            | Effect                                                                                                                                                                             |
+| :-------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowed_tools=["Read", "Grep"]`  | `Read` and `Grep` are auto-approved. Tools not listed here still exist and fall through to the permission mode and `canUseTool`.                                                   |
+| `disallowed_tools=["Bash"]`       | The `Bash` tool definition is removed from the request. Claude does not see the tool and cannot attempt it.                                                                        |
+| `disallowed_tools=["Bash(rm *)"]` | `Bash` stays available. Calls matching `rm *` are denied in every permission mode, including `bypassPermissions`. Other `Bash` calls fall through to the permission mode.          |
+| `disallowed_tools=["*"]`          | Every tool definition is removed from the request. Tool-name globs are supported in deny rules: `"*"` matches every tool and `"mcp__*"` matches every MCP tool across all servers. |
+
+Allow rules accept tool-name globs only after a literal `mcp__<server>__` prefix. The server segment must be glob-free so the rule names a specific server you configured: `mcp__puppeteer__*` matches every tool from the `puppeteer` server, and `mcp__github__get_*` matches its `get_` tools. An unanchored entry like `allowed_tools=["*"]` or `allowed_tools=["mcp__*"]` is ignored with a startup warning and does not auto-approve anything.
 
 For a locked-down agent, pair `allowedTools` with `permissionMode: "dontAsk"`. Listed tools are approved; anything else is denied outright instead of prompting:
 
@@ -82,12 +90,12 @@ The SDK supports these permission modes:
 | `default`                | Standard permission behavior | No auto-approvals; unmatched tools trigger your `canUseTool` callback                                                                         |
 | `dontAsk`                | Deny instead of prompting    | Anything not pre-approved by `allowed_tools` or rules is denied; `canUseTool` is never called                                                 |
 | `acceptEdits`            | Auto-accept file edits       | File edits and [filesystem operations](#accept-edits-mode-acceptedits) (`mkdir`, `rm`, `mv`, etc.) are automatically approved                 |
-| `bypassPermissions`      | Bypass all permission checks | All tools run without permission prompts (use with caution)                                                                                   |
-| `plan`                   | Planning mode                | No tool execution; Claude plans without making changes                                                                                        |
+| `bypassPermissions`      | Bypass permission checks     | Tools run without permission prompts, unless an explicit [`ask` rule](#how-permissions-are-evaluated) matches (use with caution)              |
+| `plan`                   | Planning mode                | Claude explores and plans without editing your source files; file edits are never auto-approved and prompt through your `canUseTool` callback |
 | `auto` (TypeScript only) | Model-classified approvals   | A model classifier approves or denies each tool call. See [Auto mode](/en/permission-modes#eliminate-prompts-with-auto-mode) for availability |
 
 <Warning>
-  **Subagent inheritance:** When the parent uses `bypassPermissions`, `acceptEdits`, or `auto`, all subagents inherit that mode and it cannot be overridden per subagent. Subagents may have different system prompts and less constrained behavior than your main agent, so inheriting `bypassPermissions` grants them full, autonomous system access without any approval prompts.
+  **Subagent inheritance:** When the parent uses `bypassPermissions`, `acceptEdits`, or `auto`, all subagents inherit that mode and it cannot be overridden per subagent. Subagents may have different system prompts and less constrained behavior than your main agent, so inheriting `bypassPermissions` grants them full, autonomous system access. An explicit [`ask` rule](#how-permissions-are-evaluated) still forces a prompt.
 </Warning>
 
 ### Set permission mode
@@ -145,24 +153,24 @@ You can set the permission mode once when starting a query, or change it dynamic
     <CodeGroup>
       ```python Python theme={null}
       import asyncio
-      from claude_agent_sdk import query, ClaudeAgentOptions
+      from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions
 
 
       async def main():
-          q = query(
-              prompt="Help me refactor this code",
+          async with ClaudeSDKClient(
               options=ClaudeAgentOptions(
                   permission_mode="default",  # Start in default mode
-              ),
-          )
+              )
+          ) as client:
+              await client.query("Help me refactor this code")
 
-          # Change mode dynamically mid-session
-          await q.set_permission_mode("acceptEdits")
+              # Change mode dynamically mid-session
+              await client.set_permission_mode("acceptEdits")
 
-          # Process messages with the new permission mode
-          async for message in q:
-              if hasattr(message, "result"):
-                  print(message.result)
+              # Process messages with the new permission mode
+              async for message in client.receive_response():
+                  if hasattr(message, "result"):
+                      print(message.result)
 
 
       asyncio.run(main())
@@ -229,7 +237,7 @@ Auto-approves all tool uses without prompts. Hooks still execute and can block o
 
 #### Plan mode (`plan`)
 
-Prevents tool execution entirely. Claude can analyze code and create plans but cannot make changes. Claude may use `AskUserQuestion` to clarify requirements before finalizing the plan. See [Handle approvals and user input](/en/agent-sdk/user-input#handle-clarifying-questions) for handling these prompts.
+Claude explores the codebase and produces a plan without editing your source files. Read-only tools run as in default mode. File edits are never auto-approved in plan mode, even when an allow rule matches. They prompt through your `canUseTool` callback instead. Claude may use `AskUserQuestion` to clarify requirements before finalizing the plan. See [Handle approvals and user input](/en/agent-sdk/user-input#handle-clarifying-questions) for handling these prompts.
 
 **Use when:** you want Claude to propose changes without executing them, such as during code review or when you need to approve changes before they're made.
 

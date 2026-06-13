@@ -21,6 +21,7 @@ This guide covers how to define tools with input schemas and handlers, bundle th
 | Let Claude call tools in parallel            | Set `readOnlyHint: true` on tools with no side effects. See [Add tool annotations](#add-tool-annotations).                                                                                                    |
 | Handle errors without stopping the loop      | Return `isError: true` instead of throwing. See [Handle errors](#handle-errors).                                                                                                                              |
 | Return images or files                       | Use `image` or `resource` blocks in the content array. See [Return images and resources](#return-images-and-resources).                                                                                       |
+| Return a machine-readable JSON result        | Set `structuredContent` on the result. See [Return structured data](#return-structured-data).                                                                                                                 |
 | Scale to many tools                          | Use [tool search](/en/agent-sdk/tool-search) to load tools on demand.                                                                                                                                         |
 
 ## Create a custom tool
@@ -31,10 +32,11 @@ A tool is defined by four parts, passed as arguments to the [`tool()`](/en/agent
 * **Description:** what the tool does. Claude reads this to decide when to call it.
 * **Input schema:** the arguments Claude must provide. In TypeScript this is always a [Zod schema](https://zod.dev/), and the handler's `args` are typed from it automatically. In Python this is a dict mapping names to types, like `{"latitude": float}`, which the SDK converts to JSON Schema for you. The Python decorator also accepts a full [JSON Schema](https://json-schema.org/understanding-json-schema/about) dict directly when you need enums, ranges, optional fields, or nested objects.
 * **Handler:** the async function that runs when Claude calls the tool. It receives the validated arguments and must return an object with:
-  * `content` (required): an array of result blocks, each with a `type` of `"text"`, `"image"`, or `"resource"`. See [Return images and resources](#return-images-and-resources) for non-text blocks.
+  * `content` (required): an array of result blocks, each with a `type` of `"text"`, `"image"`, `"audio"`, `"resource"`, or `"resource_link"`. See [Return images and resources](#return-images-and-resources) for non-text blocks.
+  * `structuredContent` (optional): a JSON object holding the result as machine-readable data, returned alongside `content`. See [Return structured data](#return-structured-data).
   * `isError` (optional): set to `true` to signal a tool failure so Claude can react to it. See [Handle errors](#handle-errors).
 
-After defining a tool, wrap it in a server with [`createSdkMcpServer`](/en/agent-sdk/typescript#create-sdk-mcp-server) (TypeScript) or [`create_sdk_mcp_server`](/en/agent-sdk/python#create-sdk-mcp-server) (Python). The server runs in-process inside your application, not as a separate process.
+After defining a tool, wrap it in a server with [`createSdkMcpServer`](/en/agent-sdk/typescript#createsdkmcpserver) (TypeScript) or [`create_sdk_mcp_server`](/en/agent-sdk/python#create_sdk_mcp_server) (Python). The server runs in-process inside your application, not as a separate process.
 
 ### Weather tool example
 
@@ -306,7 +308,7 @@ This example adds `readOnlyHint` to the `get_temperature` tool from the [weather
   ```
 </CodeGroup>
 
-See `ToolAnnotations` in the [TypeScript](/en/agent-sdk/typescript#tool-annotations) or [Python](/en/agent-sdk/python#tool-annotations) reference.
+See `ToolAnnotations` in the [TypeScript](/en/agent-sdk/typescript#toolannotations) or [Python](/en/agent-sdk/python#toolannotations) reference.
 
 ## Control tool access
 
@@ -321,16 +323,16 @@ When MCP tools are exposed to Claude, their names follow a specific format:
 
 ### Configure allowed tools
 
-The `tools` option and the allowed/disallowed lists operate on separate layers. `tools` controls which built-in tools appear in Claude's context. Allowed and disallowed tool lists control whether calls are approved or denied once Claude attempts them.
+The `tools` option and the allowed/disallowed lists affect two layers: availability, which controls whether a tool appears in Claude's context, and permission, which controls whether a call is approved once Claude attempts it. `tools` and bare-name `disallowedTools` entries change availability. `allowedTools` and scoped `disallowedTools` rules change permission only.
 
-| Option                    | Layer        | Effect                                                                                                                                            |
-| :------------------------ | :----------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tools: ["Read", "Grep"]` | Availability | Only the listed built-ins are in Claude's context. Unlisted built-ins are removed. MCP tools are unaffected.                                      |
-| `tools: []`               | Availability | All built-ins are removed. Claude can only use your MCP tools.                                                                                    |
-| allowed tools             | Permission   | Listed tools run without a permission prompt. Unlisted tools remain available; calls go through the [permission flow](/en/agent-sdk/permissions). |
-| disallowed tools          | Permission   | Every call to a listed tool is denied. The tool stays in Claude's context, so Claude may still attempt it before the call is rejected.            |
+| Option                    | Layer        | Effect                                                                                                                                                                                                          |
+| :------------------------ | :----------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tools: ["Read", "Grep"]` | Availability | Only the listed built-ins are in Claude's context. Unlisted built-ins are removed. MCP tools are unaffected.                                                                                                    |
+| `tools: []`               | Availability | All built-ins are removed. Claude can only use your MCP tools.                                                                                                                                                  |
+| allowed tools             | Permission   | Listed tools run without a permission prompt. Unlisted tools remain available; calls go through the [permission flow](/en/agent-sdk/permissions).                                                               |
+| disallowed tools          | Both         | A bare tool name such as `"Bash"` removes the tool from Claude's context, the same as omitting it from `tools`. A scoped rule such as `"Bash(rm *)"` leaves the tool in context and denies only matching calls. |
 
-To limit which built-ins Claude can use, prefer `tools` over disallowed tools. Omitting a tool from `tools` removes it from context so Claude never attempts it; listing it in `disallowedTools` (Python: `disallowed_tools`) blocks the call but leaves the tool visible, so Claude may waste a turn trying it. See [Configure permissions](/en/agent-sdk/permissions) for the full evaluation order.
+To remove a built-in entirely, omit it from `tools` or list its bare name in `disallowedTools` (Python: `disallowed_tools`); both keep the tool out of context so Claude never attempts it. A scoped `disallowedTools` rule blocks matching calls but leaves the tool visible, so Claude may waste a turn trying it. See [Configure permissions](/en/agent-sdk/permissions) for the full evaluation order.
 
 ## Handle errors
 
@@ -437,7 +439,7 @@ The example below catches two kinds of failures inside the handler instead of le
 
 ## Return images and resources
 
-The `content` array in a tool result accepts `text`, `image`, and `resource` blocks. You can mix them in the same response.
+The `content` array in a tool result accepts `text`, `image`, `audio`, `resource`, and `resource_link` blocks. You can mix them in the same response. Audio blocks are saved to disk and Claude receives a text block with the saved file path. Resource link blocks are converted to a text block containing the link's name, URI, and description.
 
 ### Images
 
@@ -549,6 +551,33 @@ This example shows a resource block returned from inside a tool handler. The URI
 </CodeGroup>
 
 These block shapes come from the MCP `CallToolResult` type. See the [MCP specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result) for the full definition.
+
+## Return structured data
+
+`structuredContent` is an optional JSON object on the result, separate from the `content` array. Use it to return raw values that Claude can read as exact fields instead of parsing them out of a text string or image.
+
+When `structuredContent` is set, Claude receives the JSON plus any image or resource blocks from `content`. Text blocks in `content` are not forwarded, since they are assumed to duplicate the structured data. The example below renders a chart as an image block and returns the data points behind it in `structuredContent` from the same handler.
+
+```typescript TypeScript theme={null}
+return {
+  content: [
+    {
+      type: "image",
+      data: chartPngBuffer.toString("base64"),
+      mimeType: "image/png"
+    }
+  ],
+  structuredContent: {
+    series: "temperature_2m",
+    unit: "fahrenheit",
+    points: [62.1, 63.4, 65.0, 64.2]
+  }
+};
+```
+
+<Note>
+  The Python `@tool` decorator forwards only `content` and `is_error` from the handler's return dict. To return `structuredContent` from Python, run a [standalone MCP server](/en/agent-sdk/mcp) instead of an in-process SDK server.
+</Note>
 
 ## Example: unit converter
 

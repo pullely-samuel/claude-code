@@ -14,7 +14,7 @@ When you start an agent, the SDK runs the same [execution loop that powers Claud
 
 Every agent session follows the same cycle:
 
-<img src="https://mintcdn.com/claude-code/gvy2DIUELtNA8qD3/images/agent-loop-diagram.svg?fit=max&auto=format&n=gvy2DIUELtNA8qD3&q=85&s=192e1bd6c8a2950a16e5ee0b94e27e26" alt="Agent loop: prompt enters, Claude evaluates, branches to tool calls or final answer" width="680" height="150" data-path="images/agent-loop-diagram.svg" />
+<img src="https://mintcdn.com/claude-code/ikqp3_70mqIahteV/images/agent-loop-diagram.svg?fit=max&auto=format&n=ikqp3_70mqIahteV&q=85&s=1c6e8f28d80dba14a7287419656f1237" alt="Diagram of the agent loop: your prompt enters the agentic loop, where Claude evaluates and either requests tool calls, whose results feed back into another evaluation, or returns the final answer" width="720" height="212" data-path="images/agent-loop-diagram.svg" />
 
 1. **Receive prompt.** Claude receives your prompt, along with the system prompt, tool definitions, and conversation history. The SDK yields a [`SystemMessage`](#message-types) with subtype `"init"` containing session metadata.
 2. **Evaluate and respond.** Claude evaluates the current state and determines how to proceed. It may respond with text, request one or more tool calls, or both. The SDK yields an [`AssistantMessage`](#message-types) containing the text and any tool call requests.
@@ -47,7 +47,7 @@ Without limits, the loop runs until Claude finishes on its own, which is fine fo
 
 As the loop runs, the SDK yields a stream of messages. Each message carries a type that tells you what stage of the loop it came from. The five core types are:
 
-* **`SystemMessage`:** session lifecycle events. The `subtype` field distinguishes them: `"init"` is the first message (session metadata), and `"compact_boundary"` fires after [compaction](#automatic-compaction). In TypeScript, the compact boundary is its own [`SDKCompactBoundaryMessage`](/en/agent-sdk/typescript#sdk-compact-boundary-message) type rather than a subtype of `SDKSystemMessage`.
+* **`SystemMessage`:** session lifecycle events. The `subtype` field distinguishes them: `"init"` is the first message (session metadata), and `"compact_boundary"` fires after [compaction](#automatic-compaction). In TypeScript, the compact boundary is its own [`SDKCompactBoundaryMessage`](/en/agent-sdk/typescript#sdkcompactboundarymessage) type rather than a subtype of `SDKSystemMessage`.
 * **`AssistantMessage`:** emitted after each Claude response, including the final text-only one. Contains text content blocks and tool call blocks from that turn.
 * **`UserMessage`:** emitted after each tool execution with the tool result content sent back to Claude. Also emitted for any user inputs you stream mid-loop.
 * **`StreamEvent`:** only emitted when partial messages are enabled. Contains raw API streaming events (text deltas, tool input chunks). See [Stream responses](/en/agent-sdk/streaming-output).
@@ -110,14 +110,14 @@ Tools give your agent the ability to take action. Without tools, Claude can only
 
 The SDK includes the same tools that power Claude Code:
 
-| Category            | Tools                                            | What they do                                                                |
-| :------------------ | :----------------------------------------------- | :-------------------------------------------------------------------------- |
-| **File operations** | `Read`, `Edit`, `Write`                          | Read, modify, and create files                                              |
-| **Search**          | `Glob`, `Grep`                                   | Find files by pattern, search content with regex                            |
-| **Execution**       | `Bash`                                           | Run shell commands, scripts, git operations                                 |
-| **Web**             | `WebSearch`, `WebFetch`                          | Search the web, fetch and parse pages                                       |
-| **Discovery**       | `ToolSearch`                                     | Dynamically find and load tools on-demand instead of preloading all of them |
-| **Orchestration**   | `Agent`, `Skill`, `AskUserQuestion`, `TodoWrite` | Spawn subagents, invoke skills, ask the user, track tasks                   |
+| Category            | Tools                                                           | What they do                                                                |
+| :------------------ | :-------------------------------------------------------------- | :-------------------------------------------------------------------------- |
+| **File operations** | `Read`, `Edit`, `Write`                                         | Read, modify, and create files                                              |
+| **Search**          | `Glob`, `Grep`                                                  | Find files by pattern, search content with regex                            |
+| **Execution**       | `Bash`                                                          | Run shell commands, scripts, git operations                                 |
+| **Web**             | `WebSearch`, `WebFetch`                                         | Search the web, fetch and parse pages                                       |
+| **Discovery**       | `ToolSearch`                                                    | Dynamically find and load tools on-demand instead of preloading all of them |
+| **Orchestration**   | `Agent`, `Skill`, `AskUserQuestion`, `TaskCreate`, `TaskUpdate` | Spawn subagents, invoke skills, ask the user, track tasks                   |
 
 Beyond built-in tools, you can:
 
@@ -141,11 +141,11 @@ When a tool is denied, Claude receives a rejection message as the tool result an
 
 When Claude requests multiple tool calls in a single turn, both SDKs can run them concurrently or sequentially depending on the tool. Read-only tools (like `Read`, `Glob`, `Grep`, and MCP tools marked as read-only) can run concurrently. Tools that modify state (like `Edit`, `Write`, and `Bash`) run sequentially to avoid conflicts.
 
-Custom tools default to sequential execution. To enable parallel execution for a custom tool, mark it as read-only in its annotations: `readOnly` in [TypeScript](/en/agent-sdk/typescript#tool) or `readOnlyHint` in [Python](/en/agent-sdk/python#tool).
+Custom tools default to sequential execution. To enable parallel execution for a custom tool, set `readOnlyHint` in its annotations. Both the [TypeScript](/en/agent-sdk/typescript#tool) and [Python](/en/agent-sdk/python#tool) SDKs use this field name from the MCP SDK.
 
 ## Control how the loop runs
 
-You can limit how many turns the loop takes, how much it costs, how deeply Claude reasons, and whether tools require approval before running. All of these are fields on [`ClaudeAgentOptions`](/en/agent-sdk/python#claude-agent-options) (Python) / [`Options`](/en/agent-sdk/typescript#options) (TypeScript).
+You can limit how many turns the loop takes, how much it costs, how deeply Claude reasons, and whether tools require approval before running. All of these are fields on [`ClaudeAgentOptions`](/en/agent-sdk/python#claudeagentoptions) (Python) / [`Options`](/en/agent-sdk/typescript#options) (TypeScript).
 
 ### Turns and budget
 
@@ -154,40 +154,40 @@ You can limit how many turns the loop takes, how much it costs, how deeply Claud
 | Max turns (`max_turns` / `maxTurns`)           | Maximum tool-use round trips | No limit |
 | Max budget (`max_budget_usd` / `maxBudgetUsd`) | Maximum cost before stopping | No limit |
 
-When either limit is hit, the SDK returns a `ResultMessage` with a corresponding error subtype (`error_max_turns` or `error_max_budget_usd`). See [Handle the result](#handle-the-result) for how to check these subtypes and [`ClaudeAgentOptions`](/en/agent-sdk/python#claude-agent-options) / [`Options`](/en/agent-sdk/typescript#options) for syntax.
+When either limit is hit, the SDK returns a `ResultMessage` with a corresponding error subtype (`error_max_turns` or `error_max_budget_usd`). See [Handle the result](#handle-the-result) for how to check these subtypes and [`ClaudeAgentOptions`](/en/agent-sdk/python#claudeagentoptions) / [`Options`](/en/agent-sdk/typescript#options) for syntax.
 
 ### Effort level
 
 The `effort` option controls how much reasoning Claude applies. Lower effort levels use fewer tokens per turn and reduce cost. Not all models support the effort parameter. See [Effort](https://platform.claude.com/docs/en/build-with-claude/effort) for which models support it.
 
-| Level      | Behavior                          | Good for                                          |
-| :--------- | :-------------------------------- | :------------------------------------------------ |
-| `"low"`    | Minimal reasoning, fast responses | File lookups, listing directories                 |
-| `"medium"` | Balanced reasoning                | Routine edits, standard tasks                     |
-| `"high"`   | Thorough analysis                 | Refactors, debugging                              |
-| `"xhigh"`  | Extended reasoning depth          | Coding and agentic tasks; recommended on Opus 4.7 |
-| `"max"`    | Maximum reasoning depth           | Multi-step problems requiring deep analysis       |
+| Level      | Behavior                          | Good for                                                       |
+| :--------- | :-------------------------------- | :------------------------------------------------------------- |
+| `"low"`    | Minimal reasoning, fast responses | File lookups, listing directories                              |
+| `"medium"` | Balanced reasoning                | Routine edits, standard tasks                                  |
+| `"high"`   | Thorough analysis                 | Refactors, debugging                                           |
+| `"xhigh"`  | Extended reasoning depth          | Coding and agentic tasks; recommended on Fable 5 and Opus 4.7+ |
+| `"max"`    | Maximum reasoning depth           | Multi-step problems requiring deep analysis                    |
 
-If you don't set `effort`, the Python SDK leaves the parameter unset and defers to the model's default behavior. The TypeScript SDK defaults to `"high"`.
+If you don't set `effort`, both SDKs leave the parameter unset and defer to the model's default behavior.
 
 <Note>
   `effort` trades latency and token cost for reasoning depth within each response. [Extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) is a separate feature that produces visible chain-of-thought blocks in the output. They are independent: you can set `effort: "low"` with extended thinking enabled, or `effort: "max"` without it.
 </Note>
 
-Use lower effort for agents doing simple, well-scoped tasks (like listing files or running a single grep) to reduce cost and latency. `effort` is set at the top-level `query()` options, not per-subagent.
+Use lower effort for agents doing simple, well-scoped tasks (like listing files or running a single grep) to reduce cost and latency. Set `effort` in the top-level `query()` options for the whole session, or per subagent with the `effort` field on [`AgentDefinition`](/en/agent-sdk/subagents#agentdefinition-configuration) to override the session level.
 
 ### Permission mode
 
 The permission mode option (`permission_mode` in Python, `permissionMode` in TypeScript) controls whether the agent asks for approval before using tools:
 
-| Mode                       | Behavior                                                                                                                                                                             |
-| :------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"default"`                | Tools not covered by allow rules trigger your approval callback; no callback means deny                                                                                              |
-| `"acceptEdits"`            | Auto-approves file edits and common filesystem commands (`mkdir`, `touch`, `mv`, `cp`, etc.); other Bash commands follow default rules                                               |
-| `"plan"`                   | No tool execution; Claude produces a plan for review                                                                                                                                 |
-| `"dontAsk"`                | Never prompts. Tools pre-approved by [permission rules](/en/settings#permission-settings) run, everything else is denied                                                             |
-| `"auto"` (TypeScript only) | Uses a model classifier to approve or deny each tool call. See [Auto mode](/en/permission-modes#eliminate-prompts-with-auto-mode) for availability and behavior                      |
-| `"bypassPermissions"`      | Runs all allowed tools without asking. Cannot be used when running as root on Unix. Use only in isolated environments where the agent's actions cannot affect systems you care about |
+| Mode                       | Behavior                                                                                                                                                                                                                                                                                                                                                                                                      |
+| :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `"default"`                | Tools not covered by allow rules trigger your approval callback; no callback means deny                                                                                                                                                                                                                                                                                                                       |
+| `"acceptEdits"`            | Auto-approves file edits and common filesystem commands (`mkdir`, `touch`, `mv`, `cp`, etc.); other Bash commands follow default rules                                                                                                                                                                                                                                                                        |
+| `"plan"`                   | Claude explores and plans without editing your source files; file edits are never auto-approved and prompt through your `canUseTool` callback                                                                                                                                                                                                                                                                 |
+| `"dontAsk"`                | Never prompts. Tools pre-approved by [permission rules](/en/settings#permission-settings) run, everything else is denied                                                                                                                                                                                                                                                                                      |
+| `"auto"` (TypeScript only) | Uses a model classifier to approve or deny each tool call. See [Auto mode](/en/permission-modes#eliminate-prompts-with-auto-mode) for availability and behavior                                                                                                                                                                                                                                               |
+| `"bypassPermissions"`      | Runs all allowed tools without asking, unless an explicit [`ask` rule](/en/settings#permission-settings) matches; see [How permissions are evaluated](/en/agent-sdk/permissions#how-permissions-are-evaluated) for where ask rules sit in the precedence order. Cannot be used when running as root on Unix. Use only in isolated environments where the agent's actions cannot affect systems you care about |
 
 For interactive applications, use `"default"` with a tool approval callback to surface approval prompts. For autonomous agents on a dev machine, `"acceptEdits"` auto-approves file edits and common filesystem commands (`mkdir`, `touch`, `mv`, `cp`, etc.) while still gating other `Bash` commands behind allow rules. Reserve `"bypassPermissions"` for CI, containers, or other isolated environments. See [Permissions](/en/agent-sdk/permissions) for full details.
 
@@ -203,13 +203,13 @@ The context window is the total amount of information available to Claude during
 
 Here's how each component affects context in the SDK:
 
-| Source                   | When it loads                                                             | Impact                                                                                                                             |
-| :----------------------- | :------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------- |
-| **System prompt**        | Every request                                                             | Small fixed cost, always present                                                                                                   |
-| **CLAUDE.md files**      | Session start, via [`settingSources`](/en/agent-sdk/claude-code-features) | Full content in every request (but prompt-cached, so only the first request pays full cost)                                        |
-| **Tool definitions**     | Every request                                                             | Each tool adds its schema; use [MCP tool search](/en/agent-sdk/mcp#mcp-tool-search) to load tools on-demand instead of all at once |
-| **Conversation history** | Accumulates over turns                                                    | Grows with each turn: prompts, responses, tool inputs, tool outputs                                                                |
-| **Skill descriptions**   | Session start, via setting sources                                        | Short summaries; full content loads only when invoked                                                                              |
+| Source                   | When it loads                                                             | Impact                                                                                                                                                                                                                                                                                                                  |
+| :----------------------- | :------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **System prompt**        | Every request                                                             | Small fixed cost, always present                                                                                                                                                                                                                                                                                        |
+| **CLAUDE.md files**      | Session start, via [`settingSources`](/en/agent-sdk/claude-code-features) | Full content in every request (but prompt-cached, so only the first request pays full cost)                                                                                                                                                                                                                             |
+| **Tool definitions**     | Every request; MCP schemas deferred by default                            | Built-in tool schemas load every request. [Tool search](/en/agent-sdk/mcp#mcp-tool-search) defers MCP tool schemas by default, falling back to upfront loading on Vertex AI or a non-first-party `ANTHROPIC_BASE_URL`. See [Configure tool search](/en/agent-sdk/tool-search#configure-tool-search) for the full matrix |
+| **Conversation history** | Accumulates over turns                                                    | Grows with each turn: prompts, responses, tool inputs, tool outputs                                                                                                                                                                                                                                                     |
+| **Skill descriptions**   | Session start, via setting sources                                        | Short summaries; full content loads only when invoked                                                                                                                                                                                                                                                                   |
 
 Large tool outputs consume significant context. Reading a big file or running a command with verbose output can use thousands of tokens in a single turn. Context accumulates across turns, so longer sessions with many tool calls build up significantly more context than short ones.
 
@@ -223,7 +223,7 @@ You can customize compaction behavior in several ways:
 
 * **Summarization instructions in CLAUDE.md:** The compactor reads your CLAUDE.md like any other context, so you can include a section telling it what to preserve when summarizing. The section header is free-form (not a magic string); the compactor matches on intent.
 * **`PreCompact` hook:** Run custom logic before compaction occurs, for example to archive the full transcript. The hook receives a `trigger` field (`manual` or `auto`). See [hooks](/en/agent-sdk/hooks).
-* **Manual compaction:** Send `/compact` as a prompt string to trigger compaction on demand. (Slash commands sent this way are SDK inputs, not CLI-only shortcuts. See [slash commands in the SDK](/en/agent-sdk/slash-commands).)
+* **Manual compaction:** Send `/compact` as a prompt string to trigger compaction on demand. Commands sent this way are SDK inputs, not CLI-only shortcuts. See [commands in the SDK](/en/agent-sdk/slash-commands).
 
 <Accordion title="Example: Summarization instructions in CLAUDE.md">
   Add a section to your project's CLAUDE.md telling the compactor what to preserve. The header name isn't special; use any clear label.
@@ -244,8 +244,8 @@ You can customize compaction behavior in several ways:
 A few strategies for long-running agents:
 
 * **Use subagents for subtasks.** Each subagent starts with a fresh conversation (no prior message history, though it does load its own system prompt and project-level context like CLAUDE.md). It does not see the parent's turns, and only its final response returns to the parent as a tool result. The main agent's context grows by that summary, not by the full subtask transcript. See [What subagents inherit](/en/agent-sdk/subagents#what-subagents-inherit) for details.
-* **Be selective with tools.** Every tool definition takes context space. Use the `tools` field on [`AgentDefinition`](/en/agent-sdk/subagents#agent-definition-configuration) to scope subagents to the minimum set they need, and use [MCP tool search](/en/agent-sdk/mcp#mcp-tool-search) to load tools on demand instead of preloading all of them.
-* **Watch MCP server costs.** Each MCP server adds all its tool schemas to every request. A few servers with many tools can consume significant context before the agent does any work. The `ToolSearch` tool can help by loading tools on-demand instead of preloading all of them. See [MCP tool search](/en/agent-sdk/mcp#mcp-tool-search) for configuration.
+* **Be selective with tools.** Every tool definition takes context space. Use the `tools` field on [`AgentDefinition`](/en/agent-sdk/subagents#agentdefinition-configuration) to scope subagents to the minimum set they need.
+* **Watch MCP server costs.** [MCP tool search](/en/agent-sdk/mcp#mcp-tool-search) defers MCP tool schemas by default and loads them on demand. When tool search is off, on Vertex AI, or behind a non-first-party `ANTHROPIC_BASE_URL`, each MCP server adds all its tool schemas to every request, so a few servers with many tools can consume significant context before the agent does any work.
 * **Use lower effort for routine tasks.** Set [effort](#effort-level) to `"low"` for agents that only need to read files or list directories. This reduces token usage and cost.
 
 For a detailed breakdown of per-feature context costs, see [Understand context costs](/en/features-overview#understand-context-costs).
@@ -259,24 +259,24 @@ When you resume, the full context from previous turns is restored: files that we
 See [Session management](/en/agent-sdk/sessions) for the full guide on resume, continue, and fork patterns.
 
 <Note>
-  In Python, `ClaudeSDKClient` handles session IDs automatically across multiple calls. See the [Python SDK reference](/en/agent-sdk/python#choosing-between-query-and-claude-sdk-client) for details.
+  In Python, `ClaudeSDKClient` handles session IDs automatically across multiple calls. See the [Python SDK reference](/en/agent-sdk/python#choosing-between-query-and-claudesdkclient) for details.
 </Note>
 
 ## Handle the result
 
 When the loop ends, the `ResultMessage` tells you what happened and gives you the output. The `subtype` field (available in both SDKs) is the primary way to check termination state.
 
-| Result subtype                        | What happened                                                                    | `result` field available? |
-| :------------------------------------ | :------------------------------------------------------------------------------- | :-----------------------: |
-| `success`                             | Claude finished the task normally                                                |            Yes            |
-| `error_max_turns`                     | Hit the `maxTurns` limit before finishing                                        |             No            |
-| `error_max_budget_usd`                | Hit the `maxBudgetUsd` limit before finishing                                    |             No            |
-| `error_during_execution`              | An error interrupted the loop (for example, an API failure or cancelled request) |             No            |
-| `error_max_structured_output_retries` | Structured output validation failed after the configured retry limit             |             No            |
+| Result subtype                        | What happened                                                                                                                                                                           | `result` field available? |
+| :------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-----------------------: |
+| `success`                             | Claude finished the task normally                                                                                                                                                       |            Yes            |
+| `error_max_turns`                     | Hit the `maxTurns` limit before finishing                                                                                                                                               |             No            |
+| `error_max_budget_usd`                | Hit the `maxBudgetUsd` limit before finishing                                                                                                                                           |             No            |
+| `error_during_execution`              | An error interrupted the loop (for example, an API failure or cancelled request)                                                                                                        |             No            |
+| `error_max_structured_output_retries` | No valid structured output was produced within the configured retry limit: every attempt failed validation, or a model fallback retracted the completed output with no successful retry |             No            |
 
 The `result` field (the final text output) is only present on the `success` variant, so always check the subtype before reading it. All result subtypes carry `total_cost_usd`, `usage`, `num_turns`, and `session_id` so you can track cost and resume even after errors. In Python, `total_cost_usd` and `usage` are typed as optional and may be `None` on some error paths, so guard before formatting them. See [Tracking costs and usage](/en/agent-sdk/cost-tracking) for details on interpreting the `usage` fields.
 
-The result also includes a `stop_reason` field (`string | null` in TypeScript, `str | None` in Python) indicating why the model stopped generating on its final turn. Common values are `end_turn` (model finished normally), `max_tokens` (hit the output token limit), and `refusal` (the model declined the request). On error result subtypes, `stop_reason` carries the value from the last assistant response before the loop ended. To detect refusals, check `stop_reason === "refusal"` (TypeScript) or `stop_reason == "refusal"` (Python). See [`SDKResultMessage`](/en/agent-sdk/typescript#sdk-result-message) (TypeScript) or [`ResultMessage`](/en/agent-sdk/python#result-message) (Python) for the full type.
+The result also includes a `stop_reason` field (`string | null` in TypeScript, `str | None` in Python) indicating why the model stopped generating on its final turn. Common values are `end_turn` (model finished normally), `max_tokens` (hit the output token limit), and `refusal` (the model declined the request). On error result subtypes, `stop_reason` carries the value from the last assistant response before the loop ended. To detect refusals, check `stop_reason === "refusal"` (TypeScript) or `stop_reason == "refusal"` (Python). See [`SDKResultMessage`](/en/agent-sdk/typescript#sdkresultmessage) (TypeScript) or [`ResultMessage`](/en/agent-sdk/python#resultmessage) (Python) for the full type.
 
 ## Hooks
 

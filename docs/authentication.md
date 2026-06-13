@@ -14,7 +14,7 @@ After [installing Claude Code](/en/setup#install-claude-code), run `claude` in y
 
 If the browser doesn't open automatically, press `c` to copy the login URL to your clipboard, then paste it into your browser.
 
-If your browser shows a login code instead of redirecting back after you sign in, paste it into the terminal at the `Paste code here if prompted` prompt.
+If your browser shows a login code instead of redirecting back after you sign in, paste it into the terminal at the `Paste code here if prompted` prompt. This happens when the browser can't reach Claude Code's local callback server, which is common in WSL2, SSH sessions, and containers.
 
 You can authenticate with any of these account types:
 
@@ -25,7 +25,7 @@ You can authenticate with any of these account types:
 
 To log out and re-authenticate, type `/logout` at the Claude Code prompt.
 
-If you're having trouble logging in, see [authentication troubleshooting](/en/troubleshooting#authentication-issues).
+If you're having trouble logging in, see [authentication troubleshooting](/en/troubleshoot-install#login-and-authentication).
 
 ## Set up team authentication
 
@@ -113,13 +113,18 @@ For teams using Amazon Bedrock, Google Vertex AI, or Microsoft Foundry:
 
 Claude Code securely manages your authentication credentials:
 
-* **Storage location**: on macOS, credentials are stored in the encrypted macOS Keychain. On Linux and Windows, credentials are stored in `~/.claude/.credentials.json`, or under `$CLAUDE_CONFIG_DIR` if that variable is set. On Linux, the file is written with mode `0600`; on Windows, it inherits the access controls of your user profile directory.
+* **Storage location**:
+  * On macOS, credentials are stored in the encrypted macOS Keychain.
+  * On Linux, credentials are stored in `~/.claude/.credentials.json` with file mode `0600`.
+  * On Windows, credentials are stored in `%USERPROFILE%\.claude\.credentials.json` and inherit the access controls of your user profile directory, which restricts the file to your user account by default.
+  * If you've set the `CLAUDE_CONFIG_DIR` environment variable on Linux or Windows, the `.credentials.json` file lives under that directory instead.
+  * Claude Code manages `.credentials.json` through `/login` and `/logout`. To route requests through a custom API endpoint, set the [`ANTHROPIC_BASE_URL`](/en/env-vars) environment variable instead.
 * **Supported authentication types**: Claude.ai credentials, Claude API credentials, Azure Auth, Bedrock Auth, and Vertex Auth.
 * **Custom credential scripts**: the [`apiKeyHelper`](/en/settings#available-settings) setting can be configured to run a shell script that returns an API key.
 * **Refresh intervals**: by default, `apiKeyHelper` is called after 5 minutes or on HTTP 401 response. Set `CLAUDE_CODE_API_KEY_HELPER_TTL_MS` environment variable for custom refresh intervals.
 * **Slow helper notice**: if `apiKeyHelper` takes longer than 10 seconds to return a key, Claude Code displays a warning notice in the prompt bar showing the elapsed time. If you see this notice regularly, check whether your credential script can be optimized.
 
-`apiKeyHelper`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_AUTH_TOKEN` apply to terminal CLI sessions only. Claude Desktop and remote sessions use OAuth exclusively and do not call `apiKeyHelper` or read API key environment variables.
+`apiKeyHelper`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_AUTH_TOKEN` apply to terminal CLI sessions only. Claude Desktop and cloud sessions use OAuth exclusively and do not call `apiKeyHelper` or read API key environment variables.
 
 ### Authentication precedence
 
@@ -137,6 +142,10 @@ If you have an active Claude subscription but also have `ANTHROPIC_API_KEY` set 
 [Claude Code on the Web](/en/claude-code-on-the-web) always uses your subscription credentials. `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` in the sandbox environment do not override them.
 
 ### Generate a long-lived token
+
+<Note>
+  Starting June 15, 2026, Agent SDK and `claude -p` usage on subscription plans will draw from a new monthly Agent SDK credit, separate from your interactive usage limits. See [Use the Claude Agent SDK with your Claude plan](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan) for details.
+</Note>
 
 For CI pipelines, scripts, or other environments where interactive browser login isn't available, generate a one-year OAuth token with `claude setup-token`:
 

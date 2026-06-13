@@ -7,7 +7,7 @@
 > Build an MCP server that pushes webhooks, alerts, and chat messages into a Claude Code session. Reference for the channel contract: capability declaration, notification events, reply tools, sender gating, and permission relay.
 
 <Note>
-  Channels are in [research preview](/en/channels#research-preview) and require Claude Code v2.1.80 or later. They require claude.ai login. Console and API key authentication is not supported. Team and Enterprise organizations must [explicitly enable them](/en/channels#enterprise-controls).
+  Channels are in [research preview](/en/channels#research-preview) and require Claude Code v2.1.80 or later. Team and Enterprise organizations must [explicitly enable them](/en/channels#enterprise-controls).
 </Note>
 
 A channel is an MCP server that pushes events into a Claude Code session so Claude can react to things happening outside the terminal.
@@ -20,7 +20,7 @@ This page covers:
 * [What you need](#what-you-need): requirements and general steps
 * [Example: build a webhook receiver](#example-build-a-webhook-receiver): a minimal one-way walkthrough
 * [Server options](#server-options): the constructor fields
-* [Notification format](#notification-format): the event payload
+* [Notification format](#notification-format): the event payload and delivery behavior
 * [Expose a reply tool](#expose-a-reply-tool): let Claude send messages back
 * [Gate inbound messages](#gate-inbound-messages): sender checks to prevent prompt injection
 * [Relay permission prompts](#relay-permission-prompts): forward tool approval prompts to remote channels
@@ -136,9 +136,13 @@ This example uses [Bun](https://bun.sh) as the runtime for its built-in HTTP ser
     claude --dangerously-load-development-channels server:webhook
     ```
 
+    The first time you start a session in this project, Claude Code asks for consent before using the new server from `.mcp.json`. The dialog reports "New MCP server found in this project: webhook". Select **Use this MCP server** to continue.
+
     When Claude Code starts, it reads your MCP config, spawns your `webhook.ts` as a subprocess, and the HTTP listener starts automatically on the port you configured (8788 in this example). You don't need to run the server yourself.
 
-    If you see "blocked by org policy," your Team or Enterprise admin needs to [enable channels](/en/channels#enterprise-controls) first.
+    A dim notice below the startup banner confirms the channel is registered: `Channels (experimental) messages from server:webhook inject directly in this session · restart without --dangerously-load-development-channels to stop`.
+
+    If you see "blocked by org policy," your organization admin needs to [enable channels](/en/channels#enterprise-controls) first.
 
     In a separate terminal, simulate a webhook by sending an HTTP POST with a message to your server. This example sends a CI failure alert to port 8788 (or whichever port you configured):
 
@@ -240,6 +244,12 @@ The event arrives in Claude's context wrapped in a `<channel>` tag. The `source`
 build failed on main: https://ci.example.com/run/1234
 </channel>
 ```
+
+Notifications are not acknowledged. The `await` on `mcp.notification()` resolves when the message is written to the transport, not when Claude has processed it. If the session hasn't loaded your server as a channel, or the organization policy blocks it, events are dropped silently with no error returned to your server.
+
+If you need delivery confirmation, track event state in your server and expose a [reply tool](#expose-a-reply-tool) that Claude can call to report status back.
+
+Events queue into the session and are processed in order. If several notifications arrive while Claude is busy, they're delivered together on the next turn and Claude handles them as a group. To process independent event streams concurrently, run separate sessions.
 
 ## Expose a reply tool
 
@@ -721,13 +731,13 @@ In the third, send a message that will make Claude try to run a command:
 curl -d "list the files in this directory" -H "X-Sender: dev" localhost:8788
 ```
 
-The local permission dialog opens in your Claude Code terminal. A moment later the prompt appears in the `/events` stream, including the five-letter ID. Approve it from the remote side:
+Listing files is read-only, so Claude runs it without approval. The permission dialog opens when Claude calls the `reply` tool to send its answer back. The local dialog opens in your Claude Code terminal, and a moment later the prompt for `mcp__webhook__reply` appears in the `/events` stream, including the five-letter ID. Approve it from the remote side:
 
 ```bash theme={null}
 curl -d "yes <id>" -H "X-Sender: dev" localhost:8788
 ```
 
-The local dialog closes and the tool runs. Claude's reply comes back through the `reply` tool and lands in the stream too.
+The local dialog closes, the `reply` tool runs, and Claude's reply lands in the stream.
 
 The three channel-specific pieces in this file:
 
@@ -739,7 +749,9 @@ The three channel-specific pieces in this file:
 
 To make your channel installable and shareable, wrap it in a [plugin](/en/plugins) and publish it to a [marketplace](/en/plugin-marketplaces). Users install it with `/plugin install`, then enable it per session with `--channels plugin:<name>@<marketplace>`.
 
-A channel published to your own marketplace still needs `--dangerously-load-development-channels` to run, since it isn't on the [approved allowlist](/en/channels#supported-channels). To get it added, [submit it to the official marketplace](/en/plugins#submit-your-plugin-to-the-official-marketplace). Channel plugins go through security review before being approved. On Team and Enterprise plans, an admin can instead include your plugin in the organization's own [`allowedChannelPlugins`](/en/channels#restrict-which-channel-plugins-can-run) list, which replaces the default Anthropic allowlist.
+A channel published to your own marketplace still needs `--dangerously-load-development-channels` to run, since it isn't on the [approved allowlist](/en/channels#supported-channels). The default allowlist is the channel plugins in `claude-plugins-official`, which Anthropic curates at its discretion. The [in-app submission forms](/en/plugins#submit-your-plugin-to-the-community-marketplace) add plugins to the community marketplace, which is not on the channel allowlist.
+
+If you are working with an Anthropic partner contact, reach out to them to coordinate an official-marketplace listing. On Team and Enterprise plans, an admin can instead include your plugin in the organization's own [`allowedChannelPlugins`](/en/channels#restrict-which-channel-plugins-can-run) list, which replaces the default Anthropic allowlist.
 
 ## See also
 

@@ -41,7 +41,7 @@ If your devices are enrolled in an MDM or endpoint management solution, endpoint
   </Step>
 
   <Step title="Define your settings">
-    Add your configuration as JSON. All [settings available in `settings.json`](/en/settings#available-settings) are supported, including [hooks](/en/hooks), [environment variables](/en/env-vars), and [managed-only settings](/en/permissions#managed-only-settings) like `allowManagedPermissionRulesOnly`.
+    Add your configuration as JSON. All [settings available in `settings.json`](/en/settings#available-settings) are supported except those restricted to OS-level policy delivery; see [Current limitations](#current-limitations) for that short list. This includes [hooks](/en/hooks), [environment variables](/en/env-vars), and [managed-only settings](/en/permissions#managed-only-settings) like `allowManagedPermissionRulesOnly`.
 
     This example enforces a permission deny list, prevents users from bypassing permissions, and restricts permission rules to those defined in managed settings:
 
@@ -93,7 +93,7 @@ If your devices are enrolled in an MDM or endpoint management solution, endpoint
     }
     ```
 
-    Because hooks execute shell commands, users see a [security approval dialog](#security-approval-dialogs) before they're applied. See [Configure the auto mode classifier](/en/permissions#configure-the-auto-mode-classifier) for how the `autoMode` entries affect what the classifier blocks and important warnings about the `allow` and `soft_deny` fields.
+    Because hooks execute shell commands, users see a [security approval dialog](#security-approval-dialogs) before they're applied. See [Configure auto mode](/en/auto-mode-config) for how the `autoMode` entries affect what the classifier blocks and important warnings about the `environment`, `allow`, `soft_deny`, and `hard_deny` fields.
   </Step>
 
   <Step title="Save and deploy">
@@ -123,7 +123,8 @@ Most [settings keys](/en/settings#available-settings) work in any scope. A handf
 Server-managed settings have the following limitations:
 
 * Settings apply uniformly to all users in the organization. Per-group configurations are not yet supported.
-* [MCP server configurations](/en/mcp#managed-mcp-configuration) cannot be distributed through server-managed settings.
+* A [`managed-mcp.json`](/en/managed-mcp) file cannot be distributed through server-managed settings. Deliver the `allowedMcpServers` and `deniedMcpServers` policy keys there instead.
+* Settings restricted to OS-level policy sources, such as `policyHelper` and `wslInheritsWindowsSettings`, are not honored. Deploy them through MDM or a system `managed-settings.json` file instead.
 
 ## Settings delivery
 
@@ -153,6 +154,18 @@ Claude Code fetches settings from Anthropic's servers at startup and polls for u
 
 Claude Code applies settings updates automatically without a restart, except for advanced settings like OpenTelemetry configuration, which require a full restart to take effect.
 
+### Invalid entries in delivered settings
+
+Delivered payloads parse tolerantly with the same rules as the other managed sources. When a payload contains an entry that fails schema validation, Claude Code strips that entry, surfaces a validation error, and applies every remaining valid setting. See [Invalid entries in managed settings](/en/settings#invalid-entries-in-managed-settings) for the field-level behavior, including how security-enforcement fields are handled. Requires Claude Code v2.1.169 or later.
+
+Server-managed delivery adds these behaviors:
+
+* The cache at `~/.claude/remote-settings.json` stores the salvaged payload with invalid entries removed. The raw invalid payload is never persisted.
+* When no field in the payload can be salvaged, Claude Code keeps the last-accepted cached settings and records a fatal error.
+* The [security approval dialog](#security-approval-dialogs) evaluates the salvaged payload, so a stripped invalid entry is never presented for approval and never executes.
+
+To debug delivery issues, run `claude --debug-file <path>` and search the log for `Remote settings`. Validate a payload change with `claude doctor` on a test machine before rolling it out to the organization.
+
 ### Enforce fail-closed startup
 
 By default, if the remote settings fetch fails at startup, the CLI continues without managed settings. For environments where this brief unenforced window is unacceptable, set `forceRemoteSettingsRefresh: true` in your managed settings.
@@ -168,6 +181,8 @@ To enable this, add the key to your managed settings configuration:
 ```
 
 Before enabling this setting, ensure your network policies allow connectivity to `api.anthropic.com`. If that endpoint is unreachable, the CLI exits at startup and users cannot start Claude Code.
+
+As of v2.1.139, the `claude auth` subcommands such as `claude auth login` are exempt from this check, so users can re-authenticate when expired credentials are the reason the settings fetch fails.
 
 ### Security approval dialogs
 
@@ -202,13 +217,13 @@ Audit events include the type of action performed, the account and device that p
 
 Server-managed settings provide centralized policy enforcement, but they operate as a client-side control. On unmanaged devices, users with admin or sudo access can modify the Claude Code binary, filesystem, or network configuration.
 
-| Scenario                                         | Behavior                                                                                                                                                                                      |
-| :----------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| User edits the cached settings file              | Tampered file applies at startup, but correct settings restore on the next server fetch                                                                                                       |
-| User deletes the cached settings file            | First-launch behavior occurs: settings fetch asynchronously with a brief unenforced window                                                                                                    |
-| API is unavailable                               | Cached settings apply if available, otherwise managed settings are not enforced until the next successful fetch. With `forceRemoteSettingsRefresh: true`, the CLI exits instead of continuing |
-| User authenticates with a different organization | Settings are not delivered for accounts outside the managed organization                                                                                                                      |
-| User sets a non-default `ANTHROPIC_BASE_URL`     | Server-managed settings are bypassed when using third-party API providers                                                                                                                     |
+| Scenario                                                               | Behavior                                                                                                                                                                                                                                                            |
+| :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| User edits the cached settings file                                    | Tampered file applies at startup, but correct settings restore on the next server fetch                                                                                                                                                                             |
+| User deletes the cached settings file                                  | First-launch behavior occurs: settings fetch asynchronously with a brief unenforced window                                                                                                                                                                          |
+| API is unavailable                                                     | Cached settings apply if available, otherwise managed settings are not enforced until the next successful fetch. With `forceRemoteSettingsRefresh: true`, the CLI exits instead of continuing, except for [`claude auth` subcommands](#enforce-fail-closed-startup) |
+| User authenticates with a different organization                       | Settings are not delivered for accounts outside the managed organization                                                                                                                                                                                            |
+| User configures a [third-party model provider](#platform-availability) | Server-managed settings are bypassed. This includes setting `CLAUDE_CODE_USE_BEDROCK`, `CLAUDE_CODE_USE_MANTLE`, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY`, or a non-default `ANTHROPIC_BASE_URL`                                                         |
 
 To detect runtime configuration changes, use [`ConfigChange` hooks](/en/hooks#configchange) to log modifications or block unauthorized changes before they take effect.
 

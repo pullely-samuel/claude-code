@@ -22,29 +22,36 @@ Claude Code tracks all changes made by its file editing tools:
 
 ### Rewind and summarize
 
-Press `Esc` twice (`Esc` + `Esc`) or use the `/rewind` command to open the rewind menu. A scrollable list shows each of your prompts from the session. Select the point you want to act on, then choose an action:
+Run `/rewind`, or press `Esc` twice when the prompt input is empty, to open the rewind menu.
+
+<Note>
+  If the prompt input contains text, double `Esc` clears it instead of opening the menu. The cleared text is saved to your input history, so press `Up` to recall it after you finish in the rewind menu.
+</Note>
+
+The rewind menu lists each prompt you sent during the session. Select the point you want to act on, then choose an action:
 
 * **Restore code and conversation**: revert both code and conversation to that point
 * **Restore conversation**: rewind to that message while keeping current code
 * **Restore code**: revert file changes while keeping the conversation
 * **Summarize from here**: compress the conversation from this point forward into a summary, freeing context window space
+* **Summarize up to here**: compress the conversation before this point into a summary, keeping later messages intact
 * **Never mind**: return to the message list without making changes
 
-After restoring the conversation or summarizing, the original prompt from the selected message is restored into the input field so you can re-send or edit it.
+After restoring the conversation or choosing Summarize from here, the original prompt from the selected message is restored into the input field so you can re-send or edit it.
+
+Choosing Summarize up to here leaves you at the end of the conversation with the input empty.
 
 #### Restore vs. summarize
 
-The three restore options revert state: they undo code changes, conversation history, or both. "Summarize from here" works differently:
+The restore options revert state: they undo code changes, conversation history, or both. The summarize options compress part of the conversation into an AI-generated summary without changing files on disk:
 
-* Messages before the selected message stay intact
-* The selected message and all subsequent messages get replaced with a compact AI-generated summary
-* No files on disk are changed
-* The original messages are preserved in the session transcript, so Claude can reference the details if needed
+* **Summarize from here**: messages before the selected message stay intact. The selected message and everything after it are replaced with a summary. Use this to discard a side discussion while keeping early context in full detail.
+* **Summarize up to here**: messages before the selected message are replaced with a summary. The selected message and everything after it stay intact, and you remain at the end of the conversation. Use this to compress early setup discussion while keeping recent work in full detail.
 
-This is similar to `/compact`, but targeted: instead of summarizing the entire conversation, you keep early context in full detail and only compress the parts that are using up space. You can type optional instructions to guide what the summary focuses on.
+In both cases the original messages are preserved in the session transcript, so Claude can reference the details if needed. You can type optional instructions to guide what the summary focuses on. This is similar to `/compact`, but targeted: instead of summarizing the entire conversation, you choose which side of the selected message to compress.
 
 <Note>
-  Summarize keeps you in the same session and compresses context. If you want to branch off and try a different approach while preserving the original session intact, use [fork](/en/how-claude-code-works#resume-or-fork-sessions) instead (`claude --continue --fork-session`).
+  Summarize keeps you in the same session and compresses context. If you want to branch off and try a different approach while preserving the original session intact, use [fork](/en/sessions#branch-a-session) instead (`claude --continue --fork-session`).
 </Note>
 
 ## Common use cases

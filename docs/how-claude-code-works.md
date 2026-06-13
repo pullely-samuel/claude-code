@@ -14,7 +14,7 @@ This guide covers the core architecture, built-in capabilities, and [tips for wo
 
 When you give Claude a task, it works through three phases: **gather context**, **take action**, and **verify results**. These phases blend together. Claude uses tools throughout, whether searching files to understand your code, editing to make changes, or running tests to check its work.
 
-<img src="https://mintcdn.com/claude-code/c5r9_6tjPMzFdDDT/images/agentic-loop.svg?fit=max&auto=format&n=c5r9_6tjPMzFdDDT&q=85&s=5f1827dec8539f38adee90ead3a85a38" alt="The agentic loop: Your prompt leads to Claude gathering context, taking action, verifying results, and repeating until task complete. You can interrupt at any point." width="720" height="280" data-path="images/agentic-loop.svg" />
+<img src="https://mintcdn.com/claude-code/ikqp3_70mqIahteV/images/agentic-loop.svg?fit=max&auto=format&n=ikqp3_70mqIahteV&q=85&s=4a30fb7ce2815012a9f27c955e2c6bb0" alt="Diagram of the agentic loop: Your prompt leads to Claude gathering context, taking action, verifying results, and repeating until task complete. You can interrupt at any point." width="720" height="280" data-path="images/agentic-loop.svg" />
 
 The loop adapts to what you ask. A question about your codebase might only need context gathering. A bug fix cycles through all three phases repeatedly. A refactor might involve extensive verification. Claude decides what each step requires based on what it learned from the previous step, chaining dozens of actions together and course-correcting along the way.
 
@@ -100,27 +100,19 @@ Claude Code saves your conversation locally as you work. Each message, tool use,
 
 ### Work across branches
 
-Each Claude Code conversation is a session tied to your current directory. The `/resume` picker shows sessions from the current worktree by default, with keyboard shortcuts to widen the list to other worktrees or projects. See [Resume previous conversations](/en/common-workflows#resume-previous-conversations) for the full list of picker shortcuts and how name resolution works.
+Each Claude Code conversation is a session tied to your current directory. The `/resume` picker shows sessions from the current worktree by default, with keyboard shortcuts to widen the list to other worktrees or projects. See [Manage sessions](/en/sessions#use-the-session-picker) for the full list of picker shortcuts and how name resolution works.
 
 Claude sees your current branch's files. When you switch branches, Claude sees the new branch's files, but your conversation history stays the same. Claude remembers what you discussed even after switching.
 
-Since sessions are tied to directories, you can run parallel Claude sessions by using [git worktrees](/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees), which create separate directories for individual branches.
+Since sessions are tied to directories, you can run parallel Claude sessions by using [git worktrees](/en/worktrees), which create separate directories for individual branches.
 
 ### Resume or fork sessions
 
-When you resume a session with `claude --continue` or `claude --resume`, you pick up where you left off using the same session ID. New messages append to the existing conversation. Your full conversation history is restored, but session-scoped permissions are not. You'll need to re-approve those.
+Resuming a session with `claude --continue` or `claude --resume` reopens it under the same session ID and appends new messages to the existing conversation. Forking with `--fork-session` or `/branch` copies the history into a new session ID, leaving the original unchanged.
 
-<img src="https://mintcdn.com/claude-code/c5r9_6tjPMzFdDDT/images/session-continuity.svg?fit=max&auto=format&n=c5r9_6tjPMzFdDDT&q=85&s=fa41d12bfb57579cabfeece907151d30" alt="Session continuity: resume continues the same session, fork creates a new branch with a new ID." width="560" height="280" data-path="images/session-continuity.svg" />
+<img src="https://mintcdn.com/claude-code/ikqp3_70mqIahteV/images/session-continuity.svg?fit=max&auto=format&n=ikqp3_70mqIahteV&q=85&s=04ed0984a58e4127e05b3640265241a3" alt="Diagram of session continuity: resume continues the same session, fork creates a new branch with a new ID." width="560" height="280" data-path="images/session-continuity.svg" />
 
-To branch off and try a different approach without affecting the original session, use the `--fork-session` flag:
-
-```bash theme={null}
-claude --continue --fork-session
-```
-
-This creates a new session ID while preserving the conversation history up to that point. The original session remains unchanged. Like resume, forked sessions don't inherit session-scoped permissions.
-
-**Same session in multiple terminals**: If you resume the same session in multiple terminals, both terminals write to the same session file. Messages from both get interleaved, like two people writing in the same notebook. Nothing corrupts, but the conversation becomes jumbled. Each terminal only sees its own messages during the session, but if you resume that session later, you'll see everything interleaved. For parallel work from the same starting point, use `--fork-session` to give each terminal its own clean session.
+For the resume flags, the `/resume` picker, naming, and what happens when the same session is open in two terminals, see [Manage sessions](/en/sessions).
 
 ### The context window
 
@@ -142,7 +134,7 @@ Run `/context` to see what's using space. MCP tool definitions are deferred by d
 
 Beyond compaction, you can use other features to control what loads into context.
 
-[Skills](/en/skills) load on demand. Claude sees skill descriptions at session start, but the full content only loads when a skill is used. For skills you invoke manually, set `disable-model-invocation: true` to keep descriptions out of context until you need them.
+[Skills](/en/skills) load on demand. Claude sees skill descriptions at session start, but the full content only loads when a skill is used. For skills you invoke manually, set `disable-model-invocation: true` to keep descriptions out of context until you need them. For skills you didn't write, use [`skillOverrides`](/en/skills#override-skill-visibility-from-settings) to do the same from settings.
 
 [Subagents](/en/sub-agents) get their own fresh context, completely separate from your main conversation. Their work doesn't bloat your context. When done, they return a summary. This isolation is why subagents help with long sessions.
 
@@ -164,7 +156,7 @@ Press `Shift+Tab` to cycle through permission modes:
 
 * **Default**: Claude asks before file edits and shell commands
 * **Auto-accept edits**: Claude edits files and runs common filesystem commands like `mkdir` and `mv` without asking, still asks for other commands
-* **Plan mode**: Claude uses read-only tools only, creating a plan you can approve before execution
+* **Plan mode**: Claude explores and proposes a plan without editing your source files; permission prompts still apply as in default mode
 * **Auto mode**: Claude evaluates all actions with background safety checks. Currently a research preview
 
 You can also allow specific commands in `.claude/settings.json` so Claude doesn't ask each time. This is useful for trusted commands like `npm test` or `git status`. Settings can be scoped from organization-wide policies down to personal preferences. See [Permissions](/en/permissions) for details.
@@ -205,7 +197,10 @@ When the first attempt isn't right, you don't start over. You iterate.
 
 #### Interrupt and steer
 
-You can interrupt Claude at any point. If it's going down the wrong path, just type your correction and press Enter. Claude will stop what it's doing and adjust its approach based on your input. You don't have to wait for it to finish or start over.
+You can redirect Claude at any point without waiting for the turn to finish or starting over:
+
+* **Press `Esc`** to stop Claude immediately. The running tool call is canceled and Claude waits for your next instruction.
+* **Type a correction and press `Enter`** to send it without stopping the running tool. Claude reads it as soon as the current action completes and adjusts before deciding its next step.
 
 ### Be specific upfront
 

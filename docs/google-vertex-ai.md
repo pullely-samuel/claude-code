@@ -68,7 +68,7 @@ export const ContactSalesCard = ({surface}) => {
           <a href={`https://claude.com/pricing?${utm('view_plans')}#plans-business`} className="cc-cs-btn-ghost">
             View plans
           </a>
-          <a href={`https://www.anthropic.com/contact-sales?${utm('contact_sales')}`} className="cc-cs-btn-clay">
+          <a href={`https://claude.com/contact-sales?${utm('contact_sales')}`} className="cc-cs-btn-clay">
             Contact sales {iconArrowRight()}
           </a>
         </div>
@@ -76,117 +76,7 @@ export const ContactSalesCard = ({surface}) => {
     </div>;
 };
 
-export const Experiment = ({flag, treatment, children}) => {
-  const VID_KEY = 'exp_vid';
-  const CONSENT_COUNTRIES = new Set(['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'RE', 'GP', 'MQ', 'GF', 'YT', 'BL', 'MF', 'PM', 'WF', 'PF', 'NC', 'AW', 'CW', 'SX', 'FO', 'GL', 'AX', 'GB', 'UK', 'AI', 'BM', 'IO', 'VG', 'KY', 'FK', 'GI', 'MS', 'PN', 'SH', 'TC', 'GG', 'JE', 'IM', 'CA', 'BR', 'IN']);
-  const fnv1a = s => {
-    let h = 0x811c9dc5;
-    for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i);
-      h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-    }
-    return h >>> 0;
-  };
-  const bucket = (seed, vid) => fnv1a(fnv1a(seed + vid) + '') % 10000 < 5000 ? 'control' : 'treatment';
-  const [decision] = useState(() => {
-    const params = new URLSearchParams(location.search);
-    const preBucketed = document.documentElement.dataset['gb_' + flag.replace(/-/g, '_')];
-    const force = params.get('gb-force');
-    if (force) {
-      for (const p of force.split(',')) {
-        const [k, v] = p.split(':');
-        if (k === flag) return {
-          variant: v || 'treatment',
-          track: false
-        };
-      }
-    }
-    if (navigator.globalPrivacyControl) {
-      return {
-        variant: 'control',
-        track: false
-      };
-    }
-    const prefsMatch = document.cookie.match(/(?:^|; )anthropic-consent-preferences=([^;]+)/);
-    if (prefsMatch) {
-      try {
-        if (JSON.parse(decodeURIComponent(prefsMatch[1])).analytics !== true) {
-          return {
-            variant: 'control',
-            track: false
-          };
-        }
-      } catch {
-        return {
-          variant: 'control',
-          track: false
-        };
-      }
-    } else {
-      const country = params.get('country')?.toUpperCase() || (document.cookie.match(/(?:^|; )cf_geo=([A-Z]{2})/) || [])[1];
-      if (!country || CONSENT_COUNTRIES.has(country)) {
-        return {
-          variant: 'control',
-          track: false
-        };
-      }
-    }
-    let vid;
-    try {
-      const ajsMatch = document.cookie.match(/(?:^|; )ajs_anonymous_id=([^;]+)/);
-      if (ajsMatch) {
-        vid = decodeURIComponent(ajsMatch[1]).replace(/^"|"$/g, '');
-      } else {
-        vid = localStorage.getItem(VID_KEY);
-        if (!vid) {
-          vid = crypto.randomUUID();
-        }
-        document.cookie = `ajs_anonymous_id=${vid}; domain=.claude.com; path=/; Secure; SameSite=Lax; max-age=31536000`;
-      }
-      try {
-        localStorage.setItem(VID_KEY, vid);
-      } catch {}
-    } catch {
-      return {
-        variant: 'control',
-        track: false
-      };
-    }
-    const variant = preBucketed === '1' ? 'treatment' : preBucketed === '0' ? 'control' : bucket(flag, vid);
-    return {
-      variant,
-      track: true,
-      vid
-    };
-  });
-  useEffect(() => {
-    if (!decision.track) return;
-    fetch('https://api.anthropic.com/api/event_logging/v2/batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-service-name': 'claude_code_docs'
-      },
-      body: JSON.stringify({
-        events: [{
-          event_type: 'GrowthbookExperimentEvent',
-          event_data: {
-            device_id: decision.vid,
-            anonymous_id: decision.vid,
-            timestamp: new Date().toISOString(),
-            experiment_id: flag,
-            variation_id: decision.variant === 'treatment' ? 1 : 0,
-            environment: 'production'
-          }
-        }]
-      }),
-      keepalive: true
-    }).catch(() => {});
-  }, []);
-  return decision.variant === 'treatment' ? treatment : children;
-};
-
-<Experiment flag="docs-contact-sales-cta" treatment={<ContactSalesCard surface="vertex" />} />
+<ContactSalesCard surface="vertex" />
 
 ## Prerequisites
 
@@ -226,10 +116,10 @@ After you've signed in, run `/setup-vertex` any time to reopen the wizard and ch
 
 ## Region configuration
 
-Claude Code can be used with both Vertex AI [global](https://cloud.google.com/blog/products/ai-machine-learning/global-endpoint-for-claude-models-generally-available-on-vertex-ai) and regional endpoints.
+Claude Code supports Vertex AI [global](https://cloud.google.com/blog/products/ai-machine-learning/global-endpoint-for-claude-models-generally-available-on-vertex-ai), multi-region, and regional endpoints. Set `CLOUD_ML_REGION` to `global`, a multi-region location such as `eu` or `us`, or a specific region such as `us-east5`. Claude Code selects the correct Vertex AI hostname for each form, including the `aiplatform.eu.rep.googleapis.com` and `aiplatform.us.rep.googleapis.com` hosts for multi-region locations.
 
 <Note>
-  Vertex AI may not support the Claude Code default models in all [regions](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations#genai-partner-models) or on [global endpoints](https://cloud.google.com/vertex-ai/generative-ai/docs/partner-models/use-partner-models#supported_models). You may need to switch to a supported region, use a regional endpoint, or specify a supported model.
+  Vertex AI may not support the Claude Code default models on every endpoint type. Model availability varies across [specific regions](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations#genai-partner-models), multi-region locations, and [global endpoints](https://cloud.google.com/vertex-ai/generative-ai/docs/partner-models/use-partner-models#supported_models). You may need to switch to a supported location or specify a supported model.
 </Note>
 
 ## Set up manually
@@ -263,9 +153,26 @@ Claude Code uses standard Google Cloud authentication.
 
 For more information, see [Google Cloud authentication documentation](https://cloud.google.com/docs/authentication).
 
+Claude Code v2.1.121 or later supports [X.509 certificate-based Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation-with-x509-certificates) through the same Application Default Credentials chain. Set `GOOGLE_APPLICATION_CREDENTIALS` to the path of your credential configuration file.
+
 <Note>
-  When authenticating, Claude Code will automatically use the project ID from the `ANTHROPIC_VERTEX_PROJECT_ID` environment variable. To override this, set one of these environment variables: `GCLOUD_PROJECT`, `GOOGLE_CLOUD_PROJECT`, or `GOOGLE_APPLICATION_CREDENTIALS`.
+  Claude Code uses `ANTHROPIC_VERTEX_PROJECT_ID` as the project ID for Vertex AI requests. The `GCLOUD_PROJECT` and `GOOGLE_CLOUD_PROJECT` environment variables and the credential file referenced by `GOOGLE_APPLICATION_CREDENTIALS` take precedence over it. If none of these are set, the project ID is resolved from your `gcloud` configuration or the attached service account.
 </Note>
+
+#### Advanced credential configuration
+
+Claude Code supports automatic credential refresh for GCP through the `gcpAuthRefresh` setting. When Claude Code detects that your GCP credentials are expired or cannot be loaded, it runs the configured command to obtain new credentials before retrying the request.
+
+```json theme={null}
+{
+  "gcpAuthRefresh": "gcloud auth application-default login",
+  "env": {
+    "ANTHROPIC_VERTEX_PROJECT_ID": "your-project-id"
+  }
+}
+```
+
+The command's output is displayed to the user, but interactive input isn't supported. This works well for browser-based authentication flows where the CLI shows a URL and you complete authentication in the browser. The refresh command times out after three minutes if authentication does not complete. If you set `gcpAuthRefresh` in project settings such as `.claude/settings.json`, the command runs only after you accept the workspace trust prompt.
 
 ### 4. Configure Claude Code
 
@@ -283,6 +190,9 @@ export ANTHROPIC_VERTEX_PROJECT_ID=YOUR-PROJECT-ID
 # Optional: Disable prompt caching if needed
 export DISABLE_PROMPT_CACHING=1
 
+# Optional: Request 1-hour prompt cache TTL instead of the 5-minute default
+export ENABLE_PROMPT_CACHING_1H=1
+
 # When CLOUD_ML_REGION=global, override region for models that don't support global endpoints
 export VERTEX_REGION_CLAUDE_HAIKU_4_5=us-east5
 export VERTEX_REGION_CLAUDE_4_6_SONNET=europe-west1
@@ -290,20 +200,22 @@ export VERTEX_REGION_CLAUDE_4_6_SONNET=europe-west1
 
 Most model versions have a corresponding `VERTEX_REGION_CLAUDE_*` variable. See the [Environment variables reference](/en/env-vars) for the full list. Check [Vertex Model Garden](https://console.cloud.google.com/vertex-ai/model-garden) to determine which models support global endpoints versus regional only.
 
-[Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) is automatically supported when you specify the `cache_control` ephemeral flag. To disable it, set `DISABLE_PROMPT_CACHING=1`. For heightened rate limits, contact Google Cloud support. When using Vertex AI, the `/login` and `/logout` commands are disabled since authentication is handled through Google Cloud credentials.
+[Prompt caching](/en/prompt-caching) is enabled automatically. To disable it, set `DISABLE_PROMPT_CACHING=1`. To request a 1-hour cache TTL instead of the 5-minute default, set `ENABLE_PROMPT_CACHING_1H=1`; cache writes with a 1-hour TTL are billed at a higher rate. For heightened rate limits, contact Google Cloud support. When using Vertex AI, the `/logout` command is unavailable since authentication is handled through Google Cloud credentials.
+
+Claude Code disables [MCP tool search](/en/mcp#scale-with-mcp-tool-search) by default on Vertex AI, so MCP tool definitions load upfront. Vertex AI supports tool search for Claude Sonnet 4.5 and later and Claude Opus 4.5 and later. Set `ENABLE_TOOL_SEARCH=true` to enable it on those models. Earlier models on Vertex AI do not accept the required beta header, and requests fail if you enable tool search with them.
 
 ### 5. Pin model versions
 
 <Warning>
-  Pin specific model versions when deploying to multiple users. Without pinning, model aliases such as `sonnet` and `opus` resolve to the latest version, which may not yet be enabled in your Vertex AI project when Anthropic releases an update. Claude Code [falls back](#startup-model-checks) to the previous version at startup when the latest is unavailable, but pinning lets you control when your users move to a new model.
+  Pin specific model versions when deploying to multiple users. Without pinning, model aliases such as `sonnet` and `opus` resolve to Claude Code's built-in default for Vertex AI, which can lag the newest release and may not yet be enabled in your project. Claude Code [falls back](#startup-model-checks) to the previous version at startup when the default is unavailable, but pinning lets you control when your users move to a new model.
 </Warning>
 
 Set these environment variables to specific Vertex AI model IDs.
 
-Without `ANTHROPIC_DEFAULT_OPUS_MODEL`, the `opus` alias on Vertex resolves to Opus 4.6. Set it to the Opus 4.7 ID to use the latest model:
+Without `ANTHROPIC_DEFAULT_OPUS_MODEL`, the `opus` alias on Vertex resolves to Opus 4.6. Set it to the Opus 4.8 ID to use the latest model:
 
 ```bash theme={null}
-export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-7'
+export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-8'
 export ANTHROPIC_DEFAULT_SONNET_MODEL='claude-sonnet-4-6'
 export ANTHROPIC_DEFAULT_HAIKU_MODEL='claude-haiku-4-5@20251001'
 ```
@@ -315,12 +227,14 @@ Claude Code uses these default models when no pinning variables are set:
 | Model type       | Default value                |
 | :--------------- | :--------------------------- |
 | Primary model    | `claude-sonnet-4-5@20250929` |
-| Small/fast model | `claude-haiku-4-5@20251001`  |
+| Small/fast model | Same as primary model        |
+
+Background tasks such as session title generation use the small/fast model, normally a Haiku-class model. On Vertex AI, Claude Code defaults this to the primary model because Haiku may not be enabled in every project or region. To use Haiku for background tasks, set `ANTHROPIC_DEFAULT_HAIKU_MODEL` to a model ID that is available in your project.
 
 To customize models further:
 
 ```bash theme={null}
-export ANTHROPIC_MODEL='claude-opus-4-7'
+export ANTHROPIC_MODEL='claude-opus-4-8'
 export ANTHROPIC_DEFAULT_HAIKU_MODEL='claude-haiku-4-5@20251001'
 ```
 
@@ -350,11 +264,17 @@ For details, see [Vertex IAM documentation](https://cloud.google.com/vertex-ai/d
 
 ## 1M token context window
 
-Claude Opus 4.7, Opus 4.6, and Sonnet 4.6 support the [1M token context window](https://platform.claude.com/docs/en/build-with-claude/context-windows#1m-token-context-window) on Vertex AI. Claude Code automatically enables the extended context window when you select a 1M model variant.
+Claude Opus 4.6 and later, and Sonnet 4.6, support the [1M token context window](https://platform.claude.com/docs/en/build-with-claude/context-windows#1m-token-context-window) on Vertex AI. Claude Code automatically enables the extended context window when you select a 1M model variant.
 
 The [setup wizard](#sign-in-with-vertex-ai) offers a 1M context option when it pins models. To enable it for a manually pinned model instead, append `[1m]` to the model ID. See [Pin models for third-party deployments](/en/model-config#pin-models-for-third-party-deployments) for details.
 
 ## Troubleshooting
+
+If you encounter "Could not load the default credentials" errors:
+
+* Run `gcloud auth application-default login` to set up Application Default Credentials
+* Set `GOOGLE_APPLICATION_CREDENTIALS` to a service account key file path
+* See [Configure GCP credentials](#3-configure-gcp-credentials) for all options
 
 If you encounter quota issues:
 
@@ -363,10 +283,10 @@ If you encounter quota issues:
 If you encounter "model not found" 404 errors:
 
 * Confirm model is Enabled in [Model Garden](https://console.cloud.google.com/vertex-ai/model-garden)
-* Verify you have access to the specified region
+* Verify the model is available in the location you specified. Some models are offered only on `global` or multi-region locations such as `eu` and `us`, not in specific regions
 * If using `CLOUD_ML_REGION=global`, check that your models support global endpoints in [Model Garden](https://console.cloud.google.com/vertex-ai/model-garden) under "Supported features". For models that don't support global endpoints, either:
   * Specify a supported model via `ANTHROPIC_MODEL` or `ANTHROPIC_DEFAULT_HAIKU_MODEL`, or
-  * Set a regional endpoint using `VERTEX_REGION_<MODEL_NAME>` environment variables
+  * Set a region or multi-region location using `VERTEX_REGION_<MODEL_NAME>` environment variables
 
 If you encounter 429 errors:
 

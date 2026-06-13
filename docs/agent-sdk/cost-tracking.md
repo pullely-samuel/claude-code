@@ -4,7 +4,7 @@
 
 # Track cost and usage
 
-> Learn how to track token usage, deduplicate parallel tool calls, and estimate costs with the Claude Agent SDK.
+> Learn how to track token usage, estimate costs, and configure prompt caching with the Claude Agent SDK.
 
 The Claude Agent SDK provides detailed token usage information for each interaction with Claude. This guide explains how to properly track usage and understand cost reporting, especially when dealing with parallel tool uses and multi-step conversations.
 
@@ -31,7 +31,7 @@ Both SDKs use the same underlying cost model and expose the same granularity. Th
 
 Cost tracking depends on understanding how the SDK scopes usage data:
 
-* **`query()` call:** one invocation of the SDK's `query()` function. A single call can involve multiple steps (Claude responds, uses tools, gets results, responds again). Each call produces one [`result`](/en/agent-sdk/typescript#sdk-result-message) message at the end.
+* **`query()` call:** one invocation of the SDK's `query()` function. A single call can involve multiple steps (Claude responds, uses tools, gets results, responds again). Each call produces one [`result`](/en/agent-sdk/typescript#sdkresultmessage) message at the end.
 * **Step:** a single request/response cycle within a `query()` call. Each step produces assistant messages with token usage.
 * **Session:** a series of `query()` calls linked by a session ID (using the `resume` option). Each `query()` call within a session reports its own cost independently.
 
@@ -45,13 +45,13 @@ The following diagram shows the message stream from a single `query()` call, wit
   </Step>
 
   <Step title="The result message provides the cumulative estimate">
-    When the `query()` call completes, the SDK emits a result message with `total_cost_usd` and cumulative `usage`. This is available in both TypeScript ([`SDKResultMessage`](/en/agent-sdk/typescript#sdk-result-message)) and Python ([`ResultMessage`](/en/agent-sdk/python#result-message)). If you make multiple `query()` calls (for example, in a multi-turn session), each result only reflects the cost of that individual call. If you only need the estimated total, you can ignore the per-step usage and read this single value.
+    When the `query()` call completes, the SDK emits a result message with `total_cost_usd` and cumulative `usage`. This is available in both TypeScript ([`SDKResultMessage`](/en/agent-sdk/typescript#sdkresultmessage)) and Python ([`ResultMessage`](/en/agent-sdk/python#resultmessage)). If you make multiple `query()` calls (for example, in a multi-turn session), each result only reflects the cost of that individual call. If you only need the estimated total, you can ignore the per-step usage and read this single value.
   </Step>
 </Steps>
 
 ## Get the total cost of a query
 
-The result message ([TypeScript](/en/agent-sdk/typescript#sdk-result-message), [Python](/en/agent-sdk/python#result-message)) marks the end of the agent loop for a `query()` call. It includes `total_cost_usd`, the cumulative estimated cost across all steps in that call. This works for both success and error results. If you use sessions to make multiple `query()` calls, each result only reflects the cost of that individual call.
+The result message ([TypeScript](/en/agent-sdk/typescript#sdkresultmessage), [Python](/en/agent-sdk/python#resultmessage)) marks the end of the agent loop for a `query()` call. It includes `total_cost_usd`, the cumulative estimated cost across all steps in that call. This works for both success and error results. If you use sessions to make multiple `query()` calls, each result only reflects the cost of that individual call.
 
 The following examples iterate over the message stream from a `query()` call and print the total cost when the `result` message arrives:
 
@@ -83,7 +83,7 @@ The following examples iterate over the message stream from a `query()` call and
 
 ## Track per-step and per-model usage
 
-The examples in this section use TypeScript field names. In Python, the equivalent fields are [`AssistantMessage.usage`](/en/agent-sdk/python#assistant-message) and `AssistantMessage.message_id` for per-step usage, and [`ResultMessage.model_usage`](/en/agent-sdk/python#result-message) for per-model breakdowns.
+The examples in this section use TypeScript field names. In Python, the equivalent fields are [`AssistantMessage.usage`](/en/agent-sdk/python#assistantmessage) and `AssistantMessage.message_id` for per-step usage, and [`ResultMessage.model_usage`](/en/agent-sdk/python#resultmessage) for per-model breakdowns.
 
 ### Track per-step usage
 
@@ -122,7 +122,7 @@ console.log(`Output tokens: ${totalOutputTokens}`);
 
 ### Break down usage per model
 
-The result message includes [`modelUsage`](/en/agent-sdk/typescript#model-usage), a map of model name to per-model token counts and cost. This is useful when you run multiple models (for example, Haiku for subagents and Opus for the main agent) and want to see where tokens are going.
+The result message includes [`modelUsage`](/en/agent-sdk/typescript#modelusage), a map of model name to per-model token counts and cost. This is useful when you run multiple models (for example, Haiku for subagents and Opus for the main agent) and want to see where tokens are going.
 
 The following example runs a query and prints the cost and token breakdown for each model used:
 
@@ -223,7 +223,55 @@ The Agent SDK automatically uses [prompt caching](https://platform.claude.com/do
 * `cache_creation_input_tokens`: tokens used to create new cache entries (charged at a higher rate than standard input tokens).
 * `cache_read_input_tokens`: tokens read from existing cache entries (charged at a reduced rate).
 
-Track these separately from `input_tokens` to understand caching savings. In TypeScript, these fields are typed on the [`Usage`](/en/agent-sdk/typescript#usage) object. In Python, they appear as keys in the [`ResultMessage.usage`](/en/agent-sdk/python#result-message) dict (for example, `message.usage.get("cache_read_input_tokens", 0)`).
+Track these separately from `input_tokens` to understand caching savings. In TypeScript, these fields are typed on the [`Usage`](/en/agent-sdk/typescript#usage) object. In Python, they appear as keys in the [`ResultMessage.usage`](/en/agent-sdk/python#resultmessage) dict (for example, `message.usage.get("cache_read_input_tokens", 0)`).
+
+### Extend the prompt cache TTL to one hour
+
+Cache entries written by the SDK use a 5-minute TTL by default when you authenticate with an API key or run on Amazon Bedrock, Google Cloud Vertex AI, or Microsoft Foundry. If your workload runs many short sessions against the same system prompt and context with gaps longer than 5 minutes between them, the cache expires between sessions and each new session pays full input price.
+
+To request a 1-hour TTL on cache writes, set the [`ENABLE_PROMPT_CACHING_1H`](/en/env-vars) environment variable. You can export it in your shell or container environment, or pass it through `options.env`.
+
+The following example enables 1-hour TTL for an agent running on Bedrock:
+
+<CodeGroup>
+  ```python Python theme={null}
+  from claude_agent_sdk import ClaudeAgentOptions, query
+  import asyncio
+
+
+  async def main():
+      options = ClaudeAgentOptions(
+          env={
+              "CLAUDE_CODE_USE_BEDROCK": "1",
+              "ENABLE_PROMPT_CACHING_1H": "1",
+          },
+      )
+
+      async for message in query(prompt="Summarize this project", options=options):
+          print(message)
+
+
+  asyncio.run(main())
+  ```
+
+  ```typescript TypeScript theme={null}
+  import { query } from "@anthropic-ai/claude-agent-sdk";
+
+  const options = {
+    env: {
+      ...process.env,
+      CLAUDE_CODE_USE_BEDROCK: "1",
+      ENABLE_PROMPT_CACHING_1H: "1",
+    },
+  };
+
+  for await (const message of query({ prompt: "Summarize this project", options })) {
+    console.log(message);
+  }
+  ```
+</CodeGroup>
+
+Cache writes with a 1-hour TTL are billed at a higher rate than 5-minute writes, so enabling this trades higher write cost for more cache reads. See [prompt caching pricing](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) for details. Claude subscription users already receive 1-hour TTL automatically and do not need to set this variable.
 
 ## Related documentation
 

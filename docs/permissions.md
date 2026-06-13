@@ -26,7 +26,13 @@ You can view and manage Claude Code's tool permissions with `/permissions`. This
 * **Ask** rules prompt for confirmation whenever Claude Code tries to use the specified tool.
 * **Deny** rules prevent Claude Code from using the specified tool.
 
-Rules are evaluated in order: **deny -> ask -> allow**. The first matching rule wins, so deny rules always take precedence.
+Rules are evaluated in order: deny, then ask, then allow. The first match in that order determines the outcome, and rule specificity does not change the order. A matching ask rule prompts even when a more specific allow rule also matches the same call.
+
+Deny rules behave differently depending on whether they name a tool or scope a pattern within one. A bare tool name like `Bash` removes the tool from Claude's context entirely, so Claude never sees it. A scoped rule like `Bash(rm *)` leaves the tool available and blocks matching calls when Claude attempts them.
+
+<Note>
+  Permission rules are enforced by Claude Code, not by the model. Instructions in your prompt or `CLAUDE.md` shape what Claude tries to do, but they don't change what Claude Code allows. To grant or revoke access, use `/permissions`, the rules described here, a [permission mode](/en/permission-modes), or a [PreToolUse hook](#extend-permissions-with-hooks).
+</Note>
 
 ## Permission modes
 
@@ -36,13 +42,13 @@ Claude Code supports several permission modes that control how tools are approve
 | :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `default`           | Standard behavior: prompts for permission on first use of each tool                                                                                                |
 | `acceptEdits`       | Automatically accepts file edits and common filesystem commands (`mkdir`, `touch`, `mv`, `cp`, etc.) for paths in the working directory or `additionalDirectories` |
-| `plan`              | Plan Mode: Claude can analyze but not modify files or execute commands                                                                                             |
+| `plan`              | Plan Mode: Claude reads files and runs read-only shell commands to explore but does not edit your source files                                                     |
 | `auto`              | Auto-approves tool calls with background safety checks that verify actions align with your request. Currently a research preview                                   |
 | `dontAsk`           | Auto-denies tools unless pre-approved via `/permissions` or `permissions.allow` rules                                                                              |
-| `bypassPermissions` | Skips permission prompts except for writes to protected directories (see warning below)                                                                            |
+| `bypassPermissions` | Skips permission prompts, except those forced by explicit `ask` rules. Root and home directory removals such as `rm -rf /` also still prompt as a circuit breaker  |
 
 <Warning>
-  `bypassPermissions` mode skips permission prompts. Writes to `.git`, `.claude`, `.vscode`, `.idea`, and `.husky` directories still prompt for confirmation to prevent accidental corruption of repository state, editor configuration, and git hooks. Writes to `.claude/commands`, `.claude/agents`, and `.claude/skills` are exempt and do not prompt, because Claude routinely writes there when creating skills, subagents, and commands. Only use this mode in isolated environments like containers or VMs where Claude Code cannot cause damage. Administrators can prevent this mode by setting `permissions.disableBypassPermissionsMode` to `"disable"` in [managed settings](#managed-settings).
+  `bypassPermissions` mode skips permission prompts, including for writes to `.git`, `.config/git`, `.claude`, `.vscode`, `.idea`, `.husky`, `.cargo`, `.devcontainer`, `.yarn`, and `.mvn`. Explicit `ask` rules still force a prompt, and removals targeting the filesystem root or home directory, such as `rm -rf /` and `rm -rf ~`, still prompt as a circuit breaker against model error. Only use this mode in isolated environments like containers or VMs where Claude Code cannot cause damage. Administrators can prevent this mode by setting `permissions.disableBypassPermissionsMode` to `"disable"` in [managed settings](#managed-settings).
 </Warning>
 
 To prevent `bypassPermissions` or `auto` mode from being used, set `permissions.disableBypassPermissionsMode` or `permissions.disableAutoMode` to `"disable"` in any [settings file](/en/settings#settings-files). These are most useful in [managed settings](#managed-settings) where they cannot be overridden.
@@ -61,7 +67,7 @@ To match all uses of a tool, use just the tool name without parentheses:
 | `WebFetch` | Matches all web fetch requests |
 | `Read`     | Matches all file reads         |
 
-`Bash(*)` is equivalent to `Bash` and matches all Bash commands.
+`Bash(*)` is equivalent to `Bash` and matches all Bash commands. As a deny rule, both forms remove the tool from Claude's context.
 
 ### Use specifiers for fine-grained control
 
@@ -97,6 +103,24 @@ Bash rules support glob patterns with `*`. Wildcards can appear at any position 
 The space before `*` matters: `Bash(ls *)` matches `ls -la` but not `lsof`, while `Bash(ls*)` matches both. The `:*` suffix is an equivalent way to write a trailing wildcard, so `Bash(ls:*)` matches the same commands as `Bash(ls *)`.
 
 The permission dialog writes the space-separated form when you select "Yes, don't ask again" for a command prefix. The `:*` form is only recognized at the end of a pattern. In a pattern like `Bash(git:* push)`, the colon is treated as a literal character and won't match git commands.
+
+### Tool name wildcards
+
+Deny and ask rules also accept glob patterns in the tool-name position. The pattern must match the full tool name: `"*"` matches every tool, and `"mcp__*"` matches every MCP tool across all servers. A tool matched by a bare-name glob deny rule is removed from Claude's context, the same as a bare tool name. This configuration denies every MCP tool:
+
+```json theme={null}
+{
+  "permissions": {
+    "deny": [
+      "mcp__*"
+    ]
+  }
+}
+```
+
+Allow rules accept tool-name globs only after a literal `mcp__<server>__` prefix. The server segment must be glob-free so the rule names a specific server you configured. `mcp__puppeteer__*` matches every tool from the `puppeteer` server, and `mcp__github__get_*` matches its `get_` tools. An unanchored allow glob such as `"*"`, `"B*"`, or `"mcp__*"` is skipped with a warning and does not auto-approve anything.
+
+A deny or ask rule whose tool name matches no known tool produces a startup warning to catch typos. Tool names containing `_` or `*` are exempt from the check.
 
 ## Tool-specific permission rules
 
@@ -134,7 +158,7 @@ Exec wrappers such as `watch`, `setsid`, `ionice`, and `flock` always prompt and
 
 #### Read-only commands
 
-Claude Code recognizes a built-in set of Bash commands as read-only and runs them without a permission prompt in every mode. These include `ls`, `cat`, `head`, `tail`, `grep`, `find`, `wc`, `diff`, `stat`, `du`, `cd`, and read-only forms of `git`. The set is not configurable; to require a prompt for one of these commands, add an `ask` or `deny` rule for it.
+Claude Code recognizes a built-in set of Bash commands as read-only and runs them without a permission prompt in every mode. These include `ls`, `cat`, `echo`, `pwd`, `head`, `tail`, `grep`, `find`, `wc`, `which`, `diff`, `stat`, `du`, `cd`, and read-only forms of `git`. The set is not configurable; to require a prompt for one of these commands, add an `ask` or `deny` rule for it.
 
 Unquoted glob patterns are permitted for commands whose every flag is read-only, so `ls *.ts` and `wc -l src/*.py` run without a prompt. Commands with write-capable or exec-capable flags, such as `find`, `sort`, `sed`, and `git`, still prompt when an unquoted glob is present because the glob could expand to a flag like `-delete`.
 
@@ -153,17 +177,39 @@ A `cd` into a path inside your working directory or an [additional directory](#w
 
   * **Restrict Bash network tools**: use deny rules to block `curl`, `wget`, and similar commands, then use the WebFetch tool with `WebFetch(domain:github.com)` permission for allowed domains
   * **Use PreToolUse hooks**: implement a hook that validates URLs in Bash commands and blocks disallowed domains
-  * Instructing Claude Code about your allowed curl patterns via CLAUDE.md
+  * **Add CLAUDE.md guidance**: describe your allowed curl patterns in `CLAUDE.md`. This shapes what Claude tries but doesn't enforce a boundary, so pair it with one of the options above
 
   Note that using WebFetch alone does not prevent network access. If Bash is allowed, Claude can still use `curl`, `wget`, or other tools to reach any URL.
 </Warning>
 
+### PowerShell
+
+PowerShell permission rules use the same shape as Bash rules. Wildcards with `*` match at any position, the `:*` suffix is equivalent to a trailing ` *`, and a bare `PowerShell` or `PowerShell(*)` matches every command. This configuration allows `Get-ChildItem` and `git commit` commands while blocking `Remove-Item`:
+
+```json theme={null}
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(git commit *)"
+    ],
+    "deny": [
+      "PowerShell(Remove-Item *)"
+    ]
+  }
+}
+```
+
+Common aliases are canonicalized before matching. A rule written for the cmdlet name also matches its aliases, so `PowerShell(Get-ChildItem *)` matches `gci`, `ls`, and `dir` as well. Matching is case-insensitive.
+
+Claude Code parses the PowerShell AST and checks each command in a compound command independently. Pipeline operators `|`, statement separators `;`, and on PowerShell 7+ the chain operators `&&` and `||` split a compound command into subcommands. A rule must match every subcommand for the compound command to be allowed.
+
 ### Read and Edit
 
-`Edit` rules apply to all built-in tools that edit files. Claude makes a best-effort attempt to apply `Read` rules to all built-in tools that read files like Grep and Glob.
+`Edit` rules apply to all built-in tools that edit files. Claude makes a best-effort attempt to apply `Read` rules to all built-in tools that read files like Grep and Glob, to `@file` mentions in your prompts, and to the selection and open-file context that a connected [IDE](/en/vs-code#the-built-in-ide-mcp-server) shares with Claude.
 
 <Warning>
-  Read and Edit deny rules apply to Claude's built-in file tools, not to Bash subprocesses. A `Read(./.env)` deny rule blocks the Read tool but does not prevent `cat .env` in Bash. For OS-level enforcement that blocks all processes from accessing a path, [enable the sandbox](/en/sandboxing).
+  Read and Edit deny rules apply to Claude's built-in file tools and to file commands Claude Code recognizes in Bash, such as `cat`, `head`, `tail`, and `sed`. They do not apply to arbitrary subprocesses that read or write files indirectly, like a Python or Node script that opens files itself. For OS-level enforcement that blocks all processes from accessing a path, [enable the sandbox](/en/sandboxing).
 </Warning>
 
 Read and Edit rules both follow the [gitignore](https://git-scm.com/docs/gitignore) specification with four distinct pattern types:
@@ -188,8 +234,15 @@ Examples:
 * `Edit(//tmp/scratch.txt)`: edits the absolute path `/tmp/scratch.txt`
 * `Read(src/**)`: reads from `<current-directory>/src/`
 
+A rule only matches files under its anchor, so the anchor determines how far a deny rule reaches. Bare filenames follow gitignore semantics and match at any depth, so `Read(.env)` and `Read(**/.env)` are equivalent:
+
+| Deny rule                       | Blocks                                       | Does not block                                       |
+| ------------------------------- | -------------------------------------------- | ---------------------------------------------------- |
+| `Read(.env)` or `Read(**/.env)` | any `.env` at or under the current directory | `.env` in a parent directory or another project      |
+| `Read(//**/.env)`               | any `.env` anywhere on the filesystem        | nothing; the rule is anchored at the filesystem root |
+
 <Note>
-  In gitignore patterns, `*` matches files in a single directory while `**` matches recursively across directories. To allow all file access, use just the tool name without parentheses: `Read`, `Edit`, or `Write`.
+  In gitignore patterns, `*` matches within a single path segment and can appear at any position in the pattern, while `**` matches across directories. To allow all file access, use just the tool name without parentheses: `Read`, `Edit`, or `Write`.
 </Note>
 
 When Claude accesses a symlink, permission rules check two paths: the symlink itself and the file it resolves to. Allow and deny rules treat that pair differently: allow rules fall back to prompting you, while deny rules block outright.
@@ -201,7 +254,13 @@ For example, with `Read(./project/**)` allowed and `Read(~/.ssh/**)` denied, a s
 
 ### WebFetch
 
-* `WebFetch(domain:example.com)` matches fetch requests to example.com
+WebFetch rules use a `domain:` prefix and match against the hostname of the requested URL. Matching is case-insensitive, supports `*` wildcards, and strips a trailing `.` from both the rule and the hostname so `example.com.` and `example.com` are treated the same.
+
+* `WebFetch(domain:example.com)` matches requests to `example.com`
+* `WebFetch(domain:*.example.com)` matches any subdomain at any depth, such as `api.example.com` or `a.b.example.com`, but not `example.com` itself
+* `WebFetch(domain:*)` matches every domain and is equivalent to a bare `WebFetch` rule
+
+A `*` matches across a `.` only as a leading `*.` or as the entire pattern. Elsewhere it stays within one label, so `WebFetch(domain:github.*)` matches `github.io` but not `github.evil.com`, a domain an attacker could register. When an exact rule and a wildcard rule in the same allow, ask, or deny list both match a hostname, the exact rule is the one matched. Evaluation order is unchanged: deny rules still run before ask and allow rules regardless of specificity.
 
 ### MCP
 
@@ -227,6 +286,22 @@ Add these rules to the `deny` array in your settings or use the `--disallowedToo
 }
 ```
 
+### Cd
+
+`Cd` rules control which directories the [`/cd` command](/en/commands) can move the session to. `Cd` is not a model-invocable tool: Claude cannot call it, and the rules apply only when you run `/cd` yourself.
+
+A bare `Cd` deny rule disables `/cd` entirely. A `Cd(<path-pattern>)` deny rule blocks matching targets. Deny rules check every spelling of the target, including each symlink hop it resolves through, so a rule written for one path also blocks targets that resolve to it.
+
+Adding any `Cd` allow rule switches `/cd` to allowlist mode: the resolved target directory must match one of your allow rules, or `/cd` refuses. With no `Cd` rules configured, `/cd` keeps its default behavior and prompts you to trust an unfamiliar directory.
+
+Path patterns share the `//`, `~/`, and `/` anchors from [Read and Edit rules](#read-and-edit), but matching is anchored to the whole directory path rather than gitignore-style. `*` matches exactly one path segment and `**` matches across segments. A trailing `/**` also matches its named root.
+
+| Rule                  | Matches                                   | Does not match               |
+| --------------------- | ----------------------------------------- | ---------------------------- |
+| `Cd(~/code/*)`        | `~/code/app`                              | `~/code/app/src`, `~/code`   |
+| `Cd(~/code/**)`       | `~/code` and any directory under it       | directories outside `~/code` |
+| `Cd(**/node_modules)` | any `node_modules` directory at any depth | `node_modules/pkg`           |
+
 ## Extend permissions with hooks
 
 [Claude Code hooks](/en/hooks-guide) provide a way to register custom shell commands to perform permission evaluation at runtime. When Claude Code makes a tool call, PreToolUse hooks run before the permission prompt. The hook output can deny the tool call, force a prompt, or skip the prompt to let the call proceed.
@@ -245,9 +320,13 @@ By default, Claude has access to files in the directory where it was launched. Y
 
 Files in additional directories follow the same permission rules as the original working directory: they become readable without prompts, and file editing permissions follow the current permission mode.
 
+To change the session's primary working directory instead of adding another, use [`/cd`](/en/commands). The `/cd` command requires Claude Code v2.1.169 or later. Unlike `/add-dir`, it relocates the session: the new directory's `CLAUDE.md` is loaded and `--resume` finds the session from there.
+
 ### Additional directories grant file access, not configuration
 
 Adding a directory extends where Claude can read and edit files. It does not make that directory a full configuration root: most `.claude/` configuration is not discovered from additional directories, though a few types are loaded as exceptions.
+
+These exceptions apply only to directories added with the `--add-dir` flag or the `/add-dir` command. Directories listed in `permissions.additionalDirectories` in a settings file grant file access only and do not load any of the configuration below.
 
 The following configuration types are loaded from `--add-dir` directories:
 
@@ -257,7 +336,7 @@ The following configuration types are loaded from `--add-dir` directories:
 | Plugin settings in `.claude/settings.json`                             | `enabledPlugins` and `extraKnownMarketplaces` only                                                                                                                 |
 | [CLAUDE.md](/en/memory) files, `.claude/rules/`, and `CLAUDE.local.md` | Only when `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` is set. `CLAUDE.local.md` additionally requires the `local` setting source, which is enabled by default |
 
-Everything else, including subagents, commands, output styles, hooks, and other settings, is discovered only from the current working directory and its parents, your user directory at `~/.claude/`, and managed settings. To share that configuration across projects, use one of these approaches:
+Subagents, commands, and output styles are discovered from the current working directory and its parents, your user directory at `~/.claude/`, and managed settings. Hooks and other `settings.json` keys load from the current working directory's `.claude/` folder with no parent-directory fallback, alongside your user `~/.claude/settings.json` and managed settings. To share that configuration across projects, use one of these approaches:
 
 * **User-level configuration**: place files in `~/.claude/agents/`, `~/.claude/output-styles/`, or `~/.claude/settings.json` to make them available in every project
 * **Plugins**: package and distribute configuration as a [plugin](/en/plugins) that teams can install
@@ -274,10 +353,10 @@ Use both for defense-in-depth:
 
 * Permission deny rules block Claude from even attempting to access restricted resources
 * Sandbox restrictions prevent Bash commands from reaching resources outside defined boundaries, even if a prompt injection bypasses Claude's decision-making
-* Filesystem restrictions in the sandbox use Read and Edit deny rules, not separate sandbox configuration
+* Filesystem restrictions in the sandbox combine the [`sandbox.filesystem`](/en/sandboxing) settings with Read and Edit deny rules; both are merged into the final sandbox boundary
 * Network restrictions combine WebFetch permission rules with the sandbox's `allowedDomains` and `deniedDomains` lists
 
-When sandboxing is enabled with `autoAllowBashIfSandboxed: true`, which is the default, sandboxed Bash commands run without prompting even if your permissions include `ask: Bash(*)`. The sandbox boundary substitutes for the per-command prompt. See [sandbox modes](/en/sandboxing#sandbox-modes) to change this behavior.
+When sandboxing is enabled with `autoAllowBashIfSandboxed: true`, which is the default, sandboxed Bash commands run without prompting even if your permissions include a bare `Bash` ask rule, or the [equivalent `Bash(*)` form](#match-all-uses-of-a-tool): the sandbox boundary substitutes for that whole-tool prompt. Content-scoped ask rules like `Bash(git push *)` still force a prompt, explicit deny rules still apply, and `rm` or `rmdir` commands that target `/`, your home directory, or other critical system paths still trigger a prompt. Commands that won't run sandboxed, such as excluded commands, respect the bare `Bash` ask rule as usual. See [sandbox modes](/en/sandboxing#sandbox-modes) to change this behavior.
 
 ## Managed settings
 
@@ -287,138 +366,28 @@ For organizations that need centralized control over Claude Code configuration, 
 
 The following settings are only read from managed settings. Placing them in user or project settings files has no effect.
 
-| Setting                                        | Description                                                                                                                                                                                                                                 |
-| :--------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `allowedChannelPlugins`                        | Allowlist of channel plugins that may push messages. Replaces the default Anthropic allowlist when set. Requires `channelsEnabled: true`. See [Restrict which channel plugins can run](/en/channels#restrict-which-channel-plugins-can-run) |
-| `allowManagedHooksOnly`                        | When `true`, only managed hooks, SDK hooks, and hooks from plugins force-enabled in managed settings `enabledPlugins` are loaded. User, project, and all other plugin hooks are blocked                                                     |
-| `allowManagedMcpServersOnly`                   | When `true`, only `allowedMcpServers` from managed settings are respected. `deniedMcpServers` still merges from all sources. See [Managed MCP configuration](/en/mcp#managed-mcp-configuration)                                             |
-| `allowManagedPermissionRulesOnly`              | When `true`, prevents user and project settings from defining `allow`, `ask`, or `deny` permission rules. Only rules in managed settings apply                                                                                              |
-| `blockedMarketplaces`                          | Blocklist of marketplace sources. Blocked sources are checked before downloading, so they never touch the filesystem. See [managed marketplace restrictions](/en/plugin-marketplaces#managed-marketplace-restrictions)                      |
-| `channelsEnabled`                              | Allow [channels](/en/channels) for Team and Enterprise users. Unset or `false` blocks channel message delivery regardless of what users pass to `--channels`                                                                                |
-| `forceRemoteSettingsRefresh`                   | When `true`, blocks CLI startup until remote managed settings are freshly fetched and exits if the fetch fails. See [fail-closed enforcement](/en/server-managed-settings#enforce-fail-closed-startup)                                      |
-| `pluginTrustMessage`                           | Custom message appended to the plugin trust warning shown before installation                                                                                                                                                               |
-| `sandbox.filesystem.allowManagedReadPathsOnly` | When `true`, only `filesystem.allowRead` paths from managed settings are respected. `denyRead` still merges from all sources                                                                                                                |
-| `sandbox.network.allowManagedDomainsOnly`      | When `true`, only `allowedDomains` and `WebFetch(domain:...)` allow rules from managed settings are respected. Non-allowed domains are blocked automatically without prompting the user. Denied domains still merge from all sources        |
-| `strictKnownMarketplaces`                      | Controls which plugin marketplaces users can add. See [managed marketplace restrictions](/en/plugin-marketplaces#managed-marketplace-restrictions)                                                                                          |
+| Setting                                        | Description                                                                                                                                                                                                                                                                                                             |
+| :--------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowAllClaudeAiMcps`                         | When `true`, claude.ai connectors load alongside a deployed `managed-mcp.json` instead of being suppressed by its exclusive control. See [Managed MCP configuration](/en/managed-mcp)                                                                                                                                   |
+| `allowedChannelPlugins`                        | Allowlist of channel plugins that may push messages. Replaces the default Anthropic allowlist when set. Requires `channelsEnabled: true`. See [Restrict which channel plugins can run](/en/channels#restrict-which-channel-plugins-can-run)                                                                             |
+| `allowManagedHooksOnly`                        | When `true`, only managed hooks, SDK hooks, and hooks from plugins force-enabled in managed settings `enabledPlugins` are loaded. User, project, and all other plugin hooks are blocked                                                                                                                                 |
+| `allowManagedMcpServersOnly`                   | When `true`, only `allowedMcpServers` from managed settings are respected. `deniedMcpServers` still merges from all sources. See [Managed MCP configuration](/en/managed-mcp)                                                                                                                                           |
+| `allowManagedPermissionRulesOnly`              | When `true`, prevents user and project settings from defining `allow`, `ask`, or `deny` permission rules. Only rules in managed settings apply. Does not affect the MCP server allowlist; for that, set `allowManagedMcpServersOnly`                                                                                    |
+| `blockedMarketplaces`                          | Blocklist of marketplace sources. Blocked sources are checked before downloading, so they never touch the filesystem. See [managed marketplace restrictions](/en/plugin-marketplaces#managed-marketplace-restrictions)                                                                                                  |
+| `channelsEnabled`                              | Allow [channels](/en/channels) for the organization. See [enterprise controls](/en/channels#enterprise-controls) for the default on each plan                                                                                                                                                                           |
+| `forceRemoteSettingsRefresh`                   | When `true`, blocks CLI startup until remote managed settings are freshly fetched and exits if the fetch fails. See [fail-closed enforcement](/en/server-managed-settings#enforce-fail-closed-startup)                                                                                                                  |
+| `pluginTrustMessage`                           | Custom message appended to the plugin trust warning shown before installation                                                                                                                                                                                                                                           |
+| `sandbox.filesystem.allowManagedReadPathsOnly` | When `true`, only `filesystem.allowRead` paths from managed settings are respected. `denyRead` still merges from all sources                                                                                                                                                                                            |
+| `sandbox.network.allowManagedDomainsOnly`      | When `true`, only `allowedDomains` and `WebFetch(domain:...)` allow rules from managed settings are respected. Non-allowed domains are blocked automatically without prompting the user. Denied domains still merge from all sources                                                                                    |
+| `strictKnownMarketplaces`                      | Controls which plugin marketplace sources users can add and install plugins from. See [managed marketplace restrictions](/en/plugin-marketplaces#managed-marketplace-restrictions)                                                                                                                                      |
+| `strictPluginOnlyCustomization`                | Block skills, agents, hooks, and MCP servers from user and project sources, so they can only come from plugins or managed settings. `true` locks all four surfaces; an array such as `["skills", "hooks"]` locks only the named ones. See [`strictPluginOnlyCustomization`](/en/settings#strictpluginonlycustomization) |
+| `wslInheritsWindowsSettings`                   | When `true` in the Windows HKLM registry key or `C:\Program Files\ClaudeCode\managed-settings.json`, WSL reads managed settings from the Windows policy chain in addition to `/etc/claude-code`. See [Settings files](/en/settings#settings-files)                                                                      |
 
 `disableBypassPermissionsMode` is typically placed in managed settings to enforce organizational policy, but it works from any scope. A user can set it in their own settings to lock themselves out of bypass mode.
 
 <Note>
-  Access to [Remote Control](/en/remote-control) and [web sessions](/en/claude-code-on-the-web) is not controlled by a managed settings key. On Team and Enterprise plans, an admin enables or disables these features in [Claude Code admin settings](https://claude.ai/admin-settings/claude-code).
+  On Team and Enterprise plans, an admin enables or disables [Remote Control](/en/remote-control) and [web sessions](/en/claude-code-on-the-web) organization-wide in [Claude Code admin settings](https://claude.ai/admin-settings/claude-code). Remote Control can additionally be disabled per device with the [`disableRemoteControl`](/en/settings#available-settings) managed setting. Web sessions have no per-device managed settings key.
 </Note>
-
-## Review auto mode denials
-
-When [auto mode](/en/permission-modes#eliminate-prompts-with-auto-mode) denies a tool call, a notification appears and the denied action is recorded in `/permissions` under the Recently denied tab. Press `r` on a denied action to mark it for retry: when you exit the dialog, Claude Code sends a message telling the model it may retry that tool call and resumes the conversation.
-
-To react to denials programmatically, use the [`PermissionDenied` hook](/en/hooks#permissiondenied).
-
-## Configure the auto mode classifier
-
-[Auto mode](/en/permission-modes#eliminate-prompts-with-auto-mode) uses a classifier model to decide whether each action is safe to run without prompting. Out of the box it trusts only the working directory and, if present, the current repo's remotes. Actions like pushing to your company's source control org or writing to a team cloud bucket will be blocked as potential data exfiltration. The `autoMode` settings block lets you tell the classifier which infrastructure your organization trusts.
-
-The classifier reads `autoMode` from user settings, `.claude/settings.local.json`, and managed settings. It does not read from shared project settings in `.claude/settings.json`, because a checked-in repo could otherwise inject its own allow rules.
-
-| Scope                      | File                          | Use for                                             |
-| :------------------------- | :---------------------------- | :-------------------------------------------------- |
-| One developer              | `~/.claude/settings.json`     | Personal trusted infrastructure                     |
-| One project, one developer | `.claude/settings.local.json` | Per-project trusted buckets or services, gitignored |
-| Organization-wide          | Managed settings              | Trusted infrastructure enforced for all developers  |
-
-Entries from each scope are combined. A developer can extend `environment`, `allow`, and `soft_deny` with personal entries but cannot remove entries that managed settings provide. Because allow rules act as exceptions to block rules inside the classifier, a developer-added `allow` entry can override an organization `soft_deny` entry: the combination is additive, not a hard policy boundary. If you need a rule that developers cannot work around, use `permissions.deny` in managed settings instead, which blocks actions before the classifier is consulted.
-
-### Define trusted infrastructure
-
-For most organizations, `autoMode.environment` is the only field you need to set. It tells the classifier which repos, buckets, and domains are trusted, without touching the built-in block and allow rules. The classifier uses `environment` to decide what "external" means: any destination not listed is a potential exfiltration target.
-
-```json theme={null}
-{
-  "autoMode": {
-    "environment": [
-      "Source control: github.example.com/acme-corp and all repos under it",
-      "Trusted cloud buckets: s3://acme-build-artifacts, gs://acme-ml-datasets",
-      "Trusted internal domains: *.corp.example.com, api.internal.example.com",
-      "Key internal services: Jenkins at ci.example.com, Artifactory at artifacts.example.com"
-    ]
-  }
-}
-```
-
-Entries are prose, not regex or tool patterns. The classifier reads them as natural-language rules. Write them the way you would describe your infrastructure to a new engineer. A thorough environment section covers:
-
-* **Organization**: your company name and what Claude Code is primarily used for, like software development, infrastructure automation, or data engineering
-* **Source control**: every GitHub, GitLab, or Bitbucket org your developers push to
-* **Cloud providers and trusted buckets**: bucket names or prefixes that Claude should be able to read from and write to
-* **Trusted internal domains**: hostnames for APIs, dashboards, and services inside your network, like `*.internal.example.com`
-* **Key internal services**: CI, artifact registries, internal package indexes, incident tooling
-* **Additional context**: regulated-industry constraints, multi-tenant infrastructure, or compliance requirements that affect what the classifier should treat as risky
-
-A useful starting template: fill in the bracketed fields and remove any lines that don't apply:
-
-```json theme={null}
-{
-  "autoMode": {
-    "environment": [
-      "Organization: {COMPANY_NAME}. Primary use: {PRIMARY_USE_CASE, e.g. software development, infrastructure automation}",
-      "Source control: {SOURCE_CONTROL, e.g. GitHub org github.example.com/acme-corp}",
-      "Cloud provider(s): {CLOUD_PROVIDERS, e.g. AWS, GCP, Azure}",
-      "Trusted cloud buckets: {TRUSTED_BUCKETS, e.g. s3://acme-builds, gs://acme-datasets}",
-      "Trusted internal domains: {TRUSTED_DOMAINS, e.g. *.internal.example.com, api.example.com}",
-      "Key internal services: {SERVICES, e.g. Jenkins at ci.example.com, Artifactory at artifacts.example.com}",
-      "Additional context: {EXTRA, e.g. regulated industry, multi-tenant infrastructure, compliance requirements}"
-    ]
-  }
-}
-```
-
-The more specific context you give, the better the classifier can distinguish routine internal operations from exfiltration attempts.
-
-You don't need to fill everything in at once. A reasonable rollout: start with the defaults and add your source control org and key internal services, which resolves the most common false positives like pushing to your own repos. Add trusted domains and cloud buckets next. Fill the rest as blocks come up.
-
-### Override the block and allow rules
-
-Two additional fields let you replace the classifier's built-in rule lists: `autoMode.soft_deny` controls what gets blocked, and `autoMode.allow` controls which exceptions apply. Each is an array of prose descriptions, read as natural-language rules.
-
-Inside the classifier, the precedence is: `soft_deny` rules block first, then `allow` rules override as exceptions, then explicit user intent overrides both. If the user's message directly and specifically describes the exact action Claude is about to take, the classifier allows it even if a `soft_deny` rule matches. General requests don't count: asking Claude to "clean up the repo" does not authorize force-pushing, but asking Claude to "force-push this branch" does.
-
-To loosen: remove rules from `soft_deny` when the defaults block something your pipeline already guards against with PR review, CI, or staging environments, or add to `allow` when the classifier repeatedly flags a routine pattern the default exceptions don't cover. To tighten: add to `soft_deny` for risks specific to your environment that the defaults miss, or remove from `allow` to hold a default exception to the block rules. In all cases, run `claude auto-mode defaults` to get the full default lists, then copy and edit: never start from an empty list.
-
-```json theme={null}
-{
-  "autoMode": {
-    "environment": [
-      "Source control: github.example.com/acme-corp and all repos under it"
-    ],
-    "allow": [
-      "Deploying to the staging namespace is allowed: staging is isolated from production and resets nightly",
-      "Writing to s3://acme-scratch/ is allowed: ephemeral bucket with a 7-day lifecycle policy"
-    ],
-    "soft_deny": [
-      "Never run database migrations outside the migrations CLI, even against dev databases",
-      "Never modify files under infra/terraform/prod/: production infrastructure changes go through the review workflow",
-      "...copy full default soft_deny list here first, then add your rules..."
-    ]
-  }
-}
-```
-
-<Danger>
-  Setting `allow` or `soft_deny` replaces the entire default list for that section. If you set `soft_deny` with a single entry, every built-in block rule is discarded: force push, data exfiltration, `curl | bash`, production deploys, and all other default block rules become allowed. To customize safely, run `claude auto-mode defaults` to print the built-in rules, copy them into your settings file, then review each rule against your own pipeline and risk tolerance. Only remove rules for risks your infrastructure already mitigates.
-</Danger>
-
-The three sections are evaluated independently, so setting `environment` alone leaves the default `allow` and `soft_deny` lists intact.
-
-### Inspect the defaults and your effective config
-
-Because setting `allow` or `soft_deny` replaces the defaults, start any customization by copying the full default lists. Three CLI subcommands help you inspect and validate:
-
-```bash theme={null}
-claude auto-mode defaults  # the built-in environment, allow, and soft_deny rules
-claude auto-mode config    # what the classifier actually uses: your settings where set, defaults otherwise
-claude auto-mode critique  # get AI feedback on your custom allow and soft_deny rules
-```
-
-Save the output of `claude auto-mode defaults` to a file, edit the lists to match your policy, and paste the result into your settings file. After saving, run `claude auto-mode config` to confirm the effective rules are what you expect. If you've written custom rules, `claude auto-mode critique` reviews them and flags entries that are ambiguous, redundant, or likely to cause false positives.
 
 ## Settings precedence
 
@@ -432,7 +401,9 @@ Permission rules follow the same [settings precedence](/en/settings#settings-pre
 
 If a tool is denied at any level, no other level can allow it. For example, a managed settings deny cannot be overridden by `--allowedTools`, and `--disallowedTools` can add restrictions beyond what managed settings define.
 
-If a permission is allowed in user settings but denied in project settings, the project setting takes precedence and the permission is blocked.
+Embedding hosts can supply additional managed policy via the SDK `managedSettings` option when [`parentSettingsBehavior`](/en/settings#settings-precedence) is set to `"merge"`; embedder values can tighten policy but not loosen it.
+
+For example, if user settings allow a permission and project settings deny it, the deny rule blocks it. The reverse is also true: a user-level deny blocks a project-level allow, because deny rules from any scope are evaluated before allow rules.
 
 ## Example configurations
 
@@ -441,6 +412,7 @@ This [repository](https://github.com/anthropics/claude-code/tree/main/examples/s
 ## See also
 
 * [Settings](/en/settings): complete configuration reference including the permission settings table
+* [Configure auto mode](/en/auto-mode-config): tell the auto mode classifier which infrastructure your organization trusts
 * [Sandboxing](/en/sandboxing): OS-level filesystem and network isolation for Bash commands
 * [Authentication](/en/authentication): set up user access to Claude Code
 * [Security](/en/security): security safeguards and best practices

@@ -14,13 +14,13 @@ This page covers how to [track your costs](#track-your-costs), [manage costs for
 
 ## Track your costs
 
-### Using the `/cost` command
+### Using the `/usage` command
 
 <Note>
-  The `/cost` command shows API token usage and is intended for API users. Claude Max and Pro subscribers have usage included in their subscription, so `/cost` data isn't relevant for billing purposes. Subscribers can use `/stats` to view usage patterns.
+  The Session block in `/usage` shows API token usage and is intended for API users. Claude Max and Pro subscribers have usage included in their subscription, so the session cost figure isn't relevant for billing purposes. Subscribers see plan usage bars, activity stats, and a usage breakdown on the same screen.
 </Note>
 
-The `/cost` command provides detailed token usage statistics for your current session. The dollar figure is an estimate computed locally from token counts and may differ from your actual bill. For authoritative billing, see the Usage page in the [Claude Console](https://platform.claude.com/usage).
+The Session block at the top of `/usage` shows detailed token usage statistics for your current session. The dollar figure is an estimate computed locally from token counts and may differ from your actual bill. For authoritative billing, see the Usage page in the [Claude Console](https://platform.claude.com/usage).
 
 ```text theme={null}
 Total cost:            $0.55
@@ -29,9 +29,15 @@ Total duration (wall): 6h 33m 10.2s
 Total code changes:    0 lines added, 0 lines removed
 ```
 
+On a Pro, Max, Team, or Enterprise plan, `/usage` also shows a breakdown of what counts against your plan limits. It attributes recent usage to skills, subagents, plugins, and individual MCP servers, with each shown as a percentage of the total. Press `d` or `w` to switch between the last 24 hours and the last 7 days. The figures are approximate and computed from local session history on this machine, so usage from other devices or claude.ai is not included.
+
+In the [VS Code extension](/en/vs-code#check-account-and-usage), the same breakdown appears in the Account & usage dialog with a Day and Week toggle. Requires Claude Code v2.1.174 or later.
+
 ## Managing costs for teams
 
 When using Claude API, you can [set workspace spend limits](https://platform.claude.com/docs/en/build-with-claude/workspaces#workspace-limits) on the total Claude Code workspace spend. Admins can [view cost and usage reporting](https://platform.claude.com/docs/en/build-with-claude/workspaces#usage-and-cost-tracking) in the Console.
+
+On Pro and Max plans, you can set a monthly spend limit on usage credits with the `/usage-credits` command. If you reach that limit while you still have usage credits available, Claude Code prompts you to raise or remove the limit so you can continue without leaving the CLI. Changing the limit requires billing access on the account.
 
 <Note>
   When you first authenticate Claude Code with your Claude Console account, a workspace called "Claude Code" is automatically created for you. This workspace provides centralized cost tracking and management for all Claude Code usage in your organization. You cannot create API keys for this workspace; it is exclusively for Claude Code authentication and usage.
@@ -76,13 +82,13 @@ To keep agent team costs manageable:
 
 ## Reduce token usage
 
-Token costs scale with context size: the more context Claude processes, the more tokens you use. Claude Code automatically optimizes costs through prompt caching (which reduces costs for repeated content like system prompts) and auto-compaction (which summarizes conversation history when approaching context limits).
+Token costs scale with context size: the more context Claude processes, the more tokens you use. Claude Code automatically optimizes costs through [prompt caching](/en/prompt-caching), which reduces costs for repeated content like system prompts, and auto-compaction, which summarizes conversation history when approaching context limits.
 
 The following strategies help you keep context small and reduce per-message costs.
 
 ### Manage context proactively
 
-Use `/cost` to check your current token usage, or [configure your status line](/en/statusline#context-window-usage) to display it continuously.
+Use `/usage` to check your current token usage, or [configure your status line](/en/statusline#context-window-usage) to display it continuously.
 
 * **Clear between tasks**: Use `/clear` to start fresh when switching to unrelated work. Stale context wastes tokens on every subsequent message. Use `/rename` before clearing so you can easily find the session later, then `/resume` to return to it.
 * **Add custom compaction instructions**: `/compact Focus on code samples and API usage` tells Claude what to preserve during summarization.
@@ -166,7 +172,7 @@ Your [CLAUDE.md](/en/memory) file is loaded into context at session start. If it
 
 ### Adjust extended thinking
 
-Extended thinking is enabled by default because it significantly improves performance on complex planning and reasoning tasks. Thinking tokens are billed as output tokens, and the default budget can be tens of thousands of tokens per request depending on the model. For simpler tasks where deep reasoning isn't needed, you can reduce costs by lowering the [effort level](/en/model-config#adjust-effort-level) with `/effort` or in `/model`, disabling thinking in `/config`, or lowering the budget with `MAX_THINKING_TOKENS=8000`.
+Extended thinking is enabled by default because it significantly improves performance on complex planning and reasoning tasks. Thinking tokens are billed as output tokens, and the default budget can be tens of thousands of tokens per request depending on the model. For simpler tasks where deep reasoning isn't needed, you can reduce costs by lowering the [effort level](/en/model-config#adjust-effort-level) with `/effort` or in `/model`, disabling thinking in `/config`, or, on models with a [fixed thinking budget](/en/model-config#adaptive-reasoning-and-fixed-thinking-budgets), lowering the budget with `MAX_THINKING_TOKENS=8000`. Adaptive-reasoning models ignore nonzero budgets, so use effort levels there instead. Disabling thinking is not available on Fable 5, which always uses extended thinking.
 
 ### Delegate verbose operations to subagents
 
@@ -184,7 +190,7 @@ Vague requests like "improve this codebase" trigger broad scanning. Specific req
 
 For longer or more complex work, these habits help avoid wasted tokens from going down the wrong path:
 
-* **Use plan mode for complex tasks**: Press Shift+Tab to enter [plan mode](/en/common-workflows#use-plan-mode-for-safe-code-analysis) before implementation. Claude explores the codebase and proposes an approach for your approval, preventing expensive re-work when the initial direction is wrong.
+* **Use plan mode for complex tasks**: Press Shift+Tab to enter [plan mode](/en/permission-modes#analyze-before-you-edit-with-plan-mode) before implementation. Claude explores the codebase and proposes an approach for your approval, preventing expensive re-work when the initial direction is wrong.
 * **Course-correct early**: If Claude starts heading the wrong direction, press Escape to stop immediately. Use `/rewind` or double-tap Escape to restore conversation and code to a previous checkpoint.
 * **Give verification targets**: Include test cases, paste screenshots, or define expected output in your prompt. When Claude can verify its own work, it catches issues before you need to request fixes.
 * **Test incrementally**: Write one file, test it, then continue. This catches issues early when they're cheap to fix.
@@ -194,7 +200,7 @@ For longer or more complex work, these habits help avoid wasted tokens from goin
 Claude Code uses tokens for some background functionality even when idle:
 
 * **Conversation summarization**: Background jobs that summarize previous conversations for the `claude --resume` feature
-* **Command processing**: Some commands like `/cost` may generate requests to check status
+* **Command processing**: Some commands like `/usage` may generate requests to check status
 
 These background processes consume a small amount of tokens (typically under \$0.04 per session) even without active interaction.
 

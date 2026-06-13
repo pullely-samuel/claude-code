@@ -45,7 +45,7 @@ Claude Code behaves the same everywhere. What changes is where code executes and
 | **Uses your local config**                   | No, repo only                                                                                                   | Yes                          | Yes                    | Yes for local, no for cloud |
 | **Requires GitHub**                          | Yes, or [bundle a local repo](/en/claude-code-on-the-web#send-local-repositories-without-github) via `--remote` | No                           | No                     | Only for cloud sessions     |
 | **Keeps running if you disconnect**          | Yes                                                                                                             | While terminal stays open    | No                     | Depends on session type     |
-| **[Permission modes](/en/permission-modes)** | Auto accept edits, Plan                                                                                         | Ask, Auto accept edits, Plan | All modes              | Depends on session type     |
+| **[Permission modes](/en/permission-modes)** | Accept edits, Plan, Auto                                                                                        | Ask, Auto accept edits, Plan | All modes              | Depends on session type     |
 | **Network access**                           | Configurable per environment                                                                                    | Your machine's network       | Your machine's network | Depends on session type     |
 
 See the [terminal quickstart](/en/quickstart), [Desktop app](/en/desktop), or [Remote Control](/en/remote-control) docs to set those up.
@@ -119,7 +119,7 @@ With GitHub connected and an environment created, you're ready to submit tasks.
   </Step>
 
   <Step title="Choose a permission mode">
-    The mode dropdown next to the input defaults to **Auto accept edits**, where Claude makes changes and pushes a branch without stopping for approval. Switch to **Plan mode** if you want Claude to propose an approach and wait for your go-ahead before editing files. Cloud sessions don't offer Ask permissions, Auto mode, or Bypass permissions. See [Permission modes](/en/permission-modes) for the full list.
+    The mode dropdown next to the input defaults to **Accept edits**, where Claude makes changes and pushes a branch without stopping for approval. Switch to **Plan mode** if you want Claude to propose an approach and wait for your go-ahead before editing files. Cloud sessions don't offer Ask permissions or Bypass permissions. See [Permission modes](/en/permission-modes) for the full list.
   </Step>
 
   <Step title="Describe the task and submit">
@@ -176,7 +176,7 @@ When Claude finishes, review the changes, leave feedback on specific lines, and 
 
 ### No repositories appear after connecting GitHub
 
-The Claude GitHub App needs explicit access to each repository you want to use. On github.com, open **Settings → Applications → Claude → Configure** and verify your repo is listed under **Repository access**. Private repositories need the same authorization as public ones.
+A cloud session can use any repository the connected GitHub account can see, regardless of which repositories the Claude GitHub App is installed on. If a repository is missing, verify the connected GitHub account has access to it on GitHub. If you also want [Auto-fix](/en/claude-code-on-the-web#auto-fix-pull-requests) for a repository, install the App on it: on github.com, open **Settings → Applications → Claude → Configure** and verify the repository is listed under **Repository access**. Private repositories need the same authorization as public ones.
 
 ### The page only shows a GitHub login button
 
@@ -205,6 +205,16 @@ The setup script exited with a non-zero status, which blocks the session from st
 * A command that works locally needs a different invocation on Ubuntu.
 
 To debug, add `set -x` at the top of the script to see which command failed. For non-critical commands, append `|| true` so they don't block session start.
+
+### New sessions hang or time out during setup
+
+If new sessions stall on the setup script step or fail with a generic container error before the script finishes, the script is likely exceeding the roughly five-minute time budget for building the [environment cache](/en/claude-code-on-the-web#environment-caching). Heavy steps such as pulling large Docker images, syncing full dependency trees, or downloading model weights often push the total over the limit, especially when they run one after another.
+
+To fix this, trim the script so it reliably finishes in under five minutes:
+
+* Run independent installs in parallel with `&` and a final `wait` instead of running them serially.
+* Move the largest downloads out of the setup script and into a [SessionStart hook](/en/claude-code-on-the-web#setup-scripts-vs-sessionstart-hooks) that launches them in the background, so the session becomes usable while they finish.
+* Remove long retry sleeps from the setup script, since a stalled retry loop counts against the budget.
 
 ### Session keeps running after closing the tab
 

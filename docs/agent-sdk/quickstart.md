@@ -26,7 +26,8 @@ Use the Agent SDK to build an AI agent that reads your code, finds bugs, and fix
     Create a new directory for this quickstart:
 
     ```bash theme={null}
-    mkdir my-agent && cd my-agent
+    mkdir my-agent
+    cd my-agent
     ```
 
     For your own projects, you can run the SDK from any folder; it will have access to files in that directory and its subdirectories by default.
@@ -43,20 +44,34 @@ Use the Agent SDK to build an AI agent that reads your code, finds bugs, and fix
       </Tab>
 
       <Tab title="Python (uv)">
-        [uv Python package manager](https://docs.astral.sh/uv/) is a fast Python package manager that handles virtual environments automatically:
+        [uv](https://docs.astral.sh/uv/) is a fast Python package manager that handles virtual environments automatically:
 
         ```bash theme={null}
-        uv init && uv add claude-agent-sdk
+        uv init
+        uv add claude-agent-sdk
         ```
       </Tab>
 
       <Tab title="Python (pip)">
-        Create a virtual environment first, then install:
+        Create and activate a virtual environment, then install the package.
+
+        On macOS or Linux:
 
         ```bash theme={null}
-        python3 -m venv .venv && source .venv/bin/activate
-        pip3 install claude-agent-sdk
+        python3 -m venv .venv
+        source .venv/bin/activate
+        pip install claude-agent-sdk
         ```
+
+        On Windows:
+
+        ```powershell theme={null}
+        py -m venv .venv
+        .venv\Scripts\Activate.ps1
+        pip install claude-agent-sdk
+        ```
+
+        If PowerShell blocks `Activate.ps1` with an execution policy error, run `Set-ExecutionPolicy -Scope Process RemoteSigned` first.
       </Tab>
     </Tabs>
 
@@ -75,10 +90,11 @@ Use the Agent SDK to build an AI agent that reads your code, finds bugs, and fix
     The SDK also supports authentication via third-party API providers:
 
     * **Amazon Bedrock**: set `CLAUDE_CODE_USE_BEDROCK=1` environment variable and configure AWS credentials
+    * **Claude Platform on AWS**: set `CLAUDE_CODE_USE_ANTHROPIC_AWS=1` and `ANTHROPIC_AWS_WORKSPACE_ID`, then configure AWS credentials
     * **Google Vertex AI**: set `CLAUDE_CODE_USE_VERTEX=1` environment variable and configure Google Cloud credentials
     * **Microsoft Azure**: set `CLAUDE_CODE_USE_FOUNDRY=1` environment variable and configure Azure credentials
 
-    See the setup guides for [Bedrock](/en/amazon-bedrock), [Vertex AI](/en/google-vertex-ai), or [Azure AI Foundry](/en/microsoft-foundry) for details.
+    See the setup guides for [Bedrock](/en/amazon-bedrock), [Claude Platform on AWS](/en/claude-platform-on-aws), [Vertex AI](/en/google-vertex-ai), or [Azure AI Foundry](/en/microsoft-foundry) for details.
 
     <Note>
       Unless previously approved, Anthropic does not allow third party developers to offer claude.ai login or rate limits for their products, including agents built on the Claude Agent SDK. Please use the API key authentication methods described in this document instead.
@@ -122,7 +138,7 @@ Create `agent.py` if you're using the Python SDK, or `agent.ts` for TypeScript:
       async for message in query(
           prompt="Review utils.py for bugs that would cause crashes. Fix any issues you find.",
           options=ClaudeAgentOptions(
-              allowed_tools=["Read", "Edit", "Glob"],  # Tools Claude can use
+              allowed_tools=["Read", "Edit", "Glob"],  # Auto-approve these tools
               permission_mode="acceptEdits",  # Auto-approve file edits
           ),
       ):
@@ -147,7 +163,7 @@ Create `agent.py` if you're using the Python SDK, or `agent.ts` for TypeScript:
   for await (const message of query({
     prompt: "Review utils.py for bugs that would cause crashes. Fix any issues you find.",
     options: {
-      allowedTools: ["Read", "Edit", "Glob"], // Tools Claude can use
+      allowedTools: ["Read", "Edit", "Glob"], // Auto-approve these tools
       permissionMode: "acceptEdits" // Auto-approve file edits
     }
   })) {
@@ -173,7 +189,7 @@ This code has three main parts:
 
 2. **`prompt`**: what you want Claude to do. Claude figures out which tools to use based on the task.
 
-3. **`options`**: configuration for the agent. This example uses `allowedTools` to pre-approve `Read`, `Edit`, and `Glob`, and `permissionMode: "acceptEdits"` to auto-approve file changes. Other options include `systemPrompt`, `mcpServers`, and more. See all options for [Python](/en/agent-sdk/python#claude-agent-options) or [TypeScript](/en/agent-sdk/typescript#options).
+3. **`options`**: configuration for the agent. This example uses `allowedTools` to pre-approve `Read`, `Edit`, and `Glob`, and `permissionMode: "acceptEdits"` to auto-approve file changes. Other options include `systemPrompt`, `mcpServers`, and more. See all options for [Python](/en/agent-sdk/python#claudeagentoptions) or [TypeScript](/en/agent-sdk/typescript#options).
 
 The `async for` loop keeps running as Claude thinks, calls tools, observes results, and decides what to do next. Each iteration yields a message: Claude's reasoning, a tool call, a tool result, or the final outcome. The SDK handles the orchestration (tool execution, context management, retries) so you just consume the stream. The loop ends when Claude finishes the task or hits an error.
 
@@ -188,15 +204,23 @@ The message handling inside the loop filters for human-readable output. Without 
 Your agent is ready. Run it with the following command:
 
 <Tabs>
-  <Tab title="Python">
-    ```bash theme={null}
-    python3 agent.py
-    ```
-  </Tab>
-
   <Tab title="TypeScript">
     ```bash theme={null}
     npx tsx agent.ts
+    ```
+  </Tab>
+
+  <Tab title="Python (uv)">
+    ```bash theme={null}
+    uv run agent.py
+    ```
+  </Tab>
+
+  <Tab title="Python (pip)">
+    With your virtual environment still activated:
+
+    ```bash theme={null}
+    python agent.py
     ```
   </Tab>
 </Tabs>
@@ -299,13 +323,13 @@ With `Bash` enabled, try: `"Write unit tests for utils.py, run them, and fix any
 
 **Permission modes** control how much human oversight you want:
 
-| Mode                     | Behavior                                                                        | Use case                                 |
-| ------------------------ | ------------------------------------------------------------------------------- | ---------------------------------------- |
-| `acceptEdits`            | Auto-approves file edits and common filesystem commands, asks for other actions | Trusted development workflows            |
-| `dontAsk`                | Denies anything not in `allowedTools`                                           | Locked-down headless agents              |
-| `auto` (TypeScript only) | A model classifier approves or denies each tool call                            | Autonomous agents with safety guardrails |
-| `bypassPermissions`      | Runs every tool without prompts                                                 | Sandboxed CI, fully trusted environments |
-| `default`                | Requires a `canUseTool` callback to handle approval                             | Custom approval flows                    |
+| Mode                     | Behavior                                                                                                                            | Use case                                 |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `acceptEdits`            | Auto-approves file edits and common filesystem commands, asks for other actions                                                     | Trusted development workflows            |
+| `dontAsk`                | Denies anything not in `allowedTools`                                                                                               | Locked-down headless agents              |
+| `auto` (TypeScript only) | A model classifier approves or denies each tool call                                                                                | Autonomous agents with safety guardrails |
+| `bypassPermissions`      | Runs every tool without prompting, unless an explicit [`ask` rule](/en/agent-sdk/permissions#how-permissions-are-evaluated) matches | Sandboxed CI, fully trusted environments |
+| `default`                | Requires a `canUseTool` callback to handle approval                                                                                 | Custom approval flows                    |
 
 The example above uses `acceptEdits` mode, which auto-approves file operations so the agent can run without interactive prompts. If you want to prompt users for approval, use `default` mode and provide a [`canUseTool` callback](/en/agent-sdk/user-input) that collects user input. For more control, see [Permissions](/en/agent-sdk/permissions).
 

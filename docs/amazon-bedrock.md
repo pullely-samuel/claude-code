@@ -68,7 +68,7 @@ export const ContactSalesCard = ({surface}) => {
           <a href={`https://claude.com/pricing?${utm('view_plans')}#plans-business`} className="cc-cs-btn-ghost">
             View plans
           </a>
-          <a href={`https://www.anthropic.com/contact-sales?${utm('contact_sales')}`} className="cc-cs-btn-clay">
+          <a href={`https://claude.com/contact-sales?${utm('contact_sales')}`} className="cc-cs-btn-clay">
             Contact sales {iconArrowRight()}
           </a>
         </div>
@@ -76,117 +76,7 @@ export const ContactSalesCard = ({surface}) => {
     </div>;
 };
 
-export const Experiment = ({flag, treatment, children}) => {
-  const VID_KEY = 'exp_vid';
-  const CONSENT_COUNTRIES = new Set(['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'RE', 'GP', 'MQ', 'GF', 'YT', 'BL', 'MF', 'PM', 'WF', 'PF', 'NC', 'AW', 'CW', 'SX', 'FO', 'GL', 'AX', 'GB', 'UK', 'AI', 'BM', 'IO', 'VG', 'KY', 'FK', 'GI', 'MS', 'PN', 'SH', 'TC', 'GG', 'JE', 'IM', 'CA', 'BR', 'IN']);
-  const fnv1a = s => {
-    let h = 0x811c9dc5;
-    for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i);
-      h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-    }
-    return h >>> 0;
-  };
-  const bucket = (seed, vid) => fnv1a(fnv1a(seed + vid) + '') % 10000 < 5000 ? 'control' : 'treatment';
-  const [decision] = useState(() => {
-    const params = new URLSearchParams(location.search);
-    const preBucketed = document.documentElement.dataset['gb_' + flag.replace(/-/g, '_')];
-    const force = params.get('gb-force');
-    if (force) {
-      for (const p of force.split(',')) {
-        const [k, v] = p.split(':');
-        if (k === flag) return {
-          variant: v || 'treatment',
-          track: false
-        };
-      }
-    }
-    if (navigator.globalPrivacyControl) {
-      return {
-        variant: 'control',
-        track: false
-      };
-    }
-    const prefsMatch = document.cookie.match(/(?:^|; )anthropic-consent-preferences=([^;]+)/);
-    if (prefsMatch) {
-      try {
-        if (JSON.parse(decodeURIComponent(prefsMatch[1])).analytics !== true) {
-          return {
-            variant: 'control',
-            track: false
-          };
-        }
-      } catch {
-        return {
-          variant: 'control',
-          track: false
-        };
-      }
-    } else {
-      const country = params.get('country')?.toUpperCase() || (document.cookie.match(/(?:^|; )cf_geo=([A-Z]{2})/) || [])[1];
-      if (!country || CONSENT_COUNTRIES.has(country)) {
-        return {
-          variant: 'control',
-          track: false
-        };
-      }
-    }
-    let vid;
-    try {
-      const ajsMatch = document.cookie.match(/(?:^|; )ajs_anonymous_id=([^;]+)/);
-      if (ajsMatch) {
-        vid = decodeURIComponent(ajsMatch[1]).replace(/^"|"$/g, '');
-      } else {
-        vid = localStorage.getItem(VID_KEY);
-        if (!vid) {
-          vid = crypto.randomUUID();
-        }
-        document.cookie = `ajs_anonymous_id=${vid}; domain=.claude.com; path=/; Secure; SameSite=Lax; max-age=31536000`;
-      }
-      try {
-        localStorage.setItem(VID_KEY, vid);
-      } catch {}
-    } catch {
-      return {
-        variant: 'control',
-        track: false
-      };
-    }
-    const variant = preBucketed === '1' ? 'treatment' : preBucketed === '0' ? 'control' : bucket(flag, vid);
-    return {
-      variant,
-      track: true,
-      vid
-    };
-  });
-  useEffect(() => {
-    if (!decision.track) return;
-    fetch('https://api.anthropic.com/api/event_logging/v2/batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-service-name': 'claude_code_docs'
-      },
-      body: JSON.stringify({
-        events: [{
-          event_type: 'GrowthbookExperimentEvent',
-          event_data: {
-            device_id: decision.vid,
-            anonymous_id: decision.vid,
-            timestamp: new Date().toISOString(),
-            experiment_id: flag,
-            variation_id: decision.variant === 'treatment' ? 1 : 0,
-            environment: 'production'
-          }
-        }]
-      }),
-      keepalive: true
-    }).catch(() => {});
-  }, []);
-  return decision.variant === 'treatment' ? treatment : children;
-};
-
-<Experiment flag="docs-contact-sales-cta" treatment={<ContactSalesCard surface="bedrock" />} />
+<ContactSalesCard surface="bedrock" />
 
 ## Prerequisites
 
@@ -280,7 +170,10 @@ Bedrock API keys provide a simpler authentication method without needing full AW
 
 Claude Code supports automatic credential refresh for AWS SSO and corporate identity providers. Add these settings to your Claude Code settings file (see [Settings](/en/settings) for file locations).
 
-When Claude Code detects that your AWS credentials are expired (either locally based on their timestamp or when Bedrock returns a credential error), it will automatically run your configured `awsAuthRefresh` and/or `awsCredentialExport` commands to obtain new credentials before retrying the request.
+These two settings have different trigger conditions:
+
+* **`awsAuthRefresh`**: runs only when Claude Code detects that your AWS credentials are expired, either locally based on their timestamp or when Bedrock returns a credential error, then retries the request with refreshed credentials.
+* **`awsCredentialExport`**: runs at session start and on each credential reload, even when the credentials in your AWS default credential provider chain are still valid. Use this when your Bedrock account requires cross-account credentials that differ from the ones the default provider chain would resolve.
 
 ##### Example configuration
 
@@ -297,7 +190,7 @@ When Claude Code detects that your AWS credentials are expired (either locally b
 
 **`awsAuthRefresh`**: Use this for commands that modify the `.aws` directory, such as updating credentials, SSO cache, or config files. The command's output is displayed to the user, but interactive input isn't supported. This works well for browser-based SSO flows where the CLI displays a URL or code and you complete authentication in the browser.
 
-**`awsCredentialExport`**: Only use this if you can't modify `.aws` and must directly return credentials. Output is captured silently and not shown to the user. The command must output JSON in this format:
+**`awsCredentialExport`**: Only use this if you can't modify `.aws` and must directly return credentials. This command runs whenever credentials need to be refreshed, not only when credentials are expired. Output is captured silently and not shown to the user. The command must output JSON in this format:
 
 ```json theme={null}
 {
@@ -316,10 +209,11 @@ Set the following environment variables to enable Bedrock:
 ```bash theme={null}
 # Enable Bedrock integration
 export CLAUDE_CODE_USE_BEDROCK=1
-export AWS_REGION=us-east-1  # or your preferred region
+export AWS_REGION=us-east-1  # optional if your AWS profile already sets a region
 
-# Optional: Override the region for the small/fast model (Haiku).
-# Also applies to Bedrock Mantle.
+# Optional: Override the AWS region for the small/fast model (Bedrock and Mantle).
+# On Bedrock, has no effect without ANTHROPIC_DEFAULT_HAIKU_MODEL
+# or the deprecated ANTHROPIC_SMALL_FAST_MODEL set.
 export ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION=us-west-2
 
 # Optional: Override the Bedrock endpoint URL for custom endpoints or gateways
@@ -328,40 +222,50 @@ export ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION=us-west-2
 
 When enabling Bedrock for Claude Code, keep the following in mind:
 
-* `AWS_REGION` is a required environment variable. Claude Code does not read from the `.aws` config file for this setting.
-* When using Bedrock, the `/login` and `/logout` commands are disabled since authentication is handled through AWS credentials.
+* {/* min-version: 2.1.172 */}As of v2.1.172, you only need to set `AWS_REGION` to override your AWS profile's region or when your profile has no region. Claude Code resolves the region in this order:
+
+  * `AWS_REGION`
+  * `AWS_DEFAULT_REGION`
+  * the `region` set on your active AWS profile, read from the AWS shared credentials file first and then the shared config file, matching AWS SDK precedence
+  * `us-east-1`
+
+  The active profile is `AWS_PROFILE` if set, otherwise `default`. Set `AWS_SHARED_CREDENTIALS_FILE` or `AWS_CONFIG_FILE` to point at non-default file paths. Run `/status` to see the resolved region. When the region came from your AWS config files or the default fallback, `/status` also notes the source. On v2.1.171 and earlier, Claude Code does not read the AWS config files, so set `AWS_REGION` explicitly.
+* When using Bedrock, the `/logout` command is unavailable since authentication is handled through AWS credentials.
+* The WebSearch tool is not available on Bedrock. See [WebSearch tool behavior](/en/tools-reference#websearch-tool-behavior).
 * You can use settings files for environment variables like `AWS_PROFILE` that you don't want to leak to other processes. See [Settings](/en/settings) for more information.
 
 ### 4. Pin model versions
 
 <Warning>
-  Pin specific model versions when deploying to multiple users. Without pinning, model aliases such as `sonnet` and `opus` resolve to the latest version, which may not yet be available in your Bedrock account when Anthropic releases an update. Claude Code [falls back](#startup-model-checks) to the previous version at startup when the latest is unavailable, but pinning lets you control when your users move to a new model.
+  Pin specific model versions when deploying to multiple users. Without pinning, model aliases such as `sonnet` and `opus` resolve to Claude Code's built-in default for Bedrock, which can lag the newest release and may not yet be available in your account. Claude Code [falls back](#startup-model-checks) to the previous version at startup when the default is unavailable, but pinning lets you control when your users move to a new model.
 </Warning>
 
 Set these environment variables to specific Bedrock model IDs.
 
-Without `ANTHROPIC_DEFAULT_OPUS_MODEL`, the `opus` alias on Bedrock resolves to Opus 4.6. Set it to the Opus 4.7 ID to use the latest model:
+Without `ANTHROPIC_DEFAULT_OPUS_MODEL`, the `opus` alias on Bedrock resolves to Opus 4.6. Set it to the Opus 4.8 ID to use the latest model:
 
 ```bash theme={null}
-export ANTHROPIC_DEFAULT_OPUS_MODEL='us.anthropic.claude-opus-4-7'
+export ANTHROPIC_DEFAULT_OPUS_MODEL='us.anthropic.claude-opus-4-8'
 export ANTHROPIC_DEFAULT_SONNET_MODEL='us.anthropic.claude-sonnet-4-6'
 export ANTHROPIC_DEFAULT_HAIKU_MODEL='us.anthropic.claude-haiku-4-5-20251001-v1:0'
 ```
 
-These variables use cross-region inference profile IDs (with the `us.` prefix). If you use a different region prefix or application inference profiles, adjust accordingly. For current and legacy model IDs, see [Models overview](https://platform.claude.com/docs/en/about-claude/models/overview). See [Model configuration](/en/model-config#pin-models-for-third-party-deployments) for the full list of environment variables.
+These variables use cross-region inference profile IDs (with the `us.` prefix). If you use a different region prefix or application inference profiles, adjust accordingly. In AWS GovCloud regions, use the `us-gov.` prefix. For current and legacy model IDs, see [Models overview](https://platform.claude.com/docs/en/about-claude/models/overview). See [Model configuration](/en/model-config#pin-models-for-third-party-deployments) for the full list of environment variables.
 
 Claude Code uses these default models when no pinning variables are set:
 
 | Model type       | Default value                                  |
 | :--------------- | :--------------------------------------------- |
 | Primary model    | `us.anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Small/fast model | `us.anthropic.claude-haiku-4-5-20251001-v1:0`  |
+| Small/fast model | Same as primary model                          |
+
+Background tasks such as session title generation use the small/fast model, normally a Haiku-class model. On Bedrock, Claude Code defaults this to the primary model because Haiku may not be enabled in every account or region. To use Haiku for background tasks, set `ANTHROPIC_DEFAULT_HAIKU_MODEL` to a model ID that is available in your account.
 
 To customize models further, use one of these methods:
 
 ```bash theme={null}
 # Using inference profile ID
-export ANTHROPIC_MODEL='global.anthropic.claude-sonnet-4-6'
+export ANTHROPIC_MODEL='us.anthropic.claude-sonnet-4-6'
 export ANTHROPIC_DEFAULT_HAIKU_MODEL='us.anthropic.claude-haiku-4-5-20251001-v1:0'
 
 # Using application inference profile ARN
@@ -369,9 +273,14 @@ export ANTHROPIC_MODEL='arn:aws:bedrock:us-east-2:your-account-id:application-in
 
 # Optional: Disable prompt caching if needed
 export DISABLE_PROMPT_CACHING=1
+
+# Optional: Request 1-hour prompt cache TTL instead of the 5-minute default
+export ENABLE_PROMPT_CACHING_1H=1
 ```
 
-<Note>[Prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) may not be available in all regions.</Note>
+The 1-hour cache TTL is billed at a higher rate than the 5-minute default. See [cache lifetime](/en/prompt-caching#cache-lifetime).
+
+<Note>Prompt caching may not be available in all Bedrock regions. If cache token counts stay at zero, check [supported models, regions, and limits](https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html#prompt-caching-models) in the Bedrock documentation.</Note>
 
 #### Map each model version to an inference profile
 
@@ -414,7 +323,8 @@ Create an IAM policy with the required permissions for Claude Code:
       "Action": [
         "bedrock:InvokeModel",
         "bedrock:InvokeModelWithResponseStream",
-        "bedrock:ListInferenceProfiles"
+        "bedrock:ListInferenceProfiles",
+        "bedrock:GetInferenceProfile"
       ],
       "Resource": [
         "arn:aws:bedrock:*:*:inference-profile/*",
@@ -442,6 +352,10 @@ Create an IAM policy with the required permissions for Claude Code:
 
 For more restrictive permissions, you can limit the Resource to specific inference profile ARNs.
 
+`bedrock:GetInferenceProfile` lets Claude Code resolve an [application inference profile ARN](#map-each-model-version-to-an-inference-profile) to its backing foundation model, which is used to select the correct request shape for that model.
+
+If the token is missing this permission, Claude Code recovers automatically by retrying once with the alternate shape, so requests still succeed but each new model adds an extra round-trip. Granting the permission avoids the retry. This applies most often to `AWS_BEARER_TOKEN_BEDROCK` deployments, where the token's policy is typically narrower than a full IAM role.
+
 For details, see [Bedrock IAM documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/security-iam.html).
 
 <Note>
@@ -450,9 +364,19 @@ For details, see [Bedrock IAM documentation](https://docs.aws.amazon.com/bedrock
 
 ## 1M token context window
 
-Claude Opus 4.7, Opus 4.6, and Sonnet 4.6 support the [1M token context window](https://platform.claude.com/docs/en/build-with-claude/context-windows#1m-token-context-window) on Amazon Bedrock. Claude Code automatically enables the extended context window when you select a 1M model variant.
+Claude Opus 4.6 and later, and Sonnet 4.6, support the [1M token context window](https://platform.claude.com/docs/en/build-with-claude/context-windows#1m-token-context-window) on Amazon Bedrock. Claude Code automatically enables the extended context window when you select a 1M model variant.
 
 The [setup wizard](#sign-in-with-bedrock) offers a 1M context option when it pins models. To enable it for a manually pinned model instead, append `[1m]` to the model ID. See [Pin models for third-party deployments](/en/model-config#pin-models-for-third-party-deployments) for details.
+
+## Service tiers
+
+[Amazon Bedrock service tiers](https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html) let you trade off cost against latency. Set `ANTHROPIC_BEDROCK_SERVICE_TIER` to `default`, `flex`, or `priority`:
+
+```bash theme={null}
+export ANTHROPIC_BEDROCK_SERVICE_TIER=priority
+```
+
+Claude Code sends this as the `X-Amzn-Bedrock-Service-Tier` header on each request. Tier availability varies by model and region. Reserved capacity uses a [provisioned throughput](https://docs.aws.amazon.com/bedrock/latest/userguide/prov-throughput.html) ARN as the model ID instead of this setting.
 
 ## AWS Guardrails
 
@@ -485,7 +409,7 @@ export CLAUDE_CODE_USE_MANTLE=1
 export AWS_REGION=us-east-1
 ```
 
-Claude Code constructs the endpoint URL from `AWS_REGION`. To override it for a custom endpoint or gateway, set `ANTHROPIC_BEDROCK_MANTLE_BASE_URL`.
+Claude Code constructs the endpoint URL from the AWS region. {/* min-version: 2.1.172 */}As of v2.1.172, the region is resolved with the same precedence as [Bedrock above](#3-configure-claude-code); earlier versions use `AWS_REGION` only. To override the URL for a custom endpoint or gateway, set `ANTHROPIC_BEDROCK_MANTLE_BASE_URL`.
 
 Run `/status` inside Claude Code to confirm. The provider line shows `Amazon Bedrock (Mantle)` when Mantle is active.
 
@@ -557,7 +481,7 @@ If you encounter region issues:
 * Switch to a supported region: `export AWS_REGION=us-east-1`
 * Consider using inference profiles for cross-region access
 
-If you receive an error "on-demand throughput isn’t supported":
+If you receive an error "on-demand throughput isn't supported":
 
 * Specify the model as an [inference profile](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html) ID
 

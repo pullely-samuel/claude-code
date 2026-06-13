@@ -39,12 +39,7 @@ To install a plugin from the official marketplace, use `/plugin install <name>@c
 If Claude Code reports that the plugin is not found in any marketplace, your marketplace is either missing or outdated. Run `/plugin marketplace update claude-plugins-official` to refresh it, or `/plugin marketplace add anthropics/claude-plugins-official` if you haven't added it before. Then retry the install.
 
 <Note>
-  The official marketplace is maintained by Anthropic. To submit a plugin to the official marketplace, use one of the in-app submission forms:
-
-  * **Claude.ai**: [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit)
-  * **Console**: [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit)
-
-  To distribute plugins independently, [create your own marketplace](/en/plugin-marketplaces) and share it with users.
+  The official marketplace is curated by Anthropic, and inclusion is at Anthropic's discretion. The in-app submission forms add plugins to the [community marketplace](#community-marketplace), not the official one. To distribute plugins independently, [create your own marketplace](/en/plugin-marketplaces) and share it with users.
 </Note>
 
 The official marketplace includes several categories of plugins:
@@ -95,6 +90,10 @@ These plugins bundle pre-configured [MCP servers](/en/mcp) so you can connect Cl
 * **Communication**: `slack`
 * **Monitoring**: `sentry`
 
+### Automatic security review
+
+The `security-guidance` plugin reviews each change Claude makes for common vulnerabilities and instructs Claude to fix what it finds in the same session. See [Catch security issues as Claude writes code](/en/security-guidance) for what it checks and how to add project-specific rules.
+
 ### Development workflows
 
 Plugins that add skills and agents for common development tasks:
@@ -110,6 +109,22 @@ Customize how Claude responds:
 
 * **explanatory-output-style**: Educational insights about implementation choices
 * **learning-output-style**: Interactive learning mode for skill building
+
+## Community marketplace
+
+The community marketplace at [`anthropics/claude-plugins-community`](https://github.com/anthropics/claude-plugins-community) hosts third-party plugins that have passed Anthropic's automated validation and safety screening. Each plugin is pinned to a specific commit SHA in the catalog. Unlike the official marketplace, you add it manually:
+
+```shell theme={null}
+/plugin marketplace add anthropics/claude-plugins-community
+```
+
+Then install plugins from it using the `claude-community` marketplace name:
+
+```shell theme={null}
+/plugin install <plugin-name>@claude-community
+```
+
+To submit your own plugin to the community marketplace, see [Submit your plugin to the community marketplace](/en/plugins#submit-your-plugin-to-the-community-marketplace) in the create-plugins guide.
 
 ## Try it: add the demo marketplace
 
@@ -134,11 +149,17 @@ Anthropic also maintains a [demo plugins marketplace](https://github.com/anthrop
     * **Marketplaces**: add, remove, or update your added marketplaces
     * **Errors**: view any plugin loading errors
 
-    Go to the **Discover** tab to see plugins from the marketplace you just added.
+    Go to the **Discover** tab to see plugins from the marketplace you just added. {/* min-version: 2.1.154 */}When your administrator has allowlisted the marketplace via the [`pluginSuggestionMarketplaces`](/en/settings#available-settings) managed setting, plugins marked as relevant to your current working directory are pinned at the top with a **suggested for this directory** label.
   </Step>
 
   <Step title="Install a plugin">
-    Select a plugin to view its details, then choose an installation scope:
+    Select a plugin to view its details. The details pane shows what the plugin contains and what it costs:
+
+    * {/* min-version: 2.1.143 */}A **Context cost** estimate so you can see how many tokens the plugin will add to your [context window](/en/features-overview#understand-context-costs) every turn (Claude Code v2.1.143 and later)
+    * {/* min-version: 2.1.144 */}The plugin's **Last updated** date (v2.1.144 and later)
+    * {/* min-version: 2.1.145 */}A **Will install** section listing the plugin's commands, agents, skills, hooks, and MCP and LSP servers, so you can review exactly what it adds before installing (v2.1.145 and later)
+
+    Choose an installation scope:
 
     * **User scope**: install for yourself across all projects
     * **Project scope**: install for all collaborators on this repository
@@ -149,7 +170,7 @@ Anthropic also maintains a [demo plugins marketplace](https://github.com/anthrop
     You can also install directly from the command line:
 
     ```shell theme={null}
-    /plugin install commit-commands@anthropics-claude-code
+    /plugin install commit-commands@claude-code-plugins
     ```
 
     See [Configuration scopes](/en/settings#configuration-scopes) to learn more about scopes.
@@ -166,7 +187,7 @@ Anthropic also maintains a [demo plugins marketplace](https://github.com/anthrop
 
     This stages your changes, generates a commit message, and creates the commit.
 
-    Each plugin works differently. Check the plugin's description in the **Discover** tab or its homepage to learn what skills and capabilities it provides.
+    Each plugin works differently. Check the plugin's details in the **Discover** tab to see the commands and skills it provides, or visit its homepage for usage guidance.
   </Step>
 </Steps>
 
@@ -197,7 +218,7 @@ For example, `anthropics/claude-code` refers to the `claude-code` repository own
 
 ### Add from other Git hosts
 
-Add any git repository by providing the full URL. This works with any Git host, including GitLab, Bitbucket, and self-hosted servers:
+Add any git repository by providing the full URL. This works with any Git host, including GitLab, Bitbucket, and self-hosted servers. Include the `.git` suffix so Claude Code clones the repository rather than treating the URL as a direct link to a hosted `marketplace.json` file.
 
 Using HTTPS:
 
@@ -273,9 +294,19 @@ From the list you can:
 * type to filter by plugin name or description
 * press Enter to open a plugin's detail view and enable, disable, or uninstall it
 
+The detail view shows the components the plugin contributes: commands, skills, agents, hooks, MCP servers, and LSP servers. The same inventory is available from the command line with `claude plugin details`.
+
 When you install a plugin that declares dependencies, the install output lists which dependencies were auto-installed alongside it.
 
 You can also manage plugins with direct commands.
+
+List installed plugins without opening the menu:
+
+```shell theme={null}
+/plugin list
+```
+
+Pass `--enabled` or `--disabled` to show only plugins in that state.
 
 Disable a plugin without uninstalling:
 
@@ -311,6 +342,8 @@ When you install, enable, or disable plugins during a session, run `/reload-plug
 ```
 
 Claude Code reloads all active plugins and shows counts for plugins, skills, agents, hooks, plugin MCP servers, and plugin LSP servers.
+
+Reloading has a token cost on the next request: newly loaded components announce themselves in content appended to the conversation, while the existing history still reads from the prompt cache. A plugin that provides MCP servers costs more when its tools aren't deferred by [tool search](/en/mcp#scale-with-mcp-tool-search): the change invalidates the cache and the next request re-reads the entire conversation. {/* min-version: 2.1.163 */}In that case `/reload-plugins` shows a warning and does not apply the reload; pass `--force` to apply anyway. See [enabling or disabling a plugin](/en/prompt-caching#enabling-or-disabling-a-plugin) for details.
 
 ## Manage marketplaces
 
@@ -364,6 +397,8 @@ Toggle auto-update for individual marketplaces through the UI:
 
 Official Anthropic marketplaces have auto-update enabled by default. Third-party and local development marketplaces have auto-update disabled by default.
 
+Administrators can also set `"autoUpdate": true` on each [`extraKnownMarketplaces`](/en/settings#extraknownmarketplaces) entry in managed settings to enable auto-update for an organization marketplace without requiring each user to toggle it.
+
 To disable all automatic updates entirely for both Claude Code and all plugins, set the `DISABLE_AUTOUPDATER` environment variable. See [Auto updates](/en/setup#auto-updates) for details.
 
 To keep plugin auto-updates enabled while disabling Claude Code auto-updates, set `FORCE_AUTOUPDATE_PLUGINS=1` along with `DISABLE_AUTOUPDATER`:
@@ -409,7 +444,7 @@ If you see "unknown command" or the `/plugin` command doesn't appear:
 1. **Check your version**: Run `claude --version` to see what's installed.
 2. **Update Claude Code**:
    * **Homebrew**: `brew upgrade claude-code` (or `brew upgrade claude-code@latest` if you installed that cask)
-   * **npm**: `npm update -g @anthropic-ai/claude-code`
+   * **npm**: `npm install -g @anthropic-ai/claude-code@latest`
    * **Native installer**: Re-run the install command from [Setup](/en/setup)
 3. **Restart Claude Code**: After updating, restart your terminal and run `claude` again.
 

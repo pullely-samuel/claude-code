@@ -68,7 +68,7 @@ export const ContactSalesCard = ({surface}) => {
           <a href={`https://claude.com/pricing?${utm('view_plans')}#plans-business`} className="cc-cs-btn-ghost">
             View plans
           </a>
-          <a href={`https://www.anthropic.com/contact-sales?${utm('contact_sales')}`} className="cc-cs-btn-clay">
+          <a href={`https://claude.com/contact-sales?${utm('contact_sales')}`} className="cc-cs-btn-clay">
             Contact sales {iconArrowRight()}
           </a>
         </div>
@@ -76,119 +76,9 @@ export const ContactSalesCard = ({surface}) => {
     </div>;
 };
 
-export const Experiment = ({flag, treatment, children}) => {
-  const VID_KEY = 'exp_vid';
-  const CONSENT_COUNTRIES = new Set(['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'RE', 'GP', 'MQ', 'GF', 'YT', 'BL', 'MF', 'PM', 'WF', 'PF', 'NC', 'AW', 'CW', 'SX', 'FO', 'GL', 'AX', 'GB', 'UK', 'AI', 'BM', 'IO', 'VG', 'KY', 'FK', 'GI', 'MS', 'PN', 'SH', 'TC', 'GG', 'JE', 'IM', 'CA', 'BR', 'IN']);
-  const fnv1a = s => {
-    let h = 0x811c9dc5;
-    for (let i = 0; i < s.length; i++) {
-      h ^= s.charCodeAt(i);
-      h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-    }
-    return h >>> 0;
-  };
-  const bucket = (seed, vid) => fnv1a(fnv1a(seed + vid) + '') % 10000 < 5000 ? 'control' : 'treatment';
-  const [decision] = useState(() => {
-    const params = new URLSearchParams(location.search);
-    const preBucketed = document.documentElement.dataset['gb_' + flag.replace(/-/g, '_')];
-    const force = params.get('gb-force');
-    if (force) {
-      for (const p of force.split(',')) {
-        const [k, v] = p.split(':');
-        if (k === flag) return {
-          variant: v || 'treatment',
-          track: false
-        };
-      }
-    }
-    if (navigator.globalPrivacyControl) {
-      return {
-        variant: 'control',
-        track: false
-      };
-    }
-    const prefsMatch = document.cookie.match(/(?:^|; )anthropic-consent-preferences=([^;]+)/);
-    if (prefsMatch) {
-      try {
-        if (JSON.parse(decodeURIComponent(prefsMatch[1])).analytics !== true) {
-          return {
-            variant: 'control',
-            track: false
-          };
-        }
-      } catch {
-        return {
-          variant: 'control',
-          track: false
-        };
-      }
-    } else {
-      const country = params.get('country')?.toUpperCase() || (document.cookie.match(/(?:^|; )cf_geo=([A-Z]{2})/) || [])[1];
-      if (!country || CONSENT_COUNTRIES.has(country)) {
-        return {
-          variant: 'control',
-          track: false
-        };
-      }
-    }
-    let vid;
-    try {
-      const ajsMatch = document.cookie.match(/(?:^|; )ajs_anonymous_id=([^;]+)/);
-      if (ajsMatch) {
-        vid = decodeURIComponent(ajsMatch[1]).replace(/^"|"$/g, '');
-      } else {
-        vid = localStorage.getItem(VID_KEY);
-        if (!vid) {
-          vid = crypto.randomUUID();
-        }
-        document.cookie = `ajs_anonymous_id=${vid}; domain=.claude.com; path=/; Secure; SameSite=Lax; max-age=31536000`;
-      }
-      try {
-        localStorage.setItem(VID_KEY, vid);
-      } catch {}
-    } catch {
-      return {
-        variant: 'control',
-        track: false
-      };
-    }
-    const variant = preBucketed === '1' ? 'treatment' : preBucketed === '0' ? 'control' : bucket(flag, vid);
-    return {
-      variant,
-      track: true,
-      vid
-    };
-  });
-  useEffect(() => {
-    if (!decision.track) return;
-    fetch('https://api.anthropic.com/api/event_logging/v2/batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-service-name': 'claude_code_docs'
-      },
-      body: JSON.stringify({
-        events: [{
-          event_type: 'GrowthbookExperimentEvent',
-          event_data: {
-            device_id: decision.vid,
-            anonymous_id: decision.vid,
-            timestamp: new Date().toISOString(),
-            experiment_id: flag,
-            variation_id: decision.variant === 'treatment' ? 1 : 0,
-            environment: 'production'
-          }
-        }]
-      }),
-      keepalive: true
-    }).catch(() => {});
-  }, []);
-  return decision.variant === 'treatment' ? treatment : children;
-};
-
 Organizations can deploy Claude Code through Anthropic directly or through a cloud provider. This page helps you choose the right configuration.
 
-<Experiment flag="docs-contact-sales-cta" treatment={<ContactSalesCard surface="third_party_overview" />} />
+<ContactSalesCard surface="third_party_overview" />
 
 ## Compare deployment options
 
@@ -209,6 +99,7 @@ If your organization has specific infrastructure requirements, compare the optio
       <th>Claude for Teams/Enterprise</th>
       <th>Anthropic Console</th>
       <th>Amazon Bedrock</th>
+      <th>Claude Platform on AWS</th>
       <th>Google Vertex AI</th>
       <th>Microsoft Foundry</th>
     </tr>
@@ -220,6 +111,7 @@ If your organization has specific infrastructure requirements, compare the optio
       <td>Most organizations (recommended)</td>
       <td>Individual developers</td>
       <td>AWS-native deployments</td>
+      <td>AWS Marketplace billing with Claude API features</td>
       <td>GCP-native deployments</td>
       <td>Azure-native deployments</td>
     </tr>
@@ -229,6 +121,7 @@ If your organization has specific infrastructure requirements, compare the optio
       <td><strong>Teams:</strong> \$150/seat (Premium) with PAYG available<br /><strong>Enterprise:</strong> <a href="https://claude.com/contact-sales?utm_source=claude_code&utm_medium=docs&utm_content=third_party_enterprise">Contact Sales</a></td>
       <td>PAYG</td>
       <td>PAYG through AWS</td>
+      <td>PAYG through AWS Marketplace</td>
       <td>PAYG through GCP</td>
       <td>PAYG through Azure</td>
     </tr>
@@ -238,12 +131,14 @@ If your organization has specific infrastructure requirements, compare the optio
       <td>Supported [countries](https://www.anthropic.com/supported-countries)</td>
       <td>Supported [countries](https://www.anthropic.com/supported-countries)</td>
       <td>Multiple AWS [regions](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html)</td>
+      <td>Multiple AWS regions</td>
       <td>Multiple GCP [regions](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations)</td>
       <td>Multiple Azure [regions](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/)</td>
     </tr>
 
     <tr>
       <td>Prompt caching</td>
+      <td>Enabled by default</td>
       <td>Enabled by default</td>
       <td>Enabled by default</td>
       <td>Enabled by default</td>
@@ -256,6 +151,7 @@ If your organization has specific infrastructure requirements, compare the optio
       <td>Claude.ai SSO or email</td>
       <td>API key</td>
       <td>API key or AWS credentials</td>
+      <td>API key or AWS credentials</td>
       <td>GCP credentials</td>
       <td>API key or Microsoft Entra ID</td>
     </tr>
@@ -264,6 +160,7 @@ If your organization has specific infrastructure requirements, compare the optio
       <td>Cost tracking</td>
       <td>Usage dashboard</td>
       <td>Usage dashboard</td>
+      <td>AWS Cost Explorer</td>
       <td>AWS Cost Explorer</td>
       <td>GCP Billing</td>
       <td>Azure Cost Management</td>
@@ -276,12 +173,14 @@ If your organization has specific infrastructure requirements, compare the optio
       <td>No</td>
       <td>No</td>
       <td>No</td>
+      <td>No</td>
     </tr>
 
     <tr>
       <td>Enterprise features</td>
       <td>Team management, SSO, usage monitoring</td>
       <td>None</td>
+      <td>IAM policies, CloudTrail</td>
       <td>IAM policies, CloudTrail</td>
       <td>IAM roles, Cloud Audit Logs</td>
       <td>RBAC policies, Azure Monitor</td>
@@ -294,6 +193,7 @@ Select a deployment option to view setup instructions:
 * [Claude for Teams or Enterprise](/en/authentication#claude-for-teams-or-enterprise)
 * [Anthropic Console](/en/authentication#claude-console-authentication)
 * [Amazon Bedrock](/en/amazon-bedrock)
+* [Claude Platform on AWS](/en/claude-platform-on-aws)
 * [Google Vertex AI](/en/google-vertex-ai)
 * [Microsoft Foundry](/en/microsoft-foundry)
 
@@ -302,7 +202,7 @@ Select a deployment option to view setup instructions:
 Most organizations can use a cloud provider directly without additional configuration. However, you may need to configure a corporate proxy or LLM gateway if your organization has specific network or management requirements. These are different configurations that can be used together:
 
 * **Corporate proxy**: Routes traffic through an HTTP/HTTPS proxy. Use this if your organization requires all outbound traffic to pass through a proxy server for security monitoring, compliance, or network policy enforcement. Configure with the `HTTPS_PROXY` or `HTTP_PROXY` environment variables. Learn more in [Enterprise network configuration](/en/network-config).
-* **LLM Gateway**: A service that sits between Claude Code and the cloud provider to handle authentication and routing. Use this if you need centralized usage tracking across teams, custom rate limiting or budgets, or centralized authentication management. Configure with the `ANTHROPIC_BASE_URL`, `ANTHROPIC_BEDROCK_BASE_URL`, or `ANTHROPIC_VERTEX_BASE_URL` environment variables. Learn more in [LLM gateway configuration](/en/llm-gateway).
+* **LLM Gateway**: A service that sits between Claude Code and the cloud provider to handle authentication and routing. Use this if you need centralized usage tracking across teams, custom rate limiting or budgets, or centralized authentication management. Configure with the `ANTHROPIC_BASE_URL`, `ANTHROPIC_BEDROCK_BASE_URL`, `ANTHROPIC_AWS_BASE_URL`, or `ANTHROPIC_VERTEX_BASE_URL` environment variables. Learn more in [LLM gateway configuration](/en/llm-gateway).
 
 The following examples show the environment variables to set in your shell or shell profile (`.bashrc`, `.zshrc`). See [Settings](/en/settings) for other configuration methods.
 
@@ -423,7 +323,7 @@ Encourage new users to try Claude Code for codebase Q\&A, or on smaller bug fixe
 
 ### Pin model versions for cloud providers
 
-If you deploy through [Bedrock](/en/amazon-bedrock), [Vertex AI](/en/google-vertex-ai), or [Foundry](/en/microsoft-foundry), pin specific model versions using `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, and `ANTHROPIC_DEFAULT_HAIKU_MODEL`. Without pinning, model aliases resolve to the latest version, which may not yet be enabled in your account when Anthropic releases an update. Pinning lets you control when your users move to a new model. See [Model configuration](/en/model-config#pin-models-for-third-party-deployments) for what each provider does when the latest version is unavailable.
+If you deploy through [Bedrock](/en/amazon-bedrock), [Vertex AI](/en/google-vertex-ai), [Foundry](/en/microsoft-foundry), or [Claude Platform on AWS](/en/claude-platform-on-aws), pin specific model versions using `ANTHROPIC_DEFAULT_FABLE_MODEL`, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, and `ANTHROPIC_DEFAULT_HAIKU_MODEL`. Without pinning, model aliases resolve to Claude Code's built-in default for that provider, which can lag the newest release and may not yet be enabled in your account. Pinning lets you control when your users move to a new model. See [Model configuration](/en/model-config#pin-models-for-third-party-deployments) for what each provider does when the default is unavailable.
 
 ### Configure security policies
 

@@ -7,7 +7,7 @@
 > Continue a local Claude Code session from your phone, tablet, or any browser using Remote Control. Works with claude.ai/code and the Claude mobile app.
 
 <Note>
-  Remote Control is available on all plans. On Team and Enterprise, it is off by default until an admin enables the Remote Control toggle in [Claude Code admin settings](https://claude.ai/admin-settings/claude-code).
+  Remote Control is in research preview and available on all plans. On Team and Enterprise, it is off by default until an admin enables the Remote Control toggle in [Claude Code admin settings](https://claude.ai/admin-settings/claude-code).
 </Note>
 
 Remote Control connects [claude.ai/code](https://claude.ai/code) or the Claude app for [iOS](https://apps.apple.com/us/app/claude-by-anthropic/id6473753684) and [Android](https://play.google.com/store/apps/details?id=com.anthropic.claude) to a Claude Code session running on your machine. Start a task at your desk, then pick it up from your phone on the couch or a browser on another computer.
@@ -50,14 +50,14 @@ You can start a Remote Control session from the CLI or the VS Code extension. Th
 
     Available flags:
 
-    | Flag                                            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-    | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-    | `--name "My Project"`                           | Set a custom session title visible in the session list at claude.ai/code.                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-    | `--remote-control-session-name-prefix <prefix>` | Prefix for auto-generated session names when no explicit name is set. Defaults to your machine's hostname, producing names like `myhost-graceful-unicorn`. Set `CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX` for the same effect.                                                                                                                                                                                                                                                                                                                |
-    | `--spawn <mode>`                                | How the server creates sessions.<br />• `same-dir` (default): all sessions share the current working directory, so they can conflict if editing the same files.<br />• `worktree`: each on-demand session gets its own [git worktree](/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees). Requires a git repository.<br />• `session`: single-session mode. Serves exactly one session and rejects additional connections. Set at startup only.<br />Press `w` at runtime to toggle between `same-dir` and `worktree`. |
-    | `--capacity <N>`                                | Maximum number of concurrent sessions. Default is 32. Cannot be used with `--spawn=session`.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-    | `--verbose`                                     | Show detailed connection and session logs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-    | `--sandbox` / `--no-sandbox`                    | Enable or disable [sandboxing](/en/sandboxing) for filesystem and network isolation. Off by default.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+    | Flag                                            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+    | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `--name "My Project"`                           | Set a custom session title visible in the session list at claude.ai/code.                                                                                                                                                                                                                                                                                                                                                                                                          |
+    | `--remote-control-session-name-prefix <prefix>` | Prefix for auto-generated session names when no explicit name is set. Defaults to your machine's hostname, producing names like `myhost-graceful-unicorn`. Set `CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX` for the same effect.                                                                                                                                                                                                                                                    |
+    | `--spawn <mode>`                                | How the server creates sessions.<br />• `same-dir` (default): all sessions share the current working directory, so they can conflict if editing the same files.<br />• `worktree`: each on-demand session gets its own [git worktree](/en/worktrees). Requires a git repository.<br />• `session`: single-session mode. Serves exactly one session and rejects additional connections. Set at startup only.<br />Press `w` at runtime to toggle between `same-dir` and `worktree`. |
+    | `--capacity <N>`                                | Maximum number of concurrent sessions. Default is 32. Cannot be used with `--spawn=session`.                                                                                                                                                                                                                                                                                                                                                                                       |
+    | `--verbose`                                     | Show detailed connection and session logs.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+    | `--sandbox` / `--no-sandbox`                    | Enable or disable [sandboxing](/en/sandboxing) for filesystem and network isolation. Off by default.                                                                                                                                                                                                                                                                                                                                                                               |
   </Tab>
 
   <Tab title="Interactive session">
@@ -74,6 +74,8 @@ You can start a Remote Control session from the CLI or the VS Code extension. Th
     ```
 
     This gives you a full interactive session in your terminal that you can also control from claude.ai or the Claude app. Unlike `claude remote-control` (server mode), you can type messages locally while the session is also available remotely.
+
+    As of v2.1.162, a Remote Control indicator stays in the footer below the input box while the connection is up. {/* min-version: 2.1.172 */}From v2.1.172, the indicator reads `/rc active` and is hidden when the terminal is too narrow to fit it; earlier versions always show `Remote Control active`. The indicator text is a link to the session on claude.ai, so you can reopen it from the terminal at any time. Select the indicator with the down arrow key and press Enter to open a status panel with the session URL and a QR code.
   </Tab>
 
   <Tab title="From an existing session">
@@ -89,7 +91,11 @@ You can start a Remote Control session from the CLI or the VS Code extension. Th
     /remote-control My Project
     ```
 
-    This starts a Remote Control session that carries over your current conversation history and displays a session URL and QR code you can use to [connect from another device](#connect-from-another-device). The `--verbose`, `--sandbox`, and `--no-sandbox` flags are not available with this command.
+    This starts a Remote Control session that carries over your current conversation history.
+
+    As of v2.1.162, a Remote Control indicator appears in the footer below the input box and stays visible while the connection is up. {/* min-version: 2.1.172 */}From v2.1.172, the indicator reads `/rc active` and is hidden when the terminal is too narrow to fit it; earlier versions always show `Remote Control active`. The indicator text is a link to the session on claude.ai. Select it with the down arrow key and press Enter, or run `/remote-control` again, to open a status panel with the session URL and a QR code you can use to [connect from another device](#connect-from-another-device).
+
+    The `--verbose`, `--sandbox`, and `--no-sandbox` flags are not available with this command.
   </Tab>
 
   <Tab title="VS Code">
@@ -113,7 +119,7 @@ Once a Remote Control session is active, you have a few ways to connect from ano
 
 * **Open the session URL** in any browser to go directly to the session on [claude.ai/code](https://claude.ai/code).
 * **Scan the QR code** shown alongside the session URL to open it directly in the Claude app. With `claude remote-control`, press spacebar to toggle the QR code display.
-* **Open [claude.ai/code](https://claude.ai/code) or the Claude app** and find the session by name in the session list. Remote Control sessions show a computer icon with a green status dot when online.
+* **Open [claude.ai/code](https://claude.ai/code) or the Claude app** and find the session by name in the session list. In the Claude mobile app, tap **Code** in the navigation to reach the session list. Remote Control sessions show a computer icon with a green status dot when online.
 
 The remote session title is chosen in this order:
 
@@ -122,7 +128,7 @@ The remote session title is chosen in this order:
 3. The last meaningful message in existing conversation history
 4. An auto-generated name like `myhost-graceful-unicorn`, where `myhost` is your machine's hostname or the prefix you set with `--remote-control-session-name-prefix`
 
-If you didn't set an explicit name, the title updates to reflect your prompt once you send one.
+If you didn't set an explicit name, the title updates to reflect your prompt once you send one. Renaming a session from claude.ai or the Claude app also updates the local title shown in `claude --resume`.
 
 If the environment already has an active session, you'll be asked whether to continue it or start a new one.
 
@@ -130,7 +136,7 @@ If you don't have the Claude app yet, use the `/mobile` command inside Claude Co
 
 ### Enable Remote Control for all sessions
 
-By default, Remote Control only activates when you explicitly run `claude remote-control`, `claude --remote-control`, or `/remote-control`. To enable it automatically for every interactive session, run `/config` inside Claude Code and set **Enable Remote Control for all sessions** to `true`. Set it back to `false` to disable.
+By default, Remote Control only activates when you explicitly run `claude remote-control`, `claude --remote-control`, or `/remote-control`. To enable it automatically for every interactive session, run `/config` inside Claude Code and set **Enable Remote Control for all sessions** to `true`. Set it back to `false` to disable. In the Desktop app, you can also toggle this from **Settings → Claude Code → Enable remote control by default**.
 
 With this setting on, each interactive Claude Code process registers one remote session. If you run multiple instances, each one gets its own environment and session. To run multiple concurrent sessions from a single process, use [server mode](#start-a-remote-control-session) instead.
 
@@ -188,7 +194,7 @@ If notifications don't arrive:
 * **Local process must keep running**: Remote Control runs as a local process. If you close the terminal, quit VS Code, or otherwise stop the `claude` process, the session ends.
 * **Extended network outage**: if your machine is awake but unable to reach the network for more than roughly 10 minutes, the session times out and the process exits. Run `claude remote-control` again to start a new session.
 * **Ultraplan disconnects Remote Control**: starting an [ultraplan](/en/ultraplan) session disconnects any active Remote Control session because both features occupy the claude.ai/code interface and only one can be connected at a time.
-* **Some commands are local-only**: commands that open an interactive picker in the terminal, such as `/mcp`, `/plugin`, or `/resume`, work only from the local CLI. Commands that produce text output, including `/compact`, `/clear`, `/context`, `/cost`, `/exit`, `/extra-usage`, `/recap`, and `/reload-plugins`, work from mobile and web.
+* **Some commands are local-only**: commands that open an interactive picker in the terminal, such as `/plugin` or `/resume`, work only from the local CLI. Commands that produce text output, including `/compact`, `/clear`, `/context`, `/usage`, `/exit`, `/usage-credits`, `/recap`, and `/reload-plugins`, work from mobile and web. {/* min-version: 2.1.166 */}As of v2.1.166, `/mcp` also works from mobile and web: it returns a text summary of server status instead of opening the picker, and accepts the same `reconnect`, `enable`, and `disable` [subcommands](/en/commands#all-commands) as the local CLI, with one difference: from mobile and web, `/mcp reconnect` with no server name reconnects every server that has failed or needs authentication, while the local CLI requires a server name for `reconnect`.
 
 ## Troubleshooting
 
@@ -215,11 +221,12 @@ If none of these are set, run `/logout` then `/login` to refresh.
 
 ### "Remote Control is disabled by your organization's policy"
 
-This error has three distinct causes. Run `/status` first to see which login method and subscription you're using.
+This error has four distinct causes. Run `/status` first to see which login method and subscription you're using.
 
 * **You're authenticated with an API key or Console account**: Remote Control requires claude.ai OAuth. Run `/login` and choose the claude.ai option. If `ANTHROPIC_API_KEY` is set in your environment, unset it.
-* **Your Team or Enterprise admin hasn't enabled it**: Remote Control is off by default on these plans. An admin can enable it at [claude.ai/admin-settings/claude-code](https://claude.ai/admin-settings/claude-code) by turning on the **Remote Control** toggle. This is a server-side organization setting, not a [managed settings](/en/permissions#managed-only-settings) key.
+* **Your Team or Enterprise admin hasn't enabled it**: Remote Control is off by default on these plans. An admin can enable it at [claude.ai/admin-settings/claude-code](https://claude.ai/admin-settings/claude-code) by turning on the **Remote Control** toggle. This toggle is a server-side organization setting.
 * **The admin toggle is grayed out**: your organization has a data retention or compliance configuration that is incompatible with Remote Control. This cannot be changed from the admin panel. Contact Anthropic support to discuss options.
+* **The error mentions `disableRemoteControl`**: your IT administrator has disabled Remote Control on this device through [managed settings](/en/settings#settings-files), independent of the organization-wide toggle.
 
 ### "Remote credentials fetch failed"
 

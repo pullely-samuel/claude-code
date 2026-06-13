@@ -93,10 +93,11 @@ Both contain raw Claude API events, not accumulated text. You need to extract an
   ```typescript TypeScript theme={null}
   type SDKPartialAssistantMessage = {
     type: "stream_event";
-    event: RawMessageStreamEvent; // From Anthropic SDK
+    event: BetaRawMessageStreamEvent; // From Anthropic SDK
     parent_tool_use_id: string | null;
     uuid: UUID;
     session_id: string;
+    ttft_ms?: number; // Time to first token in ms, present only on message_start events
   };
   ```
 </CodeGroup>
@@ -382,9 +383,6 @@ This example combines text and tool streaming into a cohesive UI. It tracks whet
 
 ## Known limitations
 
-Some SDK features are incompatible with streaming:
-
-* **Extended thinking**: when you explicitly set `max_thinking_tokens` (Python) or `maxThinkingTokens` (TypeScript), `StreamEvent` messages are not emitted. You'll only receive complete messages after each turn. Note that thinking is disabled by default in the SDK, so streaming works unless you enable it.
 * **Structured output**: the JSON result appears only in the final `ResultMessage.structured_output`, not as streaming deltas. See [structured outputs](/en/agent-sdk/structured-outputs) for details.
 
 ## Next steps

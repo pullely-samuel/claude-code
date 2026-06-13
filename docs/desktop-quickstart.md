@@ -18,7 +18,7 @@ The desktop app gives you Claude Code with a graphical interface built for runni
   </Card>
 </CardGroup>
 
-For Windows ARM64, download the [ARM64 installer](https://claude.ai/api/desktop/win32/arm64/setup/latest/redirect?utm_source=claude_code\&utm_medium=docs). Linux is not supported.
+For Windows ARM64, download the [ARM64 installer](https://claude.ai/api/desktop/win32/arm64/setup/latest/redirect?utm_source=claude_code\&utm_medium=docs). The desktop app is not available on Linux; use the [CLI](/en/quickstart) instead.
 
 <Note>
   Claude Code requires a [Pro, Max, Team, or Enterprise subscription](https://claude.com/pricing?utm_source=claude_code\&utm_medium=docs\&utm_content=desktop_quickstart_pricing).
@@ -62,12 +62,12 @@ With the Code tab open, choose a project and give Claude something to do.
 
     You can also select:
 
-    * **Remote**: Run sessions on Anthropic's cloud infrastructure that continue even if you close the app. Remote sessions use the same infrastructure as [Claude Code on the web](/en/claude-code-on-the-web).
-    * **SSH**: Connect to a remote machine over SSH (your own servers, cloud VMs, or dev containers). Claude Code must be installed on the remote machine.
+    * **Remote**: Run sessions on Anthropic's cloud infrastructure that continue even if you close the app. Cloud sessions use the same infrastructure as [Claude Code on the web](/en/claude-code-on-the-web).
+    * **SSH**: Connect to a remote machine over SSH, such as your own servers, cloud VMs, or dev containers. Desktop installs Claude Code on the remote machine automatically the first time you connect.
   </Step>
 
   <Step title="Choose a model">
-    Select a model from the dropdown next to the send button. See [models](/en/model-config#available-models) for a comparison of Opus, Sonnet, and Haiku. You can change the model later from the same dropdown.
+    Select a model from the dropdown next to the send button. See [models](/en/model-config#available-models) for a comparison of the available models. You can change the model later from the same dropdown.
   </Step>
 
   <Step title="Tell Claude what to do">
@@ -95,7 +95,7 @@ With the Code tab open, choose a project and give Claude something to do.
 
 You've made your first edit. For the full reference on everything Desktop can do, see [Use Claude Code Desktop](/en/desktop). Here are some things to try next.
 
-**Interrupt and steer.** You can interrupt Claude at any point. If it's going down the wrong path, click the stop button or type your correction and press **Enter**. Claude stops what it's doing and adjusts based on your input. You don't have to wait for it to finish or start over.
+**Interrupt and steer.** You can redirect Claude at any point. Click the stop button to interrupt immediately, or type a correction and press **Enter** to send it without stopping the running action. Either way, you don't have to wait for it to finish or start over.
 
 **Give Claude more context.** Type `@filename` in the prompt box to pull a specific file into the conversation, attach images and PDFs using the attachment button, or drag and drop files directly into the prompt. The more context Claude has, the better the results. See [Add files and context](/en/desktop#add-files-and-context-to-prompts).
 

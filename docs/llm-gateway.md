@@ -14,6 +14,8 @@ LLM gateways provide a centralized proxy layer between Claude Code and model pro
 * **Audit logging** - Track all model interactions for compliance
 * **Model routing** - Switch between providers without code changes
 
+This page covers gateway requirements and configuration for the Claude Code CLI. Enterprise Desktop deployments can configure gateway providers via [managed settings](https://support.claude.com/en/articles/12622667-enterprise-configuration). The Claude Desktop app can also run against a self-hosted gateway through the [Cowork on 3P research preview](https://claude.com/docs/cowork/3p/gateway), which uses its own configuration keys.
+
 ## Gateway requirements
 
 For an LLM gateway to work with Claude Code, it must meet the following requirements:
@@ -39,19 +41,31 @@ Failure to forward headers or preserve body fields may result in reduced functio
 
 **Request headers**
 
-Claude Code includes the following headers on every API request:
+Claude Code includes the following headers on API requests:
 
-| Header                     | Description                                                                                                                                                         |
-| :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `X-Claude-Code-Session-Id` | A unique identifier for the current Claude Code session. Proxies can use this to aggregate all API requests from a single session without parsing the request body. |
+| Header                          | Description                                                                                                                                                                                                                                                              |
+| :------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `X-Claude-Code-Session-Id`      | A unique identifier for the current Claude Code session. Proxies can use this to aggregate all API requests from a single session without parsing the request body.                                                                                                      |
+| `X-Claude-Code-Agent-Id`        | Identifier of the subagent or teammate that issued the request. Your proxy can use this to attribute API cost to individual parallel subagents within a session, without parsing the request body. Present only for requests made by an in-process subagent or teammate. |
+| `X-Claude-Code-Parent-Agent-Id` | Identifier of the agent that spawned the agent making the request. Use this with `X-Claude-Code-Agent-Id` to attribute API costs across nested agents in your proxy. Present only when the requesting agent was itself spawned by another agent.                         |
+
+Both agent ID headers are ephemeral per-spawn identifiers, not persistent user or device IDs.
+
+Claude Code also prepends a short attribution block to the system prompt containing the client version and a fingerprint derived from the conversation. The Anthropic API strips this block before processing, so it does not affect first-party prompt caching. If your gateway implements its own prompt cache keyed on the full request body, set [`CLAUDE_CODE_ATTRIBUTION_HEADER=0`](/en/env-vars) to omit it.
 
 ## Configuration
 
 ### Model selection
 
-By default, Claude Code will use standard model names for the selected API format.
+By default, Claude Code uses standard model names for the selected API format.
 
-If you have configured custom model names in your gateway, use the environment variables documented in [Model configuration](/en/model-config) to match your custom names.
+When `ANTHROPIC_BASE_URL` points at a gateway that exposes the Anthropic Messages format, Claude Code can query the gateway's `/v1/models` endpoint at startup and add the returned models to the `/model` picker. Set `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1` to enable this. Discovery is off by default so that gateways backed by a shared API key do not surface every model the key can access to every user. Each discovered entry is labeled "From gateway" and uses the `display_name` field from the response when one is provided. This requires Claude Code v2.1.129 or later.
+
+Discovery applies only to the Anthropic Messages format. It does not run for Bedrock or Vertex pass-through endpoints, and it does not run when `ANTHROPIC_BASE_URL` is unset or points at `api.anthropic.com`.
+
+The discovery request authenticates the same way as inference requests: it sends `ANTHROPIC_AUTH_TOKEN` as a bearer token, or `ANTHROPIC_API_KEY` as the `x-api-key` header when no auth token is set, along with any headers from `ANTHROPIC_CUSTOM_HEADERS`. Only models whose ID begins with `claude` or `anthropic` are added to the picker. Results are cached to `~/.claude/cache/gateway-models.json` and refreshed on each startup. If the request fails or the gateway does not implement `/v1/models`, the picker falls back to the cached list from the previous startup or to the built-in model list.
+
+If your gateway uses model names that do not match the discovery filter, use the environment variables documented in [Model configuration](/en/model-config) to add them manually.
 
 ## LiteLLM configuration
 
@@ -176,6 +190,17 @@ export ANTHROPIC_VERTEX_PROJECT_ID=your-gcp-project-id
 export CLAUDE_CODE_SKIP_VERTEX_AUTH=1
 export CLAUDE_CODE_USE_VERTEX=1
 export CLOUD_ML_REGION=us-east5
+```
+
+##### Claude Platform on AWS through a gateway
+
+Route to a gateway that forwards to the [Claude Platform on AWS](/en/claude-platform-on-aws) endpoint:
+
+```bash theme={null}
+export ANTHROPIC_AWS_BASE_URL=https://litellm-server:4000/anthropic-aws
+export ANTHROPIC_AWS_WORKSPACE_ID=wrkspc_01ABCDEFGHIJKLMN
+export CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH=1
+export CLAUDE_CODE_USE_ANTHROPIC_AWS=1
 ```
 
 For more detailed information, refer to the [LiteLLM documentation](https://docs.litellm.ai/).

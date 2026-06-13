@@ -101,7 +101,7 @@ Agent teams support two display modes:
   `tmux` has known limitations on certain operating systems and traditionally works best on macOS. Using `tmux -CC` in iTerm2 is the suggested entrypoint into `tmux`.
 </Note>
 
-The default is `"auto"`, which uses split panes if you're already running inside a tmux session, and in-process otherwise. The `"tmux"` setting enables split-pane mode and auto-detects whether to use tmux or iTerm2 based on your terminal. To override, set `teammateMode` in your [global config](/en/settings#global-config-settings) at `~/.claude.json`:
+The default is `"auto"`, which uses split panes if you're already running inside a tmux session or your terminal is iTerm2, and in-process otherwise. The `"tmux"` setting enables split-pane mode and auto-detects whether to use tmux or iTerm2 based on your terminal. To override, set [`teammateMode`](/en/settings#available-settings) in `~/.claude/settings.json`:
 
 ```json theme={null}
 {
@@ -128,6 +128,8 @@ Claude decides the number of teammates to spawn based on your task, or you can s
 Create a team with 4 teammates to refactor these modules in parallel.
 Use Sonnet for each teammate.
 ```
+
+Teammates don't inherit the lead's `/model` selection by default. To change the model used when the prompt doesn't specify one, set **Default teammate model** in `/config`. Pick **Default (leader's model)** to have teammates follow the lead's current model.
 
 ### Require plan approval for teammates
 
@@ -162,7 +164,7 @@ Task claiming uses file locking to prevent race conditions when multiple teammat
 
 ### Shut down teammates
 
-To gracefully end a teammate's session:
+To gracefully end a teammate's session, refer to it by name. For example, with a teammate named researcher:
 
 ```text theme={null}
 Ask the researcher teammate to shut down
@@ -178,7 +180,7 @@ When you're done, ask the lead to clean up:
 Clean up the team
 ```
 
-This removes the shared team resources. When the lead runs cleanup, it checks for active teammates and fails if any are still running, so shut them down first.
+This removes the shared team resources. When the lead runs cleanup, it checks for active teammates and fails if any are still running, so shut them down first. Claude often cleans up on its own when the team's work is done, so a later cleanup request may report that there is nothing to clean up.
 
 <Warning>
   Always use the lead to clean up. Teammates should not run cleanup because their team context may not resolve correctly, potentially leaving resources in an inconsistent state.
@@ -225,7 +227,7 @@ Teams and tasks are stored locally:
 * **Team config**: `~/.claude/teams/{team-name}/config.json`
 * **Task list**: `~/.claude/tasks/{team-name}/`
 
-Claude Code generates both of these automatically when you create a team and updates them as teammates join, go idle, or leave. The team config holds runtime state such as session IDs and tmux pane IDs, so don't edit it by hand or pre-author it: your changes are overwritten on the next state update.
+Claude Code generates both of these automatically when you create a team and updates them as teammates join, go idle, or leave. Both directories exist only while the team is active: they are removed when the team is cleaned up or when the session ends. The team config holds runtime state such as session IDs and tmux pane IDs, so don't edit it by hand or pre-author it: your changes are overwritten on the next state update.
 
 To define reusable teammate roles, use [subagent definitions](#use-subagent-definitions-for-teammates) instead.
 
@@ -262,11 +264,7 @@ Each teammate has its own context window. When spawned, a teammate loads the sam
 * **Automatic message delivery**: when teammates send messages, they're delivered automatically to recipients. The lead doesn't need to poll for updates.
 * **Idle notifications**: when a teammate finishes and stops, they automatically notify the lead.
 * **Shared task list**: all agents can see task status and claim available work.
-
-**Teammate messaging:**
-
-* **message**: send a message to one specific teammate
-* **broadcast**: send to all teammates simultaneously. Use sparingly, as costs scale with team size.
+* **Teammate messaging**: send a message to one specific teammate by name. To reach everyone, send one message per recipient.
 
 The lead assigns every teammate a name when it spawns them, and any teammate can message any other by that name. To get predictable names you can reference in later prompts, tell the lead what to call each teammate in your spawn instruction.
 
@@ -395,7 +393,7 @@ The lead may decide the team is finished before all tasks are actually complete.
 
 ### Orphaned tmux sessions
 
-If a tmux session persists after the team ends, it may not have been fully cleaned up. List sessions and kill the one created by the team:
+If a tmux session persists after the team ends, it may not have been fully cleaned up. List sessions and end the one created by the team:
 
 ```bash theme={null}
 tmux ls
@@ -409,7 +407,7 @@ Agent teams are experimental. Current limitations to be aware of:
 * **No session resumption with in-process teammates**: `/resume` and `/rewind` do not restore in-process teammates. After resuming a session, the lead may attempt to message teammates that no longer exist. If this happens, tell the lead to spawn new teammates.
 * **Task status can lag**: teammates sometimes fail to mark tasks as completed, which blocks dependent tasks. If a task appears stuck, check whether the work is actually done and update the task status manually or tell the lead to nudge the teammate.
 * **Shutdown can be slow**: teammates finish their current request or tool call before shutting down, which can take time.
-* **One team per session**: a lead can only manage one team at a time. Clean up the current team before starting a new one.
+* **One team at a time**: a lead can only manage one team. Clean up the current team before creating a new one.
 * **No nested teams**: teammates cannot spawn their own teams or teammates. Only the lead can manage the team.
 * **Lead is fixed**: the session that creates the team is the lead for its lifetime. You can't promote a teammate to lead or transfer leadership.
 * **Permissions set at spawn**: all teammates start with the lead's permission mode. You can change individual teammate modes after spawning, but you can't set per-teammate modes at spawn time.
@@ -424,5 +422,5 @@ Agent teams are experimental. Current limitations to be aware of:
 Explore related approaches for parallel work and delegation:
 
 * **Lightweight delegation**: [subagents](/en/sub-agents) spawn helper agents for research or verification within your session, better for tasks that don't need inter-agent coordination
-* **Manual parallel sessions**: [Git worktrees](/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees) let you run multiple Claude Code sessions yourself without automated team coordination
+* **Manual parallel sessions**: [Git worktrees](/en/worktrees) let you run multiple Claude Code sessions yourself without automated team coordination
 * **Compare approaches**: see the [subagent vs agent team](/en/features-overview#compare-similar-features) comparison for a side-by-side breakdown
