@@ -79,11 +79,11 @@
 
 ### Quick commands
 
-| Shortcut     | Description       | Notes                                                         |
-| :----------- | :---------------- | :------------------------------------------------------------ |
-| `/` at start | Command or skill  | See [commands](#commands) and [skills](/en/skills)            |
-| `!` at start | Shell mode        | Run commands directly and add execution output to the session |
-| `@`          | File path mention | Trigger file path autocomplete                                |
+| Shortcut     | Description       | Notes                                                                                |
+| :----------- | :---------------- | :----------------------------------------------------------------------------------- |
+| `/` at start | Command or skill  | See [commands](#commands) and [skills](/en/skills)                                   |
+| `!` at start | Shell mode        | Run a command directly, add its output to the session, and have Claude respond to it |
+| `@`          | File path mention | Trigger file path autocomplete                                                       |
 
 ### Transcript viewer
 
@@ -130,25 +130,25 @@ Enable vim-style editing via `/config` → Editor mode.
 
 ### Navigation (NORMAL mode)
 
-| Command         | Action                                              |
-| :-------------- | :-------------------------------------------------- |
-| `h`/`j`/`k`/`l` | Move left/down/up/right                             |
-| `Space`         | Move right                                          |
-| `w`             | Next word                                           |
-| `e`             | End of word                                         |
-| `b`             | Previous word                                       |
-| `0`             | Beginning of line                                   |
-| `$`             | End of line                                         |
-| `^`             | First non-blank character                           |
-| `gg`            | Beginning of input                                  |
-| `G`             | End of input                                        |
-| `f{char}`       | Jump to next occurrence of character                |
-| `F{char}`       | Jump to previous occurrence of character            |
-| `t{char}`       | Jump to just before next occurrence of character    |
-| `T{char}`       | Jump to just after previous occurrence of character |
-| `;`             | Repeat last f/F/t/T motion                          |
-| `,`             | Repeat last f/F/t/T motion in reverse               |
-| `/`             | Open reverse history search, same as `Ctrl+R`       |
+| Command         | Action                                                                                                                                                                                          |
+| :-------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `h`/`j`/`k`/`l` | Move left/down/up/right                                                                                                                                                                         |
+| `Space`         | Move right                                                                                                                                                                                      |
+| `w`             | Next word                                                                                                                                                                                       |
+| `e`             | End of word                                                                                                                                                                                     |
+| `b`             | Previous word                                                                                                                                                                                   |
+| `0`             | Beginning of line                                                                                                                                                                               |
+| `$`             | End of line                                                                                                                                                                                     |
+| `^`             | First non-blank character                                                                                                                                                                       |
+| `gg`            | Beginning of input                                                                                                                                                                              |
+| `G`             | End of input                                                                                                                                                                                    |
+| `f{char}`       | Jump to next occurrence of character                                                                                                                                                            |
+| `F{char}`       | Jump to previous occurrence of character                                                                                                                                                        |
+| `t{char}`       | Jump to just before next occurrence of character                                                                                                                                                |
+| `T{char}`       | Jump to just after previous occurrence of character                                                                                                                                             |
+| `;`             | Repeat last f/F/t/T motion                                                                                                                                                                      |
+| `,`             | Repeat last f/F/t/T motion in reverse                                                                                                                                                           |
+| `/`             | Open reverse history search, same as `Ctrl+R`. {/* min-version: 2.1.191 */}As of v2.1.191, the empty search prompt shows a hint: press `Esc` then `i` then `/` to open the command menu instead |
 
 <Note>
   In vim normal mode, if the cursor is at the beginning or end of input and cannot move further, `j`/`k` and the arrow keys navigate command history instead.
@@ -234,7 +234,7 @@ Press `Ctrl+R` to interactively search through your command history:
    * Press `Ctrl+C` to cancel and restore your original input
    * Press `Backspace` on empty search to cancel
 
-The search displays matching commands with the search term highlighted, so you can find and reuse previous inputs.
+The search loads the 100 most recent unique prompts in the selected scope, with duplicates collapsed to the newest occurrence. Matching prompts display with the search term highlighted, so you can find and reuse previous inputs.
 
 ## Background bash commands
 
@@ -286,6 +286,8 @@ Shell mode:
 * Exit with `Escape`, `Backspace`, or `Ctrl+U` on an empty prompt
 * Pasting text that starts with `!` into an empty prompt enters shell mode automatically, matching typed `!` behavior
 
+As of v2.1.186, Claude responds to the command output automatically once it lands in the transcript, so you can run `! npm test` and get an explanation of the failures without a second prompt. The response costs the same as sending a normal prompt. To restore the earlier behavior where the output is added to context without a response, set [`respondToBashCommands`](/en/settings#available-settings) to `false` in `settings.json`. Before v2.1.186, shell mode always added output to context without a response.
+
 This is useful for quick shell operations while maintaining conversation context.
 
 ## Prompt suggestions
@@ -328,6 +330,7 @@ Once the answer appears, the overlay accepts these keys. Earlier side questions 
 | :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `Space`, `Enter`, `Escape` | Dismiss the answer and return to the prompt                                                                                                                                                                                                                               |
 | `Up` / `Down`              | Scroll the answer                                                                                                                                                                                                                                                         |
+| `Left` / `Right`           | {/* min-version: 2.1.187 */}Step between this answer and your earlier `/btw` answers from the session. `Left` moves to older answers and `Right` returns toward the current one. Requires Claude Code v2.1.187 or later                                                   |
 | `c`                        | Copy the answer to your clipboard as raw Markdown. Use this instead of mouse selection, which captures the hard-wrapped terminal rendering rather than the source text                                                                                                    |
 | `f`                        | Fork into a new session. The fork inherits the parent conversation plus this question and answer as real transcript turns, so you can continue with full tool access. The original session is preserved under [`/resume`](/en/commands). Available in local sessions only |
 | `x`                        | Clear the list of earlier `/btw` exchanges shown above the current answer                                                                                                                                                                                                 |

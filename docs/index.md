@@ -92,7 +92,10 @@
 - [Customize keyboard shortcuts](keybindings.md): Customize keyboard shortcuts in Claude Code with a keybindings configuration file.
 - [Set up Claude Code in a monorepo or large codebase](large-codebases.md): Configure Claude Code for monorepos and large single-tree codebases with nested CLAUDE.md files, sparse worktrees, code intelligence, and per-package skills so Claude stays focused on the code you're working in.
 - [Legal and compliance](legal-and-compliance.md): Legal agreements, compliance certifications, and security information for Claude Code.
-- [LLM gateway configuration](llm-gateway.md): Learn how to configure Claude Code to work with LLM gateway solutions. Covers gateway requirements, authentication configuration, model selection, and provider-specific endpoint setup.
+- [LLM gateways](llm-gateway.md): Route Claude Code through an LLM gateway for centralized authentication, usage tracking, and cost controls. Covers connecting Claude Code to a gateway, rolling one out for your organization, what Claude Code sends to a gateway, and how gateways interact with claude.ai subscriptions.
+- [Connect Claude Code to an LLM gateway](llm-gateway-connect.md): Point Claude Code at your organization's LLM gateway. Check whether your admin already configured it, or set the base URL and credential yourself for the CLI, VS Code, GitHub Actions, and the Agent SDK, then verify the connection and fix gateway errors.
+- [Gateway protocol reference](llm-gateway-protocol.md): The API contract between Claude Code and an LLM gateway: endpoints, headers and body fields to forward, feature degradation when fields are stripped, attribution headers for cost tracking, and model discovery.
+- [Roll out an LLM gateway for your organization](llm-gateway-rollout.md): Deploy a gateway product for Claude Code: configure it to forward what Claude Code sends, issue developer credentials, distribute the configuration through managed settings, and verify the rollout.
 - [Control MCP server access for your organization](managed-mcp.md): Restrict which MCP servers users can add or connect to with managed configuration files, allowlists, and denylists.
 - [Connect Claude Code to tools via MCP](mcp.md): Learn how to connect Claude Code to your tools with the Model Context Protocol.
 - [Connect to MCP servers](mcp-quickstart.md): Add an MCP server to Claude Code, verify the connection, and find the configuration on disk.
@@ -109,6 +112,7 @@
 - [Constrain plugin dependency versions](plugin-dependencies.md): Declare version constraints on plugin dependencies so your plugin keeps working when an upstream plugin ships a breaking change.
 - [Recommend your plugin from your CLI](plugin-hints.md): Emit a one-line marker from your CLI so Claude Code prompts users to install your official plugin.
 - [Create and distribute a plugin marketplace](plugin-marketplaces.md): Build and host plugin marketplaces to distribute Claude Code extensions across teams and communities.
+- [Recommend plugins for your org](plugin-relevance.md): Add a relevance block to marketplace plugin entries so Claude Code suggests them when a user's work matches.
 - [Create plugins](plugins.md): Create custom plugins to extend Claude Code with skills, agents, hooks, and MCP servers.
 - [Plugins reference](plugins-reference.md): Complete technical reference for Claude Code plugin system, including schemas, CLI commands, and component specifications.
 - [How Claude Code uses prompt caching](prompt-caching.md): Claude Code manages prompt caching automatically. See why a model switch triggers a slow uncached turn, what `/compact` costs, why CLAUDE.md edits don't apply mid-session, and how to check your cache hit rate.

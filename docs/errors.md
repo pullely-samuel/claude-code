@@ -41,6 +41,7 @@ Match the message you see in your terminal to a section below.
 | `OAuth token revoked` / `OAuth token has expired`                                             | [Authentication](#oauth-token-revoked-or-expired)                                                                             |
 | `does not meet scope requirement user:profile`                                                | [Authentication](#oauth-scope-requirement)                                                                                    |
 | `Unable to connect to API`                                                                    | [Network](#unable-to-connect-to-api)                                                                                          |
+| `Waiting for API response · will retry in`                                                    | [Automatic retries](#automatic-retries), or [Network](#unable-to-connect-to-api) if it persists                               |
 | `SSL certificate verification failed`                                                         | [Network](#ssl-certificate-errors)                                                                                            |
 | `403` with `x-deny-reason: host_not_allowed` in a cloud or routine session                    | [Network](#host-not-allowed-in-a-cloud-session)                                                                               |
 | `Prompt is too long`                                                                          | [Request errors](#prompt-is-too-long)                                                                                         |
@@ -52,6 +53,7 @@ Match the message you see in your terminal to a section below.
 | `Extra inputs are not permitted`                                                              | [Request errors](#extra-inputs-are-not-permitted)                                                                             |
 | `There's an issue with the selected model`                                                    | [Request errors](#there%E2%80%99s-an-issue-with-the-selected-model)                                                           |
 | `Claude Opus is not available with the Claude Pro plan`                                       | [Request errors](#claude-opus-is-not-available-with-the-claude-pro-plan)                                                      |
+| `Model ... is restricted by your organization's settings`                                     | [Request errors](#model-is-restricted-by-your-organization%E2%80%99s-settings)                                                |
 | `thinking.type.enabled is not supported for this model`                                       | [Request errors](#thinking-type-enabled-is-not-supported-for-this-model)                                                      |
 | `max_tokens must be greater than thinking.budget_tokens`                                      | [Request errors](#thinking-budget-exceeds-output-limit)                                                                       |
 | `API Error: 400 due to tool use concurrency issues`                                           | [Request errors](#tool-use-or-thinking-block-mismatch)                                                                        |
@@ -62,12 +64,15 @@ Match the message you see in your terminal to a section below.
 
 Claude Code retries transient failures before showing you an error. Server errors, overloaded responses, request timeouts, temporary 429 throttles, and dropped connections are all retried up to 10 times with exponential backoff. While retrying, the spinner shows a `Retrying in Ns · attempt x/y` countdown.
 
-When you see one of the errors on this page, those retries have already been exhausted. You can tune the behavior with two environment variables:
+{/* min-version: 2.1.185 */}If no data arrives on the response stream for 20 seconds while a request is still pending, the spinner shows `Waiting for API response · will retry in … · check your network` before any retry has started. The request has not failed yet: the countdown runs to the point where Claude Code aborts the stalled connection and retries, so the banner clears on its own once data resumes or the retry succeeds. As of v2.1.185 the threshold is 20 seconds; earlier versions show the banner after 10 seconds with different wording. If it reappears on every attempt, treat it as a [network issue](#unable-to-connect-to-api).
 
-| Variable                                  | Default | Effect                                                                                                               |
-| :---------------------------------------- | :------ | :------------------------------------------------------------------------------------------------------------------- |
-| [`CLAUDE_CODE_MAX_RETRIES`](/en/env-vars) | 10      | Number of retry attempts. Lower it to surface failures faster in scripts; raise it to wait through longer incidents. |
-| [`API_TIMEOUT_MS`](/en/env-vars)          | 600000  | Per-request timeout in milliseconds. Raise it for slow networks or proxies.                                          |
+When you see one of the errors on this page, those retries have already been exhausted. You can tune the behavior with these environment variables:
+
+| Variable                                     | Default | Effect                                                                                                                                                               |
+| :------------------------------------------- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`CLAUDE_CODE_MAX_RETRIES`](/en/env-vars)    | 10      | Number of retry attempts. {/* min-version: 2.1.186 */}Capped at 15 as of v2.1.186. Lower it to surface failures faster in scripts.                                   |
+| [`CLAUDE_CODE_RETRY_WATCHDOG`](/en/env-vars) | unset   | Set to `1` in unattended sessions such as CI jobs to retry `429` and `529` capacity errors indefinitely instead of failing after `CLAUDE_CODE_MAX_RETRIES` attempts. |
+| [`API_TIMEOUT_MS`](/en/env-vars)             | 600000  | Per-request timeout in milliseconds. Raise it for slow networks or proxies.                                                                                          |
 
 ## Server errors
 
@@ -152,6 +157,18 @@ Auto mode could not evaluate this action and is blocking it for safety — run w
 
 * Retry the action; this usually succeeds on the next attempt
 * Run `claude --debug` and repeat the action to see the underlying classifier response in the debug log
+
+When a separate API safety check blocked the classifier request because of earlier conversation content:
+
+```text theme={null}
+Auto mode could not evaluate this action and is blocking it for safety — a safety check separate from auto mode blocked this request because of earlier conversation content — it isn't about the action itself — run with --debug for details
+```
+
+**What to do:**
+
+* This is not a decision about your action. A safety filter on the API was triggered by existing content in your conversation when auto mode sent the conversation to the classifier
+* Retrying will not help; the same conversation content will trigger the filter again
+* Switch to a different [permission mode](/en/permission-modes) so you can approve the action when prompted, or start a fresh conversation without the triggering content
 
 When the conversation has grown larger than the classifier's context window:
 
@@ -431,7 +448,7 @@ Common causes include no internet access, a VPN that blocks `api.anthropic.com`,
 
 * Confirm you can reach the API host from the same shell by running `curl -I https://api.anthropic.com`. On Windows PowerShell use `curl.exe -I https://api.anthropic.com` so the built-in `Invoke-WebRequest` alias is not used.
 * If you are behind a corporate proxy, set `HTTPS_PROXY` before launching Claude Code and see [Network configuration](/en/network-config)
-* If you route through an LLM gateway or relay, set [`ANTHROPIC_BASE_URL`](/en/env-vars) to its address. See [LLM gateway configuration](/en/llm-gateway) for setup.
+* If you route through an LLM gateway or relay, set [`ANTHROPIC_BASE_URL`](/en/env-vars) to its address. See [Connect Claude Code to an LLM gateway](/en/llm-gateway-connect) for setup.
 * Ensure your firewall allows the hosts listed in [Network access requirements](/en/network-config#network-access-requirements)
 * Intermittent failures are [retried automatically](#automatic-retries); persistent failures point to a local network issue
 
@@ -594,7 +611,7 @@ Claude Code sends beta-only fields such as `context_management`, `effort`, and t
 
 **What to do:**
 
-* Configure your gateway to forward the `anthropic-beta` header. See [LLM gateway configuration](/en/llm-gateway).
+* Configure your gateway to forward the `anthropic-beta` header. See [feature pass-through](/en/llm-gateway-protocol#feature-pass-through) for what gateways must forward.
 * As a fallback, set [`CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1`](/en/env-vars) before launching. This disables features that require the beta header so requests succeed through a gateway that cannot forward it.
 
 ### There's an issue with the selected model
@@ -627,6 +644,20 @@ Claude Opus is not available with the Claude Pro plan · Select a different mode
 * Run `/model` and select a model your plan includes
 * If you upgraded your plan recently and still see this, run `/logout` then `/login`. The stored token reflects your plan at the time you signed in, so upgrading on the web does not take effect in an existing session until you re-authenticate.
 * See [claude.com/pricing](https://claude.com/pricing) for which models each plan includes
+
+### Model is restricted by your organization's settings
+
+Your organization admin has disabled this model in the Claude Console, or it is excluded by an [`availableModels`](/en/model-config#restrict-model-selection) allowlist in managed settings. When the restricted model was set with `--model`, `ANTHROPIC_MODEL`, or the `model` setting, Claude Code substitutes an allowed model and continues. Typing `/model <name>` for a restricted model is rejected with `Run /model to choose a different model.` and the session keeps its current model.
+
+```text theme={null}
+Model "claude-opus-4-8" is restricted by your organization's settings. Using claude-sonnet-4-6 instead.
+```
+
+**What to do:**
+
+* Run `/model` to pick from the models your organization allows. Restricted models are hidden from the picker.
+* If the restricted model was set in `--model`, `ANTHROPIC_MODEL`, or the `model` field of a settings file, remove or update that value so the notice does not recur on each launch
+* If you need access to the restricted model, ask your organization admin to enable it. See [Organization model restrictions](/en/model-config#organization-model-restrictions).
 
 ### thinking.type.enabled is not supported for this model
 

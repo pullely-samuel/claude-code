@@ -301,6 +301,8 @@ When Claude invokes a subagent, it can also pass a `model` parameter for that sp
 3. The subagent definition's `model` frontmatter
 4. The main conversation's model
 
+The environment variable, per-invocation parameter, and frontmatter values are checked against your organization's [`availableModels`](/en/model-config#restrict-model-selection) allowlist. A value that resolves to an excluded model is not used and the subagent runs on the inherited model instead.
+
 ### Control subagent capabilities
 
 You can control what subagents can do through tool access, permission modes, and conditional rules.
@@ -715,9 +717,7 @@ The CLI flag overrides the setting if both are present.
 Subagents can run in the foreground (blocking) or background (concurrent):
 
 * **Foreground subagents** block the main conversation until complete. Permission prompts are passed through to you as they come up.
-* **Background subagents** run concurrently while you continue working. They run with the permissions already granted in the session and auto-deny any tool call that would otherwise prompt. If a background subagent needs to ask clarifying questions, that tool call fails but the subagent continues.
-
-If a background subagent fails due to missing permissions, you can start a new foreground subagent with the same task to retry with interactive prompts.
+* **Background subagents** run concurrently while you continue working. {/* min-version: 2.1.186 */}As of v2.1.186, when a background subagent reaches a tool call that needs permission, the prompt surfaces in your main session and names the subagent that is asking. Approve to let the subagent continue, or press Esc to deny that one tool call without stopping the subagent. Before v2.1.186, background subagents auto-denied any tool call that would have prompted.
 
 Claude decides whether to run subagents in the foreground or background based on the task. You can also:
 
@@ -726,7 +726,7 @@ Claude decides whether to run subagents in the foreground or background based on
 
 To disable all background task functionality, set the `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` environment variable to `1`. See [Environment variables](/en/env-vars).
 
-When [`CLAUDE_CODE_FORK_SUBAGENT`](#fork-the-current-conversation) is set to `1`, every subagent spawn runs in the background regardless of the `background` field. Forks still surface permission prompts in your terminal as they occur; named subagents auto-deny anything that would prompt, as described above.
+When [`CLAUDE_CODE_FORK_SUBAGENT`](#fork-the-current-conversation) is set to `1`, every subagent spawn runs in the background regardless of the `background` field. Permission prompts from these background subagents surface in your main session as described above.
 
 ### Common patterns
 
@@ -789,6 +789,8 @@ A nested subagent is configured the same way as a top-level one and resolves fro
 
 Depth is counted as the number of subagent levels below the main conversation, regardless of whether each level runs in the [foreground or background](#run-subagents-in-foreground-or-background). A subagent at depth five does not receive the Agent tool and cannot spawn further. The limit is fixed and not configurable.
 
+As of Claude Code v2.1.187, a background subagent's depth is fixed when it is first spawned, and [resuming](#resume-subagents) it later does not change that depth. For example, if your main conversation spawns subagent A, and A spawns a background subagent B at depth two, B is still at depth two when you resume it directly from the main conversation. Resuming a subagent from a shallower context does not let it spawn additional levels that the depth limit already prevented.
+
 To prevent a specific subagent from spawning others, omit `Agent` from its [`tools`](#available-tools) list or add it to `disallowedTools`.
 
 A [fork](#fork-the-current-conversation) still cannot spawn another fork. It can spawn other subagent types, and those count toward the depth limit.
@@ -817,7 +819,7 @@ Each subagent invocation creates a new instance with fresh context. To continue 
 
 Resumed subagents retain their full conversation history, including all previous tool calls, results, and reasoning. The subagent picks up exactly where it stopped rather than starting fresh.
 
-When a subagent completes, Claude receives its agent ID. The built-in Explore and Plan agents are one-shot and return no agent ID, so they can't be resumed; use `general-purpose` or a custom subagent when you need to continue the work. Claude uses the `SendMessage` tool with the agent's ID as the `to` field to resume it. The `SendMessage` tool is only available when [agent teams](/en/agent-teams) are enabled via `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
+When a subagent completes, Claude receives its agent ID. The built-in Explore and Plan agents are one-shot and return no agent ID, so they can't be resumed; use `general-purpose` or a custom subagent when you need to continue the work. Claude uses the `SendMessage` tool with the agent's ID as the `to` field to resume it. The `SendMessage` tool is always available for resuming subagents by agent ID or name. Structured team-protocol messages such as `shutdown_request` and `plan_approval_response` require [agent teams](/en/agent-teams) to be enabled.
 
 To resume a subagent, ask Claude to continue the previous work:
 
@@ -896,13 +898,13 @@ Running forks appear in a panel below the prompt input, with one row for the mai
 
 A fork inherits everything the main session has at the moment it spawns. A named subagent starts from its own definition.
 
-|                         | Fork                             | Named subagent                                                                           |
-| :---------------------- | :------------------------------- | :--------------------------------------------------------------------------------------- |
-| Context                 | Full conversation history        | Fresh context with the prompt you pass                                                   |
-| System prompt and tools | Same as main session             | From the subagent's [definition file](#write-subagent-files)                             |
-| Model                   | Same as main session             | From the subagent's `model` field                                                        |
-| Permissions             | Prompts surface in your terminal | [Auto-denied](#run-subagents-in-foreground-or-background) when running in the background |
-| Prompt cache            | Shared with main session         | Separate cache                                                                           |
+|                         | Fork                             | Named subagent                                                                                                    |
+| :---------------------- | :------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
+| Context                 | Full conversation history        | Fresh context with the prompt you pass                                                                            |
+| System prompt and tools | Same as main session             | From the subagent's [definition file](#write-subagent-files)                                                      |
+| Model                   | Same as main session             | From the subagent's `model` field                                                                                 |
+| Permissions             | Prompts surface in your terminal | [Prompts surface in your main session](#run-subagents-in-foreground-or-background) when running in the background |
+| Prompt cache            | Shared with main session         | Separate cache                                                                                                    |
 
 Because a fork's system prompt and tool definitions are identical to the parent, its first request reuses the parent's [prompt cache](/en/prompt-caching#subagents-and-the-cache). This makes forking cheaper than spawning a fresh subagent for tasks that need the same context.
 
