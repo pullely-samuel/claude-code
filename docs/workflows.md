@@ -16,13 +16,6 @@ A dynamic workflow is a JavaScript script that orchestrates [subagents](/en/sub-
 
 Reach for a workflow when a task needs more agents than one conversation can coordinate, or when you want the orchestration codified as a script you can read and rerun. Examples include a codebase-wide bug sweep, a 500-file migration, a research question that needs sources cross-checked against each other, and a hard plan worth drafting from several independent angles before you commit to one.
 
-This page covers how to:
-
-* Decide [when to use a workflow](#when-to-use-a-workflow) instead of subagents or skills
-* [Run a bundled workflow](#run-a-bundled-workflow) with `/deep-research`
-* [Have Claude write a workflow](#have-claude-write-a-workflow) for your task and save it
-* Understand [how a workflow runs](#how-a-workflow-runs) and [manage runs](#manage-runs)
-
 ## When to use a workflow
 
 [Subagents](/en/sub-agents), [skills](/en/skills), [agent teams](/en/agent-teams), and workflows can all run a multi-step task. The difference is who holds the plan:
@@ -71,6 +64,8 @@ The quickest way to see a workflow in action is to run `/deep-research`, the [bu
 
   <Step title="Read the report">
     When the run finishes, the report lands in your session. It cites the sources each claim came from, with claims that didn't survive cross-checking already filtered out.
+
+    {/* min-version: 2.1.196 */}As of v2.1.196, when the verifier agents can't check a claim, such as after a rate limit or API error, the report lists that claim as unverified instead of counting it as refuted.
   </Step>
 </Steps>
 

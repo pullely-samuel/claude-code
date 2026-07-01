@@ -53,6 +53,11 @@
 - [Channels reference](channels-reference.md): Build an MCP server that pushes webhooks, alerts, and chat messages into a Claude Code session. Reference for the channel contract: capability declaration, notification events, reply tools, sender gating, and permission relay.
 - [Checkpointing](checkpointing.md): Track, rewind, and summarize Claude's edits and conversation to manage session state.
 - [Use Claude Code with Chrome (beta)](chrome.md): Connect Claude Code to your Chrome browser to test web apps, debug with console logs, automate form filling, and extract data from web pages.
+- [Claude apps gateway for Amazon Bedrock, Google Cloud, and Microsoft Foundry](claude-apps-gateway.md): Run Claude Code through Amazon Bedrock, Google Cloud, or Microsoft Foundry behind a self-hosted gateway with SSO sign-in, per-group model access, and OTLP telemetry.
+- [Claude apps gateway configuration](claude-apps-gateway-config.md): Reference for every gateway.yaml option: listener and TLS, OIDC, session, Postgres store, Bedrock/Agent Platform/Foundry upstreams, model routing, managed policies, and telemetry.
+- [Claude apps gateway deployment and operations](claude-apps-gateway-deploy.md): Register the gateway with your IdP, build the container, deploy on Kubernetes or Cloud Run, and operate it: health checks, secret rotation, upgrades, and security.
+- [Deploy Claude apps gateway on Google Cloud](claude-apps-gateway-on-gcp.md): A worked example of running Claude apps gateway on Google Cloud: Cloud Run or GKE, Cloud SQL for PostgreSQL, Secret Manager, and service-account auth to Agent Platform.
+- [Claude apps gateway spend limits](claude-apps-gateway-spend-limits.md): Cap each developer's spend through the Claude apps gateway by day, week, or month. Set limits with an Admin API and the gateway enforces them live on every request.
 - [Use Claude Code on the web](claude-code-on-the-web.md): Configure cloud environments, setup scripts, network access, and Docker in Anthropic's sandbox. Move sessions between web and terminal with `--remote` and `--teleport`.
 - [Explore the .claude directory](claude-directory.md): Where Claude Code reads CLAUDE.md, settings.json, hooks, skills, commands, subagents, workflows, rules, and auto memory. Explore the .claude directory in your project and ~/.claude in your home directory.
 - [Claude Code on Claude Platform on AWS](claude-platform-on-aws.md): Configure Claude Code to use the Anthropic-operated Claude API with AWS authentication, IAM access control, and AWS Marketplace billing.
@@ -68,6 +73,7 @@
 - [Debug your configuration](debug-your-config.md): Diagnose why CLAUDE.md, settings, hooks, MCP servers, or skills aren't taking effect. Use /context, /doctor, /hooks, and /mcp to see what actually loaded.
 - [Launch sessions from links](deep-links.md): Open a Claude Code terminal session from a URL. Embed `claude-cli://` links in runbooks, alerts, and dashboards so a click opens Claude Code in the right repo with the right prompt.
 - [Desktop application](desktop.md): Get more out of Claude Code Desktop: parallel sessions with Git isolation, drag-and-drop pane layout, integrated terminal and file editor, side chats, computer use, Dispatch sessions from your phone, visual diff review, app previews, PR monitoring, connectors, and enterprise configuration.
+- [Claude Desktop on Linux (beta)](desktop-linux.md): Install and update the Claude desktop app on Ubuntu and Debian
 - [Get started with the desktop app](desktop-quickstart.md): Install Claude Code on desktop and start your first coding session
 - [Schedule recurring tasks in Claude Code Desktop](desktop-scheduled-tasks.md): Set up scheduled tasks in Claude Code Desktop to run Claude automatically on a recurring basis for daily code reviews, dependency audits, or morning briefings.
 - [Development containers](devcontainer.md): Run Claude Code inside a dev container for consistent, isolated environments across your team.
@@ -75,8 +81,10 @@
 - [Environment variables](env-vars.md): Reference for environment variables that control Claude Code behavior.
 - [Error reference](errors.md): Look up Claude Code runtime error messages with what each one means and how to fix it.
 - [Speed up responses with fast mode](fast-mode.md): Get faster Opus responses in Claude Code by toggling fast mode.
+- [Feature availability](feature-availability.md): Compare which Claude Code features are available across Anthropic subscription plans, the Anthropic Console, Amazon Bedrock, Claude Platform on AWS, Google Vertex AI, and Microsoft Foundry.
 - [Extend Claude Code](features-overview.md): Understand when to use CLAUDE.md, Skills, subagents, hooks, MCP, and plugins.
 - [Fullscreen rendering](fullscreen.md): Enable a smoother, flicker-free rendering mode with mouse support and stable memory usage in long conversations.
+- [Run Claude Code through a gateway](gateways.md): Route Claude Code through a self-hosted gateway for centralized credentials, usage tracking, and cost controls. Covers the architecture, Anthropic's Claude apps gateway, and using other gateway products.
 - [Claude Code GitHub Actions](github-actions.md): Learn about integrating Claude Code into your development workflow with Claude Code GitHub Actions
 - [Claude Code with GitHub Enterprise Server](github-enterprise-server.md): Connect Claude Code to your self-hosted GitHub Enterprise Server instance for web sessions, code review, and plugin marketplaces.
 - [Claude Code GitLab CI/CD](gitlab-ci-cd.md): Learn about integrating Claude Code into your development workflow with GitLab CI/CD
@@ -92,7 +100,7 @@
 - [Customize keyboard shortcuts](keybindings.md): Customize keyboard shortcuts in Claude Code with a keybindings configuration file.
 - [Set up Claude Code in a monorepo or large codebase](large-codebases.md): Configure Claude Code for monorepos and large single-tree codebases with nested CLAUDE.md files, sparse worktrees, code intelligence, and per-package skills so Claude stays focused on the code you're working in.
 - [Legal and compliance](legal-and-compliance.md): Legal agreements, compliance certifications, and security information for Claude Code.
-- [LLM gateways](llm-gateway.md): Route Claude Code through an LLM gateway for centralized authentication, usage tracking, and cost controls. Covers connecting Claude Code to a gateway, rolling one out for your organization, what Claude Code sends to a gateway, and how gateways interact with claude.ai subscriptions.
+- [Other LLM gateways](llm-gateway.md): Route Claude Code through an LLM gateway your organization already runs. Covers connecting Claude Code to a gateway, rolling one out for your organization, and what Claude Code sends to a gateway.
 - [Connect Claude Code to an LLM gateway](llm-gateway-connect.md): Point Claude Code at your organization's LLM gateway. Check whether your admin already configured it, or set the base URL and credential yourself for the CLI, VS Code, GitHub Actions, and the Agent SDK, then verify the connection and fix gateway errors.
 - [Gateway protocol reference](llm-gateway-protocol.md): The API contract between Claude Code and an LLM gateway: endpoints, headers and body fields to forward, feature degradation when fields are stripped, attribution headers for cost tracking, and model discovery.
 - [Roll out an LLM gateway for your organization](llm-gateway-rollout.md): Deploy a gateway product for Claude Code: configure it to forward what Claude Code sends, issue developer credentials, distribute the configuration through managed settings, and verify the rollout.
@@ -126,7 +134,7 @@
 - [Security](security.md): Learn about Claude Code's security safeguards and best practices for safe usage.
 - [Catch security issues as Claude writes code](security-guidance.md): Install the security-guidance plugin to have Claude review its own code changes for vulnerabilities and fix them in the same session.
 - [Configure server-managed settings](server-managed-settings.md): Centrally configure Claude Code for your organization through server-delivered settings, without requiring device management infrastructure.
-- [Manage sessions](sessions.md): Name, resume, branch, and switch between Claude Code conversations. Covers `--continue`, `--resume`, `--from-pr`, the `/resume` picker, session naming, and where transcripts are stored.
+- [Manage sessions](sessions.md): Name, resume, branch, and switch between Claude Code conversations. Covers `--continue`, `--resume`, `--from-pr`, the `/resume` picker, session naming, exporting transcripts, and where transcripts are stored.
 - [Claude Code settings](settings.md): Configure Claude Code with global and project-level settings, and environment variables.
 - [Advanced setup](setup.md): System requirements, platform-specific installation, version management, and uninstallation for Claude Code.
 - [Extend Claude with skills](skills.md): Create, manage, and share skills to extend Claude's capabilities in Claude Code. Includes custom commands and bundled skills.
@@ -155,6 +163,8 @@
 - [Week 22 · May 25–29, 2026](whats-new/2026-w22.md): Run Claude Code on Claude Opus 4.8, orchestrate large tasks with dynamic workflows, catch security issues with the security-guidance plugin, and use fast mode on Opus 4.8 at a lower price.
 - [Week 23 · June 1–5, 2026](whats-new/2026-w23.md): Run auto mode on Bedrock, Vertex, and Foundry, prompt before writing files that can run code in acceptEdits mode, list installed plugins with /plugin list, and require an approved version range for managed deployments.
 - [Week 24 · June 8–12, 2026](whats-new/2026-w24.md): Move a session to a new directory with /cd, let subagents spawn their own subagents, and troubleshoot a broken configuration with safe mode.
+- [Week 25 · June 15–19, 2026](whats-new/2026-w25.md): Publish a live, shareable page from your session with Artifacts, match tool parameters in deny and ask rules, and set any setting from the prompt with /config.
+- [Week 26 · June 22–26, 2026](whats-new/2026-w26.md): Authenticate MCP servers from your shell with claude mcp login, get a response to shell mode command output with the ! prefix, and resume a conversation from before /clear with /rewind.
 - [What's new](whats-new/index.md): A weekly digest of notable Claude Code features, with code snippets, demos, and context on why they matter.
 - [Orchestrate subagents at scale with dynamic workflows](workflows.md): Dynamic workflows orchestrate many subagents from a script Claude writes and you can rerun. Use them for codebase audits, large migrations, and cross-checked research.
 - [Run parallel sessions with worktrees](worktrees.md): Isolate parallel Claude Code sessions in separate git worktrees so changes don't collide. Covers the `--worktree` flag, subagent isolation, `.worktreeinclude`, cleanup, and non-git VCS hooks.
