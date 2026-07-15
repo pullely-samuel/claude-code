@@ -117,10 +117,10 @@ Use the Agent SDK to build an AI agent that reads your code, finds bugs, and fix
 
     * **Amazon Bedrock**: set `CLAUDE_CODE_USE_BEDROCK=1` environment variable and configure AWS credentials
     * **Claude Platform on AWS**: set `CLAUDE_CODE_USE_ANTHROPIC_AWS=1` and `ANTHROPIC_AWS_WORKSPACE_ID`, then configure AWS credentials
-    * **Google Vertex AI**: set `CLAUDE_CODE_USE_VERTEX=1` environment variable and configure Google Cloud credentials
+    * **Google Cloud's Agent Platform**: set `CLAUDE_CODE_USE_VERTEX=1` environment variable and configure Google Cloud credentials
     * **Microsoft Azure**: set `CLAUDE_CODE_USE_FOUNDRY=1` environment variable and configure Azure credentials
 
-    See the setup guides for [Bedrock](/en/amazon-bedrock), [Claude Platform on AWS](/en/claude-platform-on-aws), [Vertex AI](/en/google-vertex-ai), or [Azure AI Foundry](/en/microsoft-foundry) for details.
+    See the setup guides for [Amazon Bedrock](/en/amazon-bedrock), [Claude Platform on AWS](/en/claude-platform-on-aws), [Google Cloud's Agent Platform](/en/google-vertex-ai), or [Microsoft Foundry](/en/microsoft-foundry) for details.
 
     <Note>
       Unless previously approved, Anthropic does not allow third party developers to offer claude.ai login or rate limits for their products, including agents built on the Claude Agent SDK. Please use the API key authentication methods described in this document instead.
@@ -351,14 +351,14 @@ With `Bash` enabled, try: `"Write unit tests for utils.py, run them, and fix any
 
 **Permission modes** control how much human oversight you want:
 
-| Mode                     | Behavior                                                                                                                            | Use case                                  |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `acceptEdits`            | Auto-approves file edits and common filesystem commands, asks for other actions                                                     | Trusted development workflows             |
-| `plan`                   | Runs read-only tools; file edits are never auto-approved and reach your `canUseTool` callback                                       | Scoping a task before approving execution |
-| `dontAsk`                | Denies anything not in `allowedTools`                                                                                               | Locked-down headless agents               |
-| `auto` (TypeScript only) | A model classifier approves or denies each tool call                                                                                | Autonomous agents with safety guardrails  |
-| `bypassPermissions`      | Runs every tool without prompting, unless an explicit [`ask` rule](/en/agent-sdk/permissions#how-permissions-are-evaluated) matches | Sandboxed CI, fully trusted environments  |
-| `default`                | Requires a `canUseTool` callback to handle approval                                                                                 | Custom approval flows                     |
+| Mode                | Behavior                                                                                                                            | Use case                                  |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `acceptEdits`       | Auto-approves file edits and common filesystem commands, asks for other actions                                                     | Trusted development workflows             |
+| `plan`              | Runs read-only tools; file edits are never auto-approved and reach your `canUseTool` callback                                       | Scoping a task before approving execution |
+| `dontAsk`           | Denies anything not in `allowedTools`                                                                                               | Locked-down headless agents               |
+| `auto`              | A model classifier approves or denies each tool call                                                                                | Autonomous agents with safety guardrails  |
+| `bypassPermissions` | Runs every tool without prompting, unless an explicit [`ask` rule](/en/agent-sdk/permissions#how-permissions-are-evaluated) matches | Sandboxed CI, fully trusted environments  |
+| `default`           | Requires a `canUseTool` callback to handle approval                                                                                 | Custom approval flows                     |
 
 The example above uses `acceptEdits` mode, which auto-approves file operations so the agent can run without interactive prompts. If you want to prompt users for approval, use `default` mode and provide a [`canUseTool` callback](/en/agent-sdk/user-input) that collects user input. For more control, see [Permissions](/en/agent-sdk/permissions).
 

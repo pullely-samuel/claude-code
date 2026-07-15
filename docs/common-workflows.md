@@ -239,7 +239,7 @@ You can create pull requests by asking Claude directly ("create a pr for my chan
   </Step>
 </Steps>
 
-When you create a PR using `gh pr create`, the session is automatically linked to that PR. To return to it later, run `claude --from-pr <number>` or paste the PR URL into the [`/resume` picker](/en/sessions#use-the-session-picker) search.
+When you create a PR using `gh pr create`, the session is automatically linked to that PR. To return to it later, run `claude --from-pr 123`, replacing 123 with the PR number, or paste the PR URL into the [`/resume` picker](/en/sessions#use-the-session-picker) search.
 
 <Tip>
   Review Claude's generated PR before submitting and ask Claude to highlight potential risks or considerations.
@@ -302,7 +302,7 @@ Suppose you need to work with images in your codebase, and you want Claude's hel
     You can use any of these methods:
 
     1. Drag and drop an image into the Claude Code window
-    2. Copy an image and paste it into the CLI with ctrl+v (Do not use cmd+v)
+    2. Copy an image and paste it into the CLI with Ctrl+V. On macOS, Cmd+V also works in iTerm2.
     3. Provide an image path to Claude. E.g., "Analyze this image: /path/to/your/image.png"
   </Step>
 

@@ -6,7 +6,7 @@
 
 > Build production AI agents with Claude Code as a library
 
-Build AI agents that autonomously read files, run commands, search the web, edit code, and more. The Agent SDK gives you the same tools, agent loop, and context management that power Claude Code, programmable in Python and TypeScript.
+Build AI agents that autonomously read files, run commands, search the web, edit code, and more. The Agent SDK gives you the same tools, agent loop, and context management that power Claude Code, programmable in Python and TypeScript. For the thinking behind agent harness design, see [A harness for every task: dynamic workflows in Claude Code](https://claude.com/blog/a-harness-for-every-task-dynamic-workflows-in-claude-code) on the blog.
 
 <CodeGroup>
   ```python Python theme={null}
@@ -60,10 +60,35 @@ The Agent SDK includes built-in tools for reading files, running commands, and e
         ```
       </Tab>
 
-      <Tab title="Python">
+      <Tab title="Python (uv)">
+        [uv](https://docs.astral.sh/uv/) is a fast Python package manager that handles virtual environments automatically:
+
         ```bash theme={null}
+        uv init
+        uv add claude-agent-sdk
+        ```
+      </Tab>
+
+      <Tab title="Python (pip)">
+        Create and activate a virtual environment, then install the package. Installing into a virtual environment avoids the `error: externally-managed-environment` failure that system Python on recent Debian, Ubuntu, and Homebrew installs returns for `pip install` outside a venv.
+
+        On macOS or Linux:
+
+        ```bash theme={null}
+        python3 -m venv .venv
+        source .venv/bin/activate
         pip install claude-agent-sdk
         ```
+
+        On Windows:
+
+        ```powershell theme={null}
+        py -m venv .venv
+        .venv\Scripts\Activate.ps1
+        pip install claude-agent-sdk
+        ```
+
+        If PowerShell blocks `Activate.ps1` with an execution policy error, run `Set-ExecutionPolicy -Scope Process RemoteSigned` first.
 
         The Python package requires Python 3.10 or later. If pip reports `No matching distribution found for claude-agent-sdk`, your interpreter is older than 3.10. Run `python3 --version` on macOS or Linux, or `py --version` on Windows, to check.
       </Tab>
@@ -75,20 +100,28 @@ The Agent SDK includes built-in tools for reading files, running commands, and e
   </Step>
 
   <Step title="Set your API key">
-    Get an API key from the [Console](https://platform.claude.com/), then set it as an environment variable:
+    Get an API key from the [Console](https://platform.claude.com/), then set it as an environment variable.
+
+    On macOS or Linux:
 
     ```bash theme={null}
-    export ANTHROPIC_API_KEY=your-api-key
+    export ANTHROPIC_API_KEY=sk-ant-xxxxx
+    ```
+
+    On Windows PowerShell:
+
+    ```powershell theme={null}
+    $env:ANTHROPIC_API_KEY = "sk-ant-xxxxx"
     ```
 
     The SDK also supports authentication via third-party API providers:
 
     * **Amazon Bedrock**: set `CLAUDE_CODE_USE_BEDROCK=1` environment variable and configure AWS credentials
     * **Claude Platform on AWS**: set `CLAUDE_CODE_USE_ANTHROPIC_AWS=1` and `ANTHROPIC_AWS_WORKSPACE_ID`, then configure AWS credentials
-    * **Google Vertex AI**: set `CLAUDE_CODE_USE_VERTEX=1` environment variable and configure Google Cloud credentials
+    * **Google Cloud's Agent Platform**: set `CLAUDE_CODE_USE_VERTEX=1` environment variable and configure Google Cloud credentials
     * **Microsoft Azure**: set `CLAUDE_CODE_USE_FOUNDRY=1` environment variable and configure Azure credentials
 
-    See the setup guides for [Bedrock](/en/amazon-bedrock), [Claude Platform on AWS](/en/claude-platform-on-aws), [Vertex AI](/en/google-vertex-ai), or [Azure AI Foundry](/en/microsoft-foundry) for details.
+    See the setup guides for [Amazon Bedrock](/en/amazon-bedrock), [Claude Platform on AWS](/en/claude-platform-on-aws), [Google Cloud's Agent Platform](/en/google-vertex-ai), or [Microsoft Foundry](/en/microsoft-foundry) for details.
 
     <Note>
       Unless previously approved, Anthropic does not allow third party developers to offer claude.ai login or rate limits for their products, including agents built on the Claude Agent SDK. Please use the API key authentication methods described in this document instead.

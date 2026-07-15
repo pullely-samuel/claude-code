@@ -2,7 +2,7 @@
 > Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt
 > Use this file to discover all available pages before exploring further.
 
-# Use Claude Code with Chrome (beta)
+# Use Claude Code with Chrome
 
 > Connect Claude Code to your Chrome browser to test web apps, debug with console logs, automate form filling, and extract data from web pages.
 
@@ -11,7 +11,7 @@ Claude Code integrates with the [Claude in Chrome browser extension](https://chr
 Claude opens new tabs for browser tasks and shares your browser's login state, so it can access any site you're already signed into. Browser actions run in a visible Chrome window in real time. When Claude encounters a login page or CAPTCHA, it pauses and asks you to handle it manually.
 
 <Note>
-  Chrome integration is in beta and currently works with Google Chrome and Microsoft Edge. It is not yet supported on Brave, Arc, or other Chromium-based browsers. WSL (Windows Subsystem for Linux) is also not supported.
+  Chrome integration works with Google Chrome and Microsoft Edge. It isn't yet supported on Brave, Arc, or other Chromium-based browsers. It also isn't supported in Windows Subsystem for Linux (WSL).
 </Note>
 
 ## Capabilities
@@ -32,11 +32,11 @@ Before using Claude Code with Chrome, you need:
 
 * [Google Chrome](https://www.google.com/chrome/) or [Microsoft Edge](https://www.microsoft.com/edge) browser
 * [Claude in Chrome extension](https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn) version 1.0.36 or higher, available in the Chrome Web Store for both browsers
-* [Claude Code](/en/quickstart#step-1-install-claude-code) version 2.0.73 or higher
+* [Claude Code](/en/quickstart#step-1-install-claude-code)
 * A direct Anthropic plan (Pro, Max, Team, or Enterprise)
 
 <Note>
-  Chrome integration is not available through third-party providers like Amazon Bedrock, Google Cloud Vertex AI, or Microsoft Foundry. If you access Claude exclusively through a third-party provider, you need a separate claude.ai account to use this feature.
+  Chrome integration is not available through third-party providers like Amazon Bedrock, Google Cloud's Agent Platform, or Microsoft Foundry. If you access Claude exclusively through a third-party provider, you need a separate claude.ai account to use this feature.
 </Note>
 
 ## Get started in the CLI
@@ -59,6 +59,8 @@ Before using Claude Code with Chrome, you need:
     Go to code.claude.com/docs, click on the search box,
     type "hooks", and tell me what results appear
     ```
+
+    The first browser action asks for permission to use the `claude-in-chrome` skill. Approve it and Claude opens a new tab and starts the task.
   </Step>
 </Steps>
 
@@ -80,9 +82,18 @@ In the [VS Code extension](/en/vs-code#automate-browser-tasks-with-chrome), Chro
 
 Site-level permissions are inherited from the Chrome extension. Manage permissions in the Chrome extension settings to control which sites Claude can browse, click, and type on.
 
+### Browser tools in plan mode
+
+In [plan mode](/en/permission-modes#analyze-before-you-edit-with-plan-mode), browser tool calls that only read the page or browser state run without a permission prompt, and calls that change state prompt for approval.
+
+* **Read-only calls**: `read_page`, `get_page_text`, `find`, reading console messages or network requests, and taking a screenshot
+* **State-changing calls**: clicks, typing, navigation, tab and window management, and recording a GIF
+
+As of v2.1.199, an otherwise read-only call that sets a state-changing input flag, such as `createIfEmpty` on `tabs_context_mcp`, `clear` on the console and network readers, or `save_to_disk` on a screenshot, also prompts for approval. A `browser_batch` call runs without a prompt only when every action inside it is read-only.
+
 ## Example workflows
 
-These examples show common ways to combine browser actions with coding tasks. Run `/mcp` and select `claude-in-chrome` to see the full list of available browser tools.
+These examples show common ways to combine browser actions with coding tasks. Run `/mcp`, select `claude-in-chrome`, then select **View tools** to see the full list of available browser tools.
 
 ### Test a local web application
 
@@ -177,6 +188,8 @@ If Claude Code can't detect the Chrome extension:
 5. If the issue persists, restart both Claude Code and Chrome
 
 The first time you enable Chrome integration, Claude Code installs a native messaging host configuration file. Chrome reads this file on startup, so if the extension isn't detected on your first attempt, restart Chrome to pick up the new configuration.
+
+As of v2.1.199, Claude Code opens a browser tab prompting you to connect the extension only on that first install. Later sessions that rewrite the configuration file, for example after switching Claude Code builds or config directories, don't reopen it.
 
 If the connection still fails, verify the host configuration file exists at:
 

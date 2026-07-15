@@ -194,7 +194,7 @@ The following example asks Claude to create and delete a test file. When Claude 
 </CodeGroup>
 
 <Note>
-  In Python, `can_use_tool` requires [streaming mode](/en/agent-sdk/streaming-vs-single-mode) and a `PreToolUse` hook that returns `{"continue_": True}` to keep the stream open. Without this hook, the stream closes before the permission callback can be invoked.
+  In Python, `can_use_tool` requires [streaming mode](/en/agent-sdk/streaming-vs-single-mode). When you pass a finite message stream through `query(prompt=generator)` or `ClaudeSDKClient.connect(prompt=async_iterable)`, the SDK closes the input stream after the last message, before the permission callback can be invoked, unless a registered hook or in-process MCP server is keeping it open. The example above keeps it open with a `PreToolUse` hook that returns `{"continue_": True}`. Connecting with no prompt and sending messages through `ClaudeSDKClient.query()` keeps the stream open on its own and needs no hook.
 </Note>
 
 This example uses a `y/n` flow where any input other than `y` is treated as a denial. In practice, you might build a richer UI that lets users modify the request, provide feedback, or redirect Claude entirely. See [Respond to tool requests](#respond-to-tool-requests) for all the ways you can respond.
@@ -208,7 +208,9 @@ Your callback returns one of two response types:
 | **Allow** | `PermissionResultAllow(updated_input=...)` | `{ behavior: "allow", updatedInput }` |
 | **Deny**  | `PermissionResultDeny(message=...)`        | `{ behavior: "deny", message }`       |
 
-When allowing, pass the tool input (original or modified). When denying, provide a message explaining why. Claude sees this message and may adjust its approach.
+When allowing, the tool runs with the input Claude requested unless you return a modified input, `updatedInput` in TypeScript or `updated_input` in Python. {/* min-version: 2.1.207 */}Before v2.1.207, Claude Code rejected an allow result that omitted `updatedInput` and denied the tool call with a validation error.
+
+When denying, provide a message explaining why. Claude sees this message and may adjust its approach.
 
 <CodeGroup>
   ```python Python theme={null}
@@ -667,6 +669,8 @@ This example handles those questions in a terminal application. Here's what happ
 3. **Collect input**: The user can enter a number to select an option, or type free text directly (e.g., "jquery", "i don't know")
 4. **Map answers**: The code checks if input is numeric (uses the option's label) or free text (uses the text directly)
 5. **Return to Claude**: The response includes both the original `questions` array and the `answers` mapping
+
+Save the TypeScript version as `ask.ts` and run it with `npx tsx ask.ts`, or save the Python version as `ask.py` and run it with `python ask.py`.
 
 <CodeGroup>
   ```python Python theme={null}

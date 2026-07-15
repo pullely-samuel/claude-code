@@ -12,21 +12,20 @@ For installation, authentication, and connectivity problems, see [Troubleshoot i
 
 ## See what loaded into context
 
-The `/context` command shows everything occupying the context window for the current session, broken down by category: system prompt, memory files, skills, MCP tools, and conversation messages. Run it first to confirm whether your `CLAUDE.md`, rules, or skill descriptions are present at all.
+The `/context` command shows everything occupying the context window for the current session, broken down by category: system prompt, memory files, skills, custom subagents with the source each loaded from, MCP tools, and conversation messages. Run it first to confirm whether your `CLAUDE.md`, rules, or skill descriptions are present at all.
 
 For detail on a specific category, follow up with the dedicated command:
 
-| Command          | Shows                                                                                                                                                                                                                                    |
-| :--------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/memory`        | Which `CLAUDE.md` and rules files loaded, plus auto-memory entries                                                                                                                                                                       |
-| `/skills`        | Available skills from project, user, and plugin sources                                                                                                                                                                                  |
-| `/agents`        | Configured subagents and their settings                                                                                                                                                                                                  |
-| `/hooks`         | Active hook configurations                                                                                                                                                                                                               |
-| `/mcp`           | Connected MCP servers and their status                                                                                                                                                                                                   |
-| `/permissions`   | Resolved allow and deny rules currently in effect                                                                                                                                                                                        |
-| `/doctor`        | Configuration diagnostics: invalid keys, schema errors, installation health. {/* min-version: 2.1.196 */}As of v2.1.196, also reports duplicate [subagent](/en/sub-agents) names defined in the same scope and marks which one is active |
-| `/debug [issue]` | Enables debug logging for the session and prompts Claude to diagnose using the log output and settings paths                                                                                                                             |
-| `/status`        | Active settings sources, including whether managed settings are in effect                                                                                                                                                                |
+| Command          | Shows                                                                                                                                                                                                                                        |
+| :--------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/memory`        | Which `CLAUDE.md` and rules files loaded, plus auto-memory entries                                                                                                                                                                           |
+| `/skills`        | Available skills from project, user, and plugin sources                                                                                                                                                                                      |
+| `/hooks`         | Active hook configurations                                                                                                                                                                                                                   |
+| `/mcp`           | Connected MCP servers and their status                                                                                                                                                                                                       |
+| `/permissions`   | Resolved allow and deny rules currently in effect                                                                                                                                                                                            |
+| `/doctor`        | Setup checkup: installation health, invalid settings files, unused extensions, duplicate [subagent](/en/sub-agents) names in the same directory, and checked-in `CLAUDE.md` content Claude can derive from the codebase, with proposed fixes |
+| `/debug [issue]` | Enables debug logging for the session and prompts Claude to diagnose using the log output and settings paths                                                                                                                                 |
+| `/status`        | Active settings sources, including whether managed settings are in effect                                                                                                                                                                    |
 
 If a memory file is missing from `/memory`, check its location against [how CLAUDE.md files load](/en/memory#how-claude-md-files-load). Subdirectory `CLAUDE.md` files load on demand when Claude reads a file in that directory with the Read tool, not at session start.
 
@@ -42,7 +41,9 @@ Adherence drops when an instruction is vague enough to interpret multiple ways, 
 
 Settings merge across managed, user, project, and local scopes. Managed settings always win when present. Among the rest, the closer scope overrides the broader one in the order local, then project, then user. Some settings can also be set by command-line flags or [environment variables](/en/env-vars), which act as another override layer. When a setting doesn't seem to apply, the value you set is usually being overridden by another scope or an environment variable.
 
-Run `/doctor` to validate your configuration files and surface invalid keys or schema errors. When `/doctor` reports issues, press `f` to send the diagnostic report to Claude and have it walk through fixes with you.
+Run `/doctor` to check your configuration and installation. It reports what it finds, including invalid settings files, duplicate installations, unused extensions, and {/* min-version: 2.1.206 */}checked-in `CLAUDE.md` content Claude can derive from the codebase, then proposes fixes it applies only after you confirm. The `CLAUDE.md` trim check requires Claude Code v2.1.206 or later. Before v2.1.205, `/doctor` opened a read-only diagnostics screen and pressing `f` sent the report to Claude to fix.
+
+From the terminal, `claude doctor` prints read-only installation and settings diagnostics without starting a session.
 
 Run `/status` to see which settings sources are active, including whether managed settings are in effect. To understand which scope wins for a given key, see [How scopes interact](/en/settings#how-scopes-interact).
 
@@ -60,7 +61,11 @@ For configuration locations and scope rules, see [MCP](/en/mcp).
 
 Run `/hooks` to list every hook registered for the current session, grouped by event. If a hook you defined doesn't appear, it isn't being read: hooks go under the `"hooks"` key in a settings file, not in a standalone file.
 
-If the hook appears but doesn't fire, the matcher is the usual cause. The `matcher` field is a single string that uses `|` to match multiple tool names, for example `"Edit|Write"`. {/* min-version: 2.1.191 */}On Claude Code v2.1.191 or later, `,` also works as a separator, so `"Edit,Write"` is equivalent. On earlier versions a comma falls through to regex evaluation and the matcher never matches, so use `|` if you aren't on v2.1.191 yet. A misspelled tool name fails silently for the same reason. An array value is a schema error: Claude Code shows a settings error notice, `/doctor` reports the validation failure, and the hook entry is dropped so it won't appear in `/hooks`.
+If the hook appears but doesn't fire, the matcher is the usual cause. Check it for these mistakes:
+
+* The `matcher` field is a single string that uses `|` to match multiple tool names, for example `"Edit|Write"`. {/* min-version: 2.1.191 */}A `,` separator is equivalent, so `"Edit,Write"` matches the same tools. Before v2.1.191, a comma fell through to regex evaluation and the matcher never matched, so use `|` if you aren't on v2.1.191 yet.
+* A misspelled tool name produces a matcher that matches nothing, so the hook fails silently.
+* An array value is a schema error: Claude Code shows a settings error notice and rejects the whole user, project, or local settings file, `claude doctor` reports the validation failure, and no hook from that file appears in `/hooks`. In [managed settings](/en/settings#settings-files), only the invalid entry is stripped and the file's other hooks still apply.
 
 Edits to `settings.json` take effect in the running session after a brief file-stability delay. You don't need to restart. If `/hooks` still shows the old definition a few seconds after saving, run `/hooks` again to refresh the view.
 
@@ -68,7 +73,7 @@ If `/hooks` shows the hook but it still does not fire, the next step is to watch
 
 ## Test against a clean configuration
 
-{/* min-version: 2.1.169 */}Start with [`claude --safe-mode`](/en/cli-reference#cli-flags), which launches a session with all customizations disabled, including `CLAUDE.md`, skills, plugins, hooks, MCP servers, and custom commands and agents. Authentication, model selection, built-in tools, and permissions work normally. If the problem disappears in safe mode, one of those surfaces is the cause; use the targeted checks above to find which. Managed settings deployed by your organization still partially apply, so policy-configured hooks and status line run even in safe mode.
+{/* min-version: 2.1.169 */}Start with [`claude --safe-mode`](/en/cli-reference#cli-flags), which launches a session with all customizations disabled, including `CLAUDE.md`, skills, plugins, hooks, MCP servers, and custom commands and agents. Authentication, model selection, built-in tools, and permissions work normally. If the problem disappears in safe mode, one of those surfaces is the cause; use the targeted checks above to find which. Safe mode still applies managed hooks and settings policy from your organization. Managed plugins, skills, CLAUDE.md, and MCP servers are turned off.
 
 If the problem persists in safe mode, or your settings themselves are suspect, compare against a session that loads nothing from your usual setup. Point [`CLAUDE_CONFIG_DIR`](/en/env-vars) at an empty directory to bypass everything under `~/.claude`, and launch from a directory that has no `.claude` folder, `.mcp.json`, or `CLAUDE.md` so project configuration is also skipped.
 

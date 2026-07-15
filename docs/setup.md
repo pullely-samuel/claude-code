@@ -30,7 +30,7 @@ Claude Code runs on the following platforms and configurations:
 ## Install Claude Code
 
 <Tip>
-  Prefer a graphical interface? The [Desktop app](/en/desktop-quickstart) lets you use Claude Code without the terminal. Download it for [macOS](https://claude.ai/api/desktop/darwin/universal/dmg/latest/redirect?utm_source=claude_code\&utm_medium=docs), [Windows](https://claude.com/download?utm_source=claude_code\&utm_medium=docs), or [Linux](https://claude.com/download?utm_source=claude_code\&utm_medium=docs).
+  Prefer a graphical interface? The [Desktop app](/en/desktop-quickstart) lets you use Claude Code without the terminal. Download it for [macOS](https://claude.ai/api/desktop/darwin/universal/dmg/latest/redirect?utm_source=claude_code\&utm_medium=docs), [Windows](https://claude.com/download?utm_source=claude_code\&utm_medium=docs), or [Linux](/en/desktop-linux).
 
   New to the terminal? See the [terminal guide](/en/terminal-guide) for step-by-step instructions.
 </Tip>
@@ -174,7 +174,7 @@ claude doctor
 
 ## Authenticate
 
-Claude Code requires a Pro, Max, Team, Enterprise, or Console account. The free Claude.ai plan does not include Claude Code access. You can also use Claude Code with a third-party API provider like [Amazon Bedrock](/en/amazon-bedrock), [Google Vertex AI](/en/google-vertex-ai), or [Microsoft Foundry](/en/microsoft-foundry).
+Claude Code requires a Pro, Max, Team, Enterprise, or Console account. The free Claude.ai plan does not include Claude Code access. You can also use Claude Code with a third-party API provider like [Amazon Bedrock](/en/amazon-bedrock), [Google Cloud's Agent Platform](/en/google-vertex-ai), or [Microsoft Foundry](/en/microsoft-foundry).
 
 After installing, log in by running `claude` and following the browser prompts. See [Authentication](/en/authentication) for all account types and team setup options.
 
@@ -187,6 +187,12 @@ Native installations automatically update in the background. You can [configure 
 Claude Code checks for updates on startup and periodically while running. Updates download and install in the background, then take effect the next time you start Claude Code.
 
 Run `claude doctor` to see the result of the most recent update attempt.
+
+On macOS and Linux, the native installer manages the launcher at `~/.local/bin/claude` as a symlink into `~/.local/share/claude/versions/`. If you replace that launcher with your own script or symlink, auto-update and `claude update` leave it in place: new versions still install under the `versions/` directory, and your launcher decides which version runs. Before v2.1.207, the auto-updater replaced a custom launcher at that path with its own symlink on every update.
+
+With a custom launcher, Claude Code also keeps every installed version on disk because it can't tell which version the launcher needs. `claude doctor` reports a launcher that the native installer didn't create.
+
+To let Claude Code manage the launcher again, remove `~/.local/bin/claude` and run `claude update`.
 
 If an npm global install can't auto-update because the npm global directory isn't writable, Claude Code shows a one-time notice at startup, and `claude doctor` lists the available fixes. See [permission errors during installation](/en/troubleshoot-install#permission-errors-during-installation) for details.
 
@@ -344,7 +350,13 @@ All repositories are signed with the [Claude Code release signing key](#binary-i
 
 <Tabs>
   <Tab title="apt">
-    For Debian and Ubuntu. The following commands configure the `stable` channel:
+    For Debian and Ubuntu. The install commands below download the signing key with `curl`, which fresh Debian and Ubuntu installations may not include. If the download fails with `sudo: curl: command not found`, install curl first:
+
+    ```bash theme={null}
+    sudo apt install curl
+    ```
+
+    The following commands configure the `stable` channel:
 
     ```bash theme={null}
     sudo install -d -m 0755 /etc/apt/keyrings
@@ -419,7 +431,7 @@ All repositories are signed with the [Claude Code release signing key](#binary-i
 
 ### Install with npm
 
-You can also install Claude Code as a global npm package. The package requires [Node.js 18 or later](https://nodejs.org/en/download).
+You can also install Claude Code as a global npm package. As of v2.1.198, the npm package requires [Node.js 22 or later](https://nodejs.org/en/download). On an older Node.js version, npm prints an `EBADENGINE` warning during install rather than failing; the install completes and `claude` still runs, since the package downloads a native binary that doesn't use your Node.js at runtime.
 
 ```bash theme={null}
 npm install -g @anthropic-ai/claude-code
@@ -488,7 +500,7 @@ Steps 1-3 require a POSIX shell with `gpg` and `curl`. On Windows, run them in G
   </Step>
 
   <Step title="Check the binary against the manifest">
-    Compare the SHA256 checksum of your downloaded binary with the value listed under `platforms.<platform>.checksum` in `manifest.json`.
+    Compare the SHA256 checksum of the binary with the value listed under `platforms.<platform>.checksum` in `manifest.json`. The commands below assume a `claude` binary in the current directory. To verify an installed native binary instead, run the command against `~/.local/share/claude/versions/VERSION`, replacing VERSION with the release you set in Step 2.
 
     <Tabs>
       <Tab title="Linux">
