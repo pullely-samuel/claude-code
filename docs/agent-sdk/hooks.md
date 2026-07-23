@@ -24,7 +24,7 @@ This guide covers how hooks work and how to configure them, with examples for co
   </Step>
 
   <Step title="The SDK collects registered hooks">
-    The SDK checks for hooks registered for that event type. This includes callback hooks you pass in `options.hooks` and shell command hooks from settings files when the corresponding [`settingSources`](/en/agent-sdk/typescript#settingsource) or [`setting_sources`](/en/agent-sdk/python#settingsource) entry is enabled, which it is for default `query()` options.
+    The SDK checks for hooks registered for that event type. This includes callback hooks you pass in `options.hooks` and shell command hooks from settings files when the corresponding [`settingSources`](/docs/en/agent-sdk/typescript#settingsource) or [`setting_sources`](/docs/en/agent-sdk/python#settingsource) entry is enabled, which it is for default `query()` options.
   </Step>
 
   <Step title="Matchers filter which hooks run">
@@ -84,7 +84,7 @@ The following example puts these steps together. It registers a `PreToolUse` hoo
       )
 
       async with ClaudeSDKClient(options=options) as client:
-          await client.query("Update the database configuration")
+          await client.query("Create a .env file with the standard local development database configuration")
           async for message in client.receive_response():
               # Filter for assistant and result messages
               if isinstance(message, (AssistantMessage, ResultMessage)):
@@ -123,7 +123,7 @@ The following example puts these steps together. It registers a `PreToolUse` hoo
   };
 
   for await (const message of query({
-    prompt: "Update the database configuration",
+    prompt: "Create a .env file with the standard local development database configuration",
     options: {
       hooks: {
         // Register the hook for PreToolUse events
@@ -140,37 +140,48 @@ The following example puts these steps together. It registers a `PreToolUse` hoo
   ```
 </CodeGroup>
 
+When you run either script, Claude attempts to create the `.env` file, the hook denies the tool call, and Claude's final response explains that it can't create `.env` files.
+
 ## Available hooks
 
 The SDK provides hooks for different stages of agent execution. Some hooks are available in both SDKs, while others are TypeScript-only.
 
-| Hook Event                                             | Python SDK | TypeScript SDK | What triggers it                                                                      | Example use case                                                            |
-| ------------------------------------------------------ | ---------- | -------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `PreToolUse`                                           | Yes        | Yes            | Tool call request (can block or modify)                                               | Block dangerous shell commands                                              |
-| `PostToolUse`                                          | Yes        | Yes            | Tool execution result                                                                 | Log all file changes to audit trail                                         |
-| `PostToolUseFailure`                                   | Yes        | Yes            | Tool execution failure                                                                | Handle or log tool errors                                                   |
-| `PostToolBatch`                                        | No         | Yes            | A full batch of tool calls resolves, once per batch before the next model call        | Inject conventions once for the whole batch                                 |
-| `UserPromptSubmit`                                     | Yes        | Yes            | User prompt submission                                                                | Inject additional context into prompts                                      |
-| [`UserPromptExpansion`](/en/hooks#userpromptexpansion) | No         | Yes            | A user-typed command expands into a prompt before it reaches Claude                   | Block a command from direct invocation or add context when a skill is typed |
-| `MessageDisplay`                                       | No         | Yes            | An assistant message with text completes, once per message with the full message text | Redact or reformat the displayed text without changing the transcript       |
-| `Stop`                                                 | Yes        | Yes            | Agent execution stop                                                                  | Save session state before exit                                              |
-| `SubagentStart`                                        | Yes        | Yes            | Subagent initialization                                                               | Track parallel task spawning                                                |
-| `SubagentStop`                                         | Yes        | Yes            | Subagent completion                                                                   | Aggregate results from parallel tasks                                       |
-| `PreCompact`                                           | Yes        | Yes            | Conversation compaction request                                                       | Archive full transcript before summarizing                                  |
-| `PermissionRequest`                                    | Yes        | Yes            | Permission dialog would be displayed                                                  | Custom permission handling                                                  |
-| `SessionStart`                                         | No         | Yes            | Session initialization                                                                | Initialize logging and telemetry                                            |
-| `SessionEnd`                                           | No         | Yes            | Session termination                                                                   | Clean up temporary resources                                                |
-| `Notification`                                         | Yes        | Yes            | Agent status messages                                                                 | Send agent status updates to Slack or PagerDuty                             |
-| `Setup`                                                | No         | Yes            | Session setup/maintenance                                                             | Run initialization tasks                                                    |
-| `TeammateIdle`                                         | No         | Yes            | Teammate becomes idle                                                                 | Reassign work or notify                                                     |
-| `TaskCompleted`                                        | No         | Yes            | Background task completes                                                             | Aggregate results from parallel tasks                                       |
-| `ConfigChange`                                         | No         | Yes            | Configuration file changes                                                            | Reload settings dynamically                                                 |
-| `WorktreeCreate`                                       | No         | Yes            | Git worktree created                                                                  | Track isolated workspaces                                                   |
-| `WorktreeRemove`                                       | No         | Yes            | Git worktree removed                                                                  | Clean up workspace resources                                                |
+| Hook Event                                             | Python SDK | TypeScript SDK | What triggers it                                                                                                                        | Example use case                                                            |
+| ------------------------------------------------------ | ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `PreToolUse`                                           | Yes        | Yes            | Tool call request (can block or modify)                                                                                                 | Block dangerous shell commands                                              |
+| `PostToolUse`                                          | Yes        | Yes            | Tool execution result                                                                                                                   | Log all file changes to audit trail                                         |
+| `PostToolUseFailure`                                   | Yes        | Yes            | Tool execution failure                                                                                                                  | Handle or log tool errors                                                   |
+| `PostToolBatch`                                        | No         | Yes            | A full batch of tool calls resolves, once per batch before the next model call                                                          | Inject conventions once for the whole batch                                 |
+| `UserPromptSubmit`                                     | Yes        | Yes            | User prompt submission                                                                                                                  | Inject additional context into prompts                                      |
+| [`UserPromptExpansion`](/docs/en/hooks#userpromptexpansion) | No         | Yes            | A user-typed command, or an MCP prompt, expands into a prompt before it reaches Claude. Doesn't fire when Claude invokes a skill itself | Block a command from direct invocation or add context when a skill is typed |
+| `MessageDisplay`                                       | No         | Yes            | An assistant message with text completes, once per message with the full message text                                                   | Redact or reformat the displayed text without changing the transcript       |
+| `Stop`                                                 | Yes        | Yes            | Agent execution stop                                                                                                                    | Save session state before exit                                              |
+| `StopFailure`                                          | No         | Yes            | The turn ends with an API error instead of a normal stop                                                                                | Log failures or send alerts                                                 |
+| `SubagentStart`                                        | Yes        | Yes            | Subagent initialization                                                                                                                 | Track parallel task spawning                                                |
+| `SubagentStop`                                         | Yes        | Yes            | Subagent completion                                                                                                                     | Aggregate results from parallel tasks                                       |
+| `PreCompact`                                           | Yes        | Yes            | Conversation compaction request                                                                                                         | Archive full transcript before summarizing                                  |
+| `PostCompact`                                          | No         | Yes            | Conversation compaction completes                                                                                                       | Log the generated summary                                                   |
+| `PermissionRequest`                                    | Yes        | Yes            | Permission dialog would be displayed                                                                                                    | Custom permission handling                                                  |
+| `PermissionDenied`                                     | No         | Yes            | The auto mode classifier denies a tool call                                                                                             | Log classifier denials or tell the model it may retry                       |
+| `SessionStart`                                         | No         | Yes            | Session initialization                                                                                                                  | Initialize logging and telemetry                                            |
+| `SessionEnd`                                           | No         | Yes            | Session termination                                                                                                                     | Clean up temporary resources                                                |
+| `Notification`                                         | Yes        | Yes            | Agent status messages                                                                                                                   | Send agent status updates to Slack or PagerDuty                             |
+| `Setup`                                                | No         | Yes            | Session setup/maintenance                                                                                                               | Run initialization tasks                                                    |
+| `TeammateIdle`                                         | No         | Yes            | Teammate becomes idle                                                                                                                   | Reassign work or notify                                                     |
+| `TaskCreated`                                          | No         | Yes            | A task is created via the `TaskCreate` tool                                                                                             | Enforce task naming conventions                                             |
+| `TaskCompleted`                                        | No         | Yes            | Background task completes                                                                                                               | Aggregate results from parallel tasks                                       |
+| `Elicitation`                                          | No         | Yes            | An MCP server requests user input mid-task                                                                                              | Respond to MCP input requests programmatically                              |
+| `ElicitationResult`                                    | No         | Yes            | A user responds to an MCP elicitation                                                                                                   | Modify or block the response before it returns to the server                |
+| `ConfigChange`                                         | No         | Yes            | Configuration file changes                                                                                                              | Reload settings dynamically                                                 |
+| `InstructionsLoaded`                                   | No         | Yes            | A `CLAUDE.md` or rules file is loaded into context                                                                                      | Audit which instruction files load                                          |
+| `WorktreeCreate`                                       | No         | Yes            | Git worktree created                                                                                                                    | Track isolated workspaces                                                   |
+| `WorktreeRemove`                                       | No         | Yes            | Git worktree removed                                                                                                                    | Clean up workspace resources                                                |
+| `CwdChanged`                                           | No         | Yes            | The working directory changes during a session                                                                                          | Reload environment variables per directory                                  |
+| `FileChanged`                                          | No         | Yes            | A watched file is modified, created, or deleted                                                                                         | Reload configuration when project files change                              |
 
 ## Configure hooks
 
-To configure a hook, pass it in the `hooks` field of your agent options (`ClaudeAgentOptions` in Python, the `options` object in TypeScript):
+To configure a hook, pass it in the `hooks` field of your agent options (`ClaudeAgentOptions` in Python, the `options` object in TypeScript). This snippet assumes you have already defined a hook callback, like `protect_env_files` in Python or `protectEnvFiles` in TypeScript from the example above:
 
 <CodeGroup>
   ```python Python theme={null}
@@ -205,9 +216,9 @@ The `hooks` option is a dictionary in Python or an object in TypeScript, where:
 
 ### Matchers
 
-Use matchers to filter when your callbacks fire. The `matcher` field matches against a different value depending on the hook event type. For example, tool-based hooks match against the tool name, while `Notification` hooks match against the notification type. See the [Claude Code hooks reference](/en/hooks#matcher-patterns) for the full list of matcher values for each event type.
+Use matchers to filter when your callbacks fire. The `matcher` field matches against a different value depending on the hook event type. For example, tool-based hooks match against the tool name, while `Notification` hooks match against the notification type. See the [Claude Code hooks reference](/docs/en/hooks#matcher-patterns) for the full list of matcher values for each event type.
 
-SDK matchers follow the same rules as [matchers in settings files](/en/hooks#matcher-patterns). A matcher containing only letters, digits, `_`, `-`, spaces, `,`, and `|` is compared as an exact string, with alternatives separated by `|` or `,` and optional surrounding whitespace, so `Write|Edit` and `Write, Edit` each match exactly those two tools and `code-reviewer` matches only that agent type. A matcher of `*`, an empty string, or omitting the matcher entirely matches every occurrence of the event.
+SDK matchers follow the same rules as [matchers in settings files](/docs/en/hooks#matcher-patterns). A matcher containing only letters, digits, `_`, `-`, spaces, `,`, and `|` is compared as an exact string, with alternatives separated by `|` or `,` and optional surrounding whitespace, so `Write|Edit` and `Write, Edit` each match exactly those two tools and `code-reviewer` matches only that agent type. A matcher of `*`, an empty string, or omitting the matcher entirely matches every occurrence of the event.
 
 A matcher containing any other character is evaluated as an unanchored regular expression, so `^mcp__` matches every MCP tool and `Edit.*` matches both `Edit` and `NotebookEdit`. Wrap a regular expression in `^` and `$` when you need a whole-string match.
 
@@ -215,18 +226,20 @@ A matcher like `mcp__memory` or `mcp__brave-search` contains only exact-match ch
 
 Hyphens in the exact-match set require a Claude Code runtime of v2.1.195 or later. On earlier versions a hyphenated name like `code-reviewer` is evaluated as an unanchored regular expression and must be anchored as `^code-reviewer$` to match exactly.
 
+`StopFailure` and `FileChanged` use a narrower exact-match set of letters, digits, `_`, and `|` only. A hyphen, space, or comma in a matcher for those two events keeps it on the regular-expression path, and only `|` separates alternatives, so write `rate_limit|overloaded`, not `rate_limit, overloaded`. `FileChanged` additionally uses its matcher to build the watch list of literal filenames; see [FileChanged in the hooks reference](/docs/en/hooks#filechanged).
+
 | Option    | Type             | Default     | Description                                                                                                                                                                                                                                                                                                                                                                        |
 | --------- | ---------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `matcher` | `string`         | `undefined` | Pattern matched against the event's filter field, following the comparison rules above. For tool hooks, this is the tool name. Built-in tools include `Bash`, `Read`, `Write`, `Edit`, `Glob`, `Grep`, `WebFetch`, `Agent`, and others (see [Tool Input Types](/en/agent-sdk/typescript#tool-input-types) for the full list). MCP tools use the pattern `mcp__<server>__<action>`. |
+| `matcher` | `string`         | `undefined` | Pattern matched against the event's filter field, following the comparison rules above. For tool hooks, this is the tool name. Built-in tools include `Bash`, `Read`, `Write`, `Edit`, `Glob`, `Grep`, `WebFetch`, `Agent`, and others (see [Tool Input Types](/docs/en/agent-sdk/typescript#tool-input-types) for the full list). MCP tools use the pattern `mcp__<server>__<action>`. |
 | `hooks`   | `HookCallback[]` | -           | Required. Array of callback functions to execute when the pattern matches                                                                                                                                                                                                                                                                                                          |
-| `timeout` | `number`         | `60`        | Timeout in seconds                                                                                                                                                                                                                                                                                                                                                                 |
+| `timeout` | `number`         | `undefined` | Timeout in seconds. When omitted, the per-event default applies: 10 minutes for most events, 30 seconds for `UserPromptSubmit`. A few events run with shorter limits, such as 10 seconds for `MessageDisplay`                                                                                                                                                                      |
 
 Use the `matcher` pattern to target specific tools whenever possible. A matcher with `'Bash'` only runs for Bash commands, while omitting the pattern runs your callbacks for every occurrence of the event.
 
 For tool-based hooks, matchers only filter by tool name, not by file paths or other arguments. To filter by file path, check `tool_input.file_path` inside your callback.
 
 <Tip>
-  **Discovering tool names:** See [Tool Input Types](/en/agent-sdk/typescript#tool-input-types) for the full list of built-in tool names, or add a hook without a matcher to log all tool calls your session makes.
+  **Discovering tool names:** See [Tool Input Types](/docs/en/agent-sdk/typescript#tool-input-types) for the full list of built-in tool names, or add a hook without a matcher to log all tool calls your session makes.
 
   **MCP tool naming:** MCP tools always start with `mcp__` followed by the server name and action: `mcp__<server>__<action>`. For example, if you configure a server named `playwright`, its tools are named `mcp__playwright__browser_screenshot`, `mcp__playwright__browser_click`, and so on. The server name comes from the key you use in the `mcpServers` configuration.
 </Tip>
@@ -237,7 +250,7 @@ For tool-based hooks, matchers only filter by tool name, not by file paths or ot
 
 Every hook callback receives three arguments:
 
-* **Input data:** a typed object containing event details. Each hook type has its own input shape. For example, `PreToolUseHookInput` includes `tool_name` and `tool_input`, while `NotificationHookInput` includes `message`. See the full type definitions in the [TypeScript](/en/agent-sdk/typescript#hookinput) and [Python](/en/agent-sdk/python#hookinput) SDK references.
+* **Input data:** a typed object containing event details. Each hook type has its own input shape. For example, `PreToolUseHookInput` includes `tool_name` and `tool_input`, while `NotificationHookInput` includes `message`. See the full type definitions in the [TypeScript](/docs/en/agent-sdk/typescript#hookinput) and [Python](/docs/en/agent-sdk/python#hookinput) SDK references.
   * All hook inputs share `session_id`, `cwd`, and `hook_event_name`.
   * `agent_id` and `agent_type` are populated when the hook fires inside a subagent. In TypeScript, these are on the base hook input and available to all hook types. In Python, they are optional fields on `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, and `PermissionRequest`, and required fields on `SubagentStart` and `SubagentStop`.
 * **Tool use ID** (`str | None` / `string | undefined`): correlates `PreToolUse` and `PostToolUse` events for the same tool call.
@@ -248,9 +261,9 @@ Every hook callback receives three arguments:
 Your callback returns an object with two categories of fields:
 
 * **Top-level fields** work the same on every event: `systemMessage` shows a message to the user, and `continue` (`continue_` in Python) determines whether the agent keeps running after this hook.
-* **`hookSpecificOutput`** controls the current operation. The fields inside depend on the hook event type. For `PreToolUse` hooks, this is where you set `permissionDecision` (`"allow"`, `"deny"`, `"ask"`, or `"defer"`), `permissionDecisionReason`, and `updatedInput`. Returning `"defer"` ends the query so you can [resume it later](/en/hooks#defer-a-tool-call-for-later). For `PostToolUse` hooks, you can set `additionalContext` to append information to the tool result. To replace the tool's output before Claude sees it, set `updatedToolOutput`, which works for any tool in both SDKs. The older `updatedMCPToolOutput` field replaces MCP tool output only and is deprecated.
+* **`hookSpecificOutput`** controls the current operation. The fields inside depend on the hook event type. For `PreToolUse` hooks, this is where you set `permissionDecision` (`"allow"`, `"deny"`, `"ask"`, or `"defer"`), `permissionDecisionReason`, and `updatedInput`. Returning `"defer"` ends the query so you can [resume it later](/docs/en/hooks#defer-a-tool-call-for-later). For `PostToolUse` hooks, you can set `additionalContext` to append information to the tool result. To replace the tool's output before Claude sees it, set `updatedToolOutput`, which works for any tool in both SDKs. The older `updatedMCPToolOutput` field replaces MCP tool output only and is deprecated.
 
-Return `{}` to allow the operation without changes. SDK callback hooks use the same JSON output format as [Claude Code shell command hooks](/en/hooks#json-output), which documents every field and event-specific option. For the SDK type definitions, see the [TypeScript](/en/agent-sdk/typescript#synchookjsonoutput) and [Python](/en/agent-sdk/python#synchookjsonoutput) SDK references.
+Return `{}` to allow the operation without changes. SDK callback hooks use the same JSON output format as [Claude Code shell command hooks](/docs/en/hooks#json-output), which documents every field and event-specific option. For the SDK type definitions, see the [TypeScript](/docs/en/agent-sdk/typescript#synchookjsonoutput) and [Python](/docs/en/agent-sdk/python#synchookjsonoutput) SDK references.
 
 <Note>
   When multiple hooks or permission rules apply, `deny` takes priority over `defer`, which takes priority over `ask`, which takes priority over `allow`. If any hook returns `deny`, the operation is blocked regardless of other hooks.
@@ -258,7 +271,7 @@ Return `{}` to allow the operation without changes. SDK callback hooks use the s
 
 #### Asynchronous output
 
-By default, the agent waits for your hook to return before proceeding. If your hook performs a side effect, such as logging or sending a webhook, and doesn't need to influence the agent's behavior, you can return an async output instead. This tells the agent to continue immediately without waiting for the hook to finish:
+By default, the agent waits for your hook to return before proceeding. If your hook performs a side effect, such as logging or sending a webhook, and doesn't need to influence the agent's behavior, you can return an async output instead. This tells the agent to continue immediately without waiting for the hook to finish. In this snippet, `send_to_logging_service` in Python and `sendToLoggingService` in TypeScript stand in for any logging function you define:
 
 <CodeGroup>
   ```python Python theme={null}
@@ -287,6 +300,8 @@ By default, the agent waits for your hook to return before proceeding. If your h
 </Note>
 
 ## Examples
+
+Several examples in this section show only the callback function. To run one, register the callback under the matching event in the `hooks` field of your options, as shown in [Configure hooks](#configure-hooks).
 
 ### Modify tool input
 
@@ -469,7 +484,7 @@ The example below registers three independent checks for every tool call:
 
 Use multi-tool matchers to share one callback across related tools. This example registers three matchers with different scopes:
 
-* A pipe-separated exact list (`Write|Edit|Delete`) triggers `file_security_hook` only for file modification tools.
+* A pipe-separated exact list (`Write|Edit|NotebookEdit`) triggers `file_security_hook` only for file modification tools.
 * A regex (`^mcp__`) triggers `mcp_audit_hook` for any MCP tool whose name starts with `mcp__`.
 * An omitted matcher triggers `global_logger` for every tool call regardless of name.
 
@@ -479,7 +494,7 @@ Use multi-tool matchers to share one callback across related tools. This example
       hooks={
           "PreToolUse": [
               # Match file modification tools
-              HookMatcher(matcher="Write|Edit|Delete", hooks=[file_security_hook]),
+              HookMatcher(matcher="Write|Edit|NotebookEdit", hooks=[file_security_hook]),
               # Match all MCP tools
               HookMatcher(matcher="^mcp__", hooks=[mcp_audit_hook]),
               # Match everything (no matcher)
@@ -494,7 +509,7 @@ Use multi-tool matchers to share one callback across related tools. This example
     hooks: {
       PreToolUse: [
         // Match file modification tools
-        { matcher: "Write|Edit|Delete", hooks: [fileSecurityHook] },
+        { matcher: "Write|Edit|NotebookEdit", hooks: [fileSecurityHook] },
 
         // Match all MCP tools
         { matcher: "^mcp__", hooks: [mcpAuditHook] },
@@ -509,7 +524,7 @@ Use multi-tool matchers to share one callback across related tools. This example
 
 ### Track subagent activity
 
-Use `SubagentStop` hooks to monitor when subagents finish their work. See the full input type in the [TypeScript](/en/agent-sdk/typescript#hookinput) and [Python](/en/agent-sdk/python#hookinput) SDK references. This example logs a summary each time a subagent completes:
+Use `SubagentStop` hooks to monitor when subagents finish their work. See the full input type in the [TypeScript](/docs/en/agent-sdk/typescript#hookinput) and [Python](/docs/en/agent-sdk/python#hookinput) SDK references. This example logs a summary each time a subagent completes:
 
 <CodeGroup>
   ```python Python theme={null}
@@ -650,7 +665,7 @@ Use `Notification` hooks to receive system notifications from the agent and forw
 
 Each notification includes a `message` field with a human-readable description and optionally a `title`.
 
-This example forwards every notification to a Slack channel. It requires a [Slack incoming webhook URL](https://api.slack.com/messaging/webhooks), which you create by adding an app to your Slack workspace and enabling incoming webhooks:
+This example forwards every notification to a Slack channel. It requires a [Slack incoming webhook URL](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/), which you create by adding an app to your Slack workspace and enabling incoming webhooks:
 
 <CodeGroup>
   ```python Python theme={null}
@@ -753,8 +768,8 @@ This example forwards every notification to a Slack channel. It requires a [Slac
 * Verify the hook event name is correct and case-sensitive (`PreToolUse`, not `preToolUse`)
 * Check that your matcher pattern matches the tool name exactly
 * Ensure the hook is under the correct event type in `options.hooks`
-* For non-tool hooks that support matchers, like `Notification` and `SubagentStop`, matchers match against different fields, and `Stop` ignores matchers entirely (see [matcher patterns](/en/hooks#matcher-patterns))
-* Hooks may not fire when the agent hits the [`max_turns`](/en/agent-sdk/python#claudeagentoptions) limit because the session ends before hooks can execute
+* For non-tool hooks that support matchers, like `Notification` and `SubagentStop`, matchers match against different fields, and `Stop` ignores matchers entirely (see [matcher patterns](/docs/en/hooks#matcher-patterns))
+* Hooks may not fire when the agent hits the [`max_turns`](/docs/en/agent-sdk/python#claudeagentoptions) limit because the session ends before hooks can execute
 
 ### Matcher not filtering as expected
 
@@ -776,7 +791,9 @@ const myHook: HookCallback = async (input, toolUseID, { signal }) => {
 * Increase the `timeout` value in the `HookMatcher` configuration
 * Use the `AbortSignal` from the third callback argument to handle cancellation gracefully in TypeScript
 
-{/* min-version: 2.1.208 */}A `UserPromptSubmit` or [`UserPromptExpansion`](/en/hooks#userpromptexpansion) callback that exceeds its timeout blocks that prompt with a timeout message and the session continues. Interrupting the query while a callback is pending cancels the pending tool call. Before v2.1.208, a callback timeout on those events ended the query with `error_during_execution`, and an interrupt during a pending `PreToolUse` callback could let the tool call proceed.
+{/* min-version: 2.1.208 */}A `UserPromptSubmit` or [`UserPromptExpansion`](/docs/en/hooks#userpromptexpansion) callback that exceeds its timeout blocks that prompt with a timeout message and the session continues. Interrupting the query while a callback is pending cancels the pending tool call. Before v2.1.208, a callback timeout on those events ended the query with `error_during_execution`, and an interrupt during a pending `PreToolUse` callback could let the tool call proceed.
+
+{/* min-version: 2.1.210 */}A `PreToolUse` callback that exceeds its timeout blocks the tool call, and Claude receives an error result naming the timeout. If another `PreToolUse` hook returned an explicit deny, Claude receives that denial instead. Before v2.1.210, Claude Code reported the timeout to Claude as if the user had rejected the tool call, so an unattended session stopped and waited for input.
 
 ### Tool blocked unexpectedly
 
@@ -804,7 +821,7 @@ const myHook: HookCallback = async (input, toolUseID, { signal }) => {
 
 ### Session hooks not available in Python
 
-`SessionStart` and `SessionEnd` can be registered as SDK callback hooks in TypeScript, but aren't available in the Python SDK because its `HookEvent` type omits them. In Python, they are only available as [shell command hooks](/en/hooks#hook-events) defined in settings files such as `.claude/settings.json`. To load shell command hooks from your SDK application, include the appropriate setting source with [`setting_sources`](/en/agent-sdk/python#settingsource) or [`settingSources`](/en/agent-sdk/typescript#settingsource):
+`SessionStart` and `SessionEnd` can be registered as SDK callback hooks in TypeScript, but aren't available in the Python SDK because its `HookEvent` type omits them. In Python, they are only available as [shell command hooks](/docs/en/hooks#hook-events) defined in settings files such as `.claude/settings.json`. To load shell command hooks from your SDK application, include the appropriate setting source with [`setting_sources`](/docs/en/agent-sdk/python#settingsource) or [`settingSources`](/docs/en/agent-sdk/typescript#settingsource):
 
 <CodeGroup>
   ```python Python theme={null}
@@ -836,15 +853,15 @@ A `UserPromptSubmit` hook that spawns subagents can create infinite loops if tho
 
 ### systemMessage not appearing in output
 
-The `systemMessage` field shows a message to the user, not the model. By default the SDK surfaces hook output in the message stream only for `SessionStart` and `Setup` hooks, so a message from any other hook event doesn't appear unless you set `includeHookEvents` (`include_hook_events` in Python). To pass context to the model instead, return [`additionalContext`](/en/hooks#add-context-for-claude).
+The `systemMessage` field shows a message to the user, not the model. By default the SDK surfaces hook output in the message stream only for `SessionStart` and `Setup` hooks, so a message from any other hook event doesn't appear unless you set `includeHookEvents` (`include_hook_events` in Python). To pass context to the model instead, return [`additionalContext`](/docs/en/hooks#add-context-for-claude).
 
 If you need to surface hook decisions to your application reliably, log them separately or use a dedicated output channel.
 
 ## Related resources
 
-* [Claude Code hooks reference](/en/hooks): full JSON input/output schemas, event documentation, and matcher patterns
-* [Claude Code hooks guide](/en/hooks-guide): shell command hook examples and walkthroughs
-* [TypeScript SDK reference](/en/agent-sdk/typescript): hook types, input/output definitions, and configuration options
-* [Python SDK reference](/en/agent-sdk/python): hook types, input/output definitions, and configuration options
-* [Permissions](/en/agent-sdk/permissions): control what your agent can do
-* [Custom tools](/en/agent-sdk/custom-tools): build tools to extend agent capabilities
+* [Claude Code hooks reference](/docs/en/hooks): full JSON input/output schemas, event documentation, and matcher patterns
+* [Claude Code hooks guide](/docs/en/hooks-guide): shell command hook examples and walkthroughs
+* [TypeScript SDK reference](/docs/en/agent-sdk/typescript): hook types, input/output definitions, and configuration options
+* [Python SDK reference](/docs/en/agent-sdk/python): hook types, input/output definitions, and configuration options
+* [Permissions](/docs/en/agent-sdk/permissions): control what your agent can do
+* [Custom tools](/docs/en/agent-sdk/custom-tools): build tools to extend agent capabilities
