@@ -10,16 +10,16 @@ Claude Code automatically tracks Claude's file edits as you work, allowing you t
 
 ## How checkpoints work
 
-As you work with Claude, checkpointing automatically captures the state of your code before each user prompt. This safety net lets you pursue ambitious, wide-scale tasks knowing you can always return to a prior code state.
+As you work with Claude, checkpointing automatically captures the state of your code before each user prompt.
 
 ### Automatic tracking
 
 Claude Code tracks all changes made by its file editing tools:
 
 * Every user prompt creates a new checkpoint
-* Claude Code keeps file snapshots for the 100 most recent checkpoints in a session. Discarding an older checkpoint deletes the snapshot files that no remaining checkpoint references, except each file's first snapshot, which the VS Code extension uses as the baseline for its session diffs. {/* min-version: 2.1.208 */}Before v2.1.208, those superseded snapshot files stayed on disk until the session was cleaned up.
-* Checkpoints are saved with the conversation, so a resumed session can still `/rewind` to them
-* Automatically cleaned up along with sessions after 30 days, configurable via [`cleanupPeriodDays`](/docs/en/settings#available-settings)
+* Claude Code keeps file snapshots for the 100 most recent checkpoints in a session. Discarding an older checkpoint deletes the snapshot files that no remaining checkpoint references, except each file's first snapshot, which the VS Code extension uses as the baseline for its session diffs.
+* Claude Code saves checkpoints with the conversation, so you can still run `/rewind` after you resume a session
+* Claude Code deletes checkpoints along with sessions after 30 days, following the [retention sweep rules](/docs/en/claude-directory#cleaned-up-automatically); change the period with [`cleanupPeriodDays`](/docs/en/settings#available-settings)
 
 ### Rewind and summarize
 
@@ -48,17 +48,12 @@ Choosing Summarize up to here leaves you at the end of the conversation with the
 
 If you ran `/clear` earlier in the same Claude Code process, the rewind menu shows an additional entry at the top of the list labeled `/resume <session-id> (previous session)`. Select it to resume the conversation that was active before `/clear` ran. The entry is available until you exit Claude Code or resume a different session, and requires Claude Code v2.1.191 or later. On earlier versions, run `/resume` and pick the previous session from the list instead.
 
-#### Restore vs. summarize
+#### Guide a summary
 
-The restore options revert state: they undo code changes, conversation history, or both. The summarize options compress part of the conversation into an AI-generated summary without changing files on disk:
-
-* **Summarize from here**: messages before the selected message stay intact. The selected message and everything after it are replaced with a summary. Use this to discard a side discussion while keeping early context in full detail.
-* **Summarize up to here**: messages before the selected message are replaced with a summary. The selected message and everything after it stay intact, and you remain at the end of the conversation. Use this to compress early setup discussion while keeping recent work in full detail.
-
-In both cases the original messages are preserved in the session transcript, so Claude can reference the details if needed. To guide what the summary focuses on, highlight a **Summarize** option with the arrow keys and type instructions inline where the row reads **add context (optional)**, then press `Enter` to summarize; selecting the option by its number key summarizes immediately without instructions. This is similar to `/compact`, but targeted: instead of summarizing the entire conversation, you choose which side of the selected message to compress.
+Summarizing doesn't change files on disk, and the original messages stay in the session transcript, so Claude can still reference the details. To guide what the summary focuses on, highlight a **Summarize** option with the arrow keys and type instructions where the row reads **add context (optional)**, then press `Enter`. Selecting the option with its number key summarizes immediately without instructions.
 
 <Note>
-  Summarize keeps you in the same session and compresses context. If you want to branch off and try a different approach while preserving the original session intact, use [`/branch`](/docs/en/sessions#branch-a-session) or `claude --continue --fork-session` instead.
+  Summarize keeps you in the same session and compresses context, like a targeted `/compact`. To branch off and try a different approach while preserving the original session intact, use [`/branch`](/docs/en/sessions#branch-a-session) or `claude --continue --fork-session` instead.
 </Note>
 
 ## Common use cases
@@ -86,7 +81,10 @@ These file modifications cannot be undone through rewind. Only direct file edits
 
 ### Subagent edits not restored
 
-Except for a [skill with `context: fork`](/docs/en/skills#run-skills-in-a-subagent) that runs in the foreground, edits a [subagent](/docs/en/sub-agents) applies land outside your session's checkpoints, so rewinding doesn't restore them, even though the subagent makes them with Claude's file editing tools. This includes a background [`/code-review --fix`](/docs/en/code-review) run and any forked skill that runs in the background. Use git to revert those edits. The foreground fork edits your working tree during your own turn, so rewinding restores its edits as usual. {/* min-version: 2.1.218 */}A forked skill runs in the background by default; set `background: false` in its frontmatter to run it in the foreground, where the invoking turn waits for the result. Before v2.1.218, forked skills always ran in the foreground.
+A [subagent](/docs/en/sub-agents) makes edits with Claude's file editing tools, but Claude Code usually doesn't capture those edits in your session's checkpoints. Whether rewinding restores them depends on how the subagent runs:
+
+* **Foreground forked skill**: a [skill with `context: fork`](/docs/en/skills#run-skills-in-a-subagent) that runs in the foreground edits your working tree during your own turn, so rewinding restores its edits as usual. Set `background: false` to run a fork in the foreground; a few situations, [listed on the skills page](/docs/en/skills#run-skills-in-a-subagent), run it there regardless of the setting.
+* **Any other subagent**: rewinding doesn't restore the edits. Use git to revert them. This includes a forked skill that runs in the background, the default, and a background [`/code-review --fix`](/docs/en/code-review) run.
 
 ### External changes not tracked
 
@@ -98,17 +96,9 @@ Checkpointing doesn't rewind symlinked or hard-linked files. When you pick **Res
 
 To see which paths a restore skips, turn on debug logging with `/debug` before you restore: the debug log at `~/.claude/debug/<session-id>.txt` names each skipped path. For every skip reason and the recovery steps, see [the skipped-files entry in the error reference](/docs/en/errors#restored-the-code-but-skipped-files).
 
-<Note>
-  Before v2.1.216, `/rewind` wrote and deleted through links at tracked paths without a warning.
-</Note>
-
 ### Not a replacement for version control
 
-Checkpoints are designed for quick, session-level recovery. For permanent version history and collaboration:
-
-* Continue using version control (ex. Git) for commits, branches, and long-term history
-* Checkpoints complement but don't replace proper version control
-* Think of checkpoints as "local undo" and Git as "permanent history"
+Checkpoints are designed for quick, session-level recovery. For permanent version history and collaboration, continue using version control, such as Git, for commits, branches, and long-term history.
 
 ## See also
 

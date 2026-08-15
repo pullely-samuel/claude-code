@@ -16,7 +16,7 @@ The plugin is also distinct from the review tools already in Claude Code: the [s
 
 To run the plugin, you need:
 
-* {/* min-version: 2.1.154 */}Claude Code v2.1.154 or later on a paid plan, for the [dynamic workflows](/docs/en/workflows) the scan uses to orchestrate its agents. On Pro, turn them on from the Dynamic workflows row in `/config`.
+* Claude Code v2.1.154 or later on a paid plan, for the [dynamic workflows](/docs/en/workflows) the scan uses to orchestrate its agents. On Pro, turn them on from the Dynamic workflows row in `/config`.
 * Python 3.9.6 or later available on your `PATH` as `python3`. Check with `python3 --version`. The plugin's tooling uses only the Python standard library, so nothing is installed.
 * Linux, macOS, or Windows.
 * Git, for change scans and for turning findings into patches; those jobs don't support other version control systems. A full scan works in any directory, with or without version control.
@@ -29,17 +29,18 @@ In a Claude Code session, install from the [official Anthropic marketplace](/doc
 /plugin install claude-security@claude-plugins-official
 ```
 
-<Note>
-  If Claude Code reports that the marketplace is not found, run `/plugin marketplace add anthropics/claude-plugins-official` first, then retry the install.
-</Note>
+If the install fails, the fix depends on which message Claude Code reports:
 
-Then activate the plugin in the current session with `/reload-plugins`, which applies pending plugin changes without a restart:
+* If it reports `Marketplace "claude-plugins-official" not found`, add the marketplace with `/plugin marketplace add anthropics/claude-plugins-official`, then retry the install.
+* If it reports that it [can't find the plugin in the marketplace](/docs/en/discover-plugins#install-plugins), check the plugin name for a typo.
+
+Check the install summary. If it reports `Run /reload-plugins to activate.`, apply the pending change without a restart:
 
 ```text theme={null}
 /reload-plugins
 ```
 
-The plugin is now active, and you're ready to [scan and fix your codebase](#scan-and-fix-your-codebase).
+Once the plugin is active, you're ready to [scan and fix your codebase](#scan-and-fix-your-codebase).
 
 ### Uninstall the plugin
 
@@ -75,7 +76,7 @@ The plugin adds one command, `/claude-security`, which opens a menu of its three
   </Step>
 </Steps>
 
-You don't have to start from the menu: ask for a job directly, as arguments to the command, such as `/claude-security scan my branch`, or in plain language, such as "scan commit abc1234". The plugin works best in [auto mode](/docs/en/permission-modes), which lets the scan's agents proceed without a permission prompt at each step; the plugin reminds you how to enable it when a job starts.
+You don't have to start from the menu: ask for a job directly, as arguments to the command, such as `/claude-security scan my branch`, or in plain language, such as "scan commit abc1234". The plugin works best in [auto mode](/docs/en/permission-modes), which lets the scan's agents proceed without a permission prompt at each step.
 
 ### Scan only your changes
 
@@ -133,6 +134,8 @@ The plugin doesn't replace your existing source-code security tools. Run it alon
 ## Troubleshooting
 
 **The `/claude-security` menu opens with a Python warning.** The plugin needs `python3` 3.9.6 or later on your `PATH`. When it can't find `python3` at all, the menu warns that Claude Security won't work until one is installed; when the first `python3` on your `PATH` is older, the warning names the version it found. Install Python 3, or put a newer `python3` first on your `PATH`, then start a new session.
+
+**You may see "Fable 5's safeguards flagged this message" when using Fable 5.** Due to Fable 5's cybersecurity safety classifiers, certain model activities will be blocked and automatically downgraded to Opus.  This is expected, and the scan should still complete successfully.
 
 ## Related resources
 

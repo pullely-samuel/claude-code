@@ -8,13 +8,6 @@
 
 System prompts define Claude's behavior, capabilities, and response style. Start from the `claude_code` preset for CLI or IDE-like coding tools where a human watches and steers the work. Write your own prompt for agents with a different surface, identity, or permission model.
 
-This page covers:
-
-* [How system prompts work](#how-system-prompts-work), with a decision table for choosing between the preset, the preset with `append`, and a custom prompt
-* [Customize agent behavior](#customize-agent-behavior) with CLAUDE.md files, output styles, `append`, or a custom string
-* [Compare the four approaches](#compare-the-four-approaches) by persistence, scope, and what they preserve
-* [Combine approaches](#combine-approaches) to layer customization methods together
-
 ## How system prompts work
 
 A system prompt is the initial instruction set that shapes how Claude behaves throughout a conversation. The Agent SDK has three starting points for it:
@@ -49,7 +42,7 @@ Output styles, `append`, and a custom prompt string each change the system promp
 
 ### CLAUDE.md files for project-level instructions
 
-CLAUDE.md files give Claude persistent project context and instructions. The SDK injects their content into the conversation, not into the system prompt, so they work with any system prompt configuration. For what to put in CLAUDE.md, where to place it, and how to write effective instructions, see [How Claude remembers your project](/docs/en/memory). This section covers what's specific to the SDK: how CLAUDE.md loads.
+CLAUDE.md files give Claude persistent project context and instructions. The SDK injects their content into the conversation and leaves the system prompt untouched, so they work with any system prompt configuration. For what to put in CLAUDE.md, where to place it, and how to write effective instructions, see [When to add to CLAUDE.md](/docs/en/memory#when-to-add-to-claude-md) and the rest of [How Claude remembers your project](/docs/en/memory). This section covers what's specific to the SDK: how CLAUDE.md loads.
 
 The SDK reads CLAUDE.md when the matching setting source is enabled: `'project'` loads `CLAUDE.md` or `.claude/CLAUDE.md` from the working directory, and `'user'` loads `~/.claude/CLAUDE.md`. Default `query()` options enable both sources, so CLAUDE.md loads automatically. If you set `settingSources` in TypeScript or `setting_sources` in Python explicitly, include the sources you need. CLAUDE.md loading is controlled by setting sources, not by the `claude_code` preset.
 
@@ -80,25 +73,34 @@ To load CLAUDE.md, set `settingSources` to include the level your CLAUDE.md live
   ```
 
   ```python Python theme={null}
+  import asyncio
+
   from claude_agent_sdk import query, ClaudeAgentOptions
 
   messages = []
 
-  async for message in query(
-      prompt="Add a new React component for user profiles",
-      options=ClaudeAgentOptions(
-          system_prompt={
-              "type": "preset",
-              "preset": "claude_code",  # Use Claude Code's system prompt
-          },
-          setting_sources=["project"],  # Loads CLAUDE.md from project
-      ),
-  ):
-      messages.append(message)
+
+  async def main():
+      async for message in query(
+          prompt="Add a new React component for user profiles",
+          options=ClaudeAgentOptions(
+              system_prompt={
+                  "type": "preset",
+                  "preset": "claude_code",  # Use Claude Code's system prompt
+              },
+              setting_sources=["project"],  # Loads CLAUDE.md from project
+          ),
+      ):
+          messages.append(message)
+
+
+  asyncio.run(main())
 
   # Now Claude has access to your project guidelines from CLAUDE.md
   ```
 </CodeGroup>
+
+When you run either example, the SDK streams messages as Claude works: a system init message, assistant messages, user messages carrying tool results, and a final result message with the session outcome.
 
 CLAUDE.md is persistent across all sessions in a project, shared with your team through git, and discovered automatically without code changes. It is not loaded if you pass an empty `settingSources` array.
 
@@ -174,29 +176,36 @@ You can use the Claude Code preset with an `append` property to add your custom 
   ```
 
   ```python Python theme={null}
+  import asyncio
+
   from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage
 
   messages = []
 
-  async for message in query(
-      prompt="Help me write a Python function to calculate fibonacci numbers",
-      options=ClaudeAgentOptions(
-          system_prompt={
-              "type": "preset",
-              "preset": "claude_code",
-              "append": "Always include detailed docstrings and type hints in Python code.",
-          }
-      ),
-  ):
-      messages.append(message)
-      if isinstance(message, AssistantMessage):
-          print(message.content)
+
+  async def main():
+      async for message in query(
+          prompt="Help me write a Python function to calculate fibonacci numbers",
+          options=ClaudeAgentOptions(
+              system_prompt={
+                  "type": "preset",
+                  "preset": "claude_code",
+                  "append": "Always include detailed docstrings and type hints in Python code.",
+              }
+          ),
+      ):
+          messages.append(message)
+          if isinstance(message, AssistantMessage):
+              print(message.content)
+
+
+  asyncio.run(main())
   ```
 </CodeGroup>
 
 #### Improve prompt caching across users and machines
 
-By default, two sessions that use the same `claude_code` preset and `append` text still cannot share a prompt cache entry if they run from different working directories. This is because the preset embeds per-session context in the system prompt ahead of your `append` text: the working directory, whether it's a git repository, the platform, the active shell, the OS version, and auto-memory paths. Any difference in that context produces a different system prompt and a cache miss. CLAUDE.md content doesn't affect the system prompt cache because the SDK injects it into the conversation, not the system prompt.
+By default, two sessions that use the same `claude_code` preset and `append` text still cannot share a prompt cache entry if they run from different working directories. This is because the preset embeds per-session context in the system prompt ahead of your `append` text: the working directory, whether it's a git repository, the platform, the active shell, the OS version, and auto memory paths. Any difference in that context produces a different system prompt and a cache miss. CLAUDE.md content doesn't affect the system prompt cache because the SDK injects it into the conversation, not the system prompt.
 
 To make the system prompt identical across sessions, set `excludeDynamicSections: true` in TypeScript or `"exclude_dynamic_sections": True` in Python. The per-session context moves into the first user message, leaving only the static preset and your `append` text in the system prompt so identical configurations share a cache entry across users and machines.
 
@@ -226,24 +235,31 @@ The following example pairs a shared `append` block with `excludeDynamicSections
   ```
 
   ```python Python theme={null}
+  import asyncio
+
   from claude_agent_sdk import query, ClaudeAgentOptions
 
-  async for message in query(
-      prompt="Triage the open issues in this repo",
-      options=ClaudeAgentOptions(
-          system_prompt={
-              "type": "preset",
-              "preset": "claude_code",
-              "append": "You operate Acme's internal triage workflow. Label issues by component and severity.",
-              "exclude_dynamic_sections": True,
-          },
-      ),
-  ):
-      ...
+
+  async def main():
+      async for message in query(
+          prompt="Triage the open issues in this repo",
+          options=ClaudeAgentOptions(
+              system_prompt={
+                  "type": "preset",
+                  "preset": "claude_code",
+                  "append": "You operate Acme's internal triage workflow. Label issues by component and severity.",
+                  "exclude_dynamic_sections": True,
+              },
+          ),
+      ):
+          ...
+
+
+  asyncio.run(main())
   ```
 </CodeGroup>
 
-**Tradeoffs:** the working directory, the git-repo flag, the platform, the active shell, the OS version, and auto-memory paths still reach Claude, but as part of the first user message rather than the system prompt. Instructions in the user message carry marginally less weight than the same text in the system prompt, so Claude may rely on them less strongly when reasoning about the current directory or auto-memory paths. Enable this option when cross-session cache reuse matters more than maximally authoritative environment context.
+**Tradeoffs:** the working directory, the git-repo flag, the platform, the active shell, the OS version, and auto memory paths still reach Claude, but as part of the first user message rather than the system prompt. Instructions in the user message carry marginally less weight than the same text in the system prompt, so Claude may rely on them less strongly when reasoning about the current directory or auto memory paths. Enable this option when cross-session cache reuse matters more than maximally authoritative environment context.
 
 For the equivalent flag in non-interactive CLI mode, see [`--exclude-dynamic-system-prompt-sections`](/docs/en/cli-reference).
 
@@ -279,6 +295,8 @@ You can provide a custom string as `systemPrompt` to replace the default entirel
   ```
 
   ```python Python theme={null}
+  import asyncio
+
   from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage
 
   custom_prompt = """You are a Python coding specialist.
@@ -291,15 +309,22 @@ You can provide a custom string as `systemPrompt` to replace the default entirel
 
   messages = []
 
-  async for message in query(
-      prompt="Create a data processing pipeline",
-      options=ClaudeAgentOptions(system_prompt=custom_prompt),
-  ):
-      messages.append(message)
-      if isinstance(message, AssistantMessage):
-          print(message.content)
+
+  async def main():
+      async for message in query(
+          prompt="Create a data processing pipeline",
+          options=ClaudeAgentOptions(system_prompt=custom_prompt),
+      ):
+          messages.append(message)
+          if isinstance(message, AssistantMessage):
+              print(message.content)
+
+
+  asyncio.run(main())
   ```
 </CodeGroup>
+
+In Python, load a large custom prompt from a file with `system_prompt={"type": "file", "path": "..."}` instead of passing it as a string. The Python SDK passes a string prompt as one command-line argument to the CLI subprocess, so a prompt that exceeds the OS argument-length limit fails at process spawn before any API request is sent. On Linux the error is `Argument list too long`. See [`SystemPromptFile`](/docs/en/agent-sdk/python#systempromptfile) for the platform thresholds and the Windows behavior.
 
 ## Compare the four approaches
 
@@ -318,55 +343,6 @@ The four customization methods differ in where they live, how they're shared, an
 | **Scope**               | Project-specific | User or project           | Code session               | Code session           |
 
 "With append" means using `systemPrompt: { type: "preset", preset: "claude_code", append: "..." }` in TypeScript or `system_prompt={"type": "preset", "preset": "claude_code", "append": "..."}` in Python. CLAUDE.md doesn't change the system prompt itself: the SDK injects its content into the conversation as project context.
-
-## Use cases and best practices
-
-### When to use CLAUDE.md
-
-Use CLAUDE.md for instructions that should apply to every session in a project, regardless of which system prompt the session uses: coding standards, common commands, architecture context, and team conventions. CLAUDE.md is committed to your repository, so it stays in sync with the code it describes. See [When to add to CLAUDE.md](/docs/en/memory#when-to-add-to-claude-md) for full guidance.
-
-CLAUDE.md files load when the `project` setting source is enabled, which it is for default `query()` options. If you set `settingSources` in TypeScript or `setting_sources` in Python explicitly, include `'project'` to keep loading project-level CLAUDE.md.
-
-### When to use output styles
-
-Output styles are for personas you want to reuse across the CLI and SDK without changing application code. Because they live as files in `.claude/output-styles`, the same persona is available from `/config` in the CLI and from any SDK session that loads the matching setting source.
-
-**Best for:**
-
-* Persistent behavior changes across sessions
-* Team-shared configurations
-* Specialized assistants like a code reviewer, data scientist, or DevOps assistant
-* Complex prompt modifications that need versioning
-
-**Examples:**
-
-* Creating a dedicated SQL optimization assistant
-* Building a security-focused code reviewer
-* Developing a teaching assistant with specific pedagogy
-
-### When to use `systemPrompt` with append
-
-Use `append` when the `claude_code` preset already fits your product and you only need to layer in extra instructions. You keep the preset's tool guidance, safety rules, and coding conventions without reimplementing them.
-
-**Best for:**
-
-* Adding specific coding standards or preferences
-* Customizing output formatting
-* Adding domain-specific knowledge
-* Modifying response verbosity
-* Enhancing Claude Code's default behavior without losing tool instructions
-
-### When to use custom `systemPrompt`
-
-Use a custom prompt when your agent's surface, identity, or permission model differs from Claude Code's, as described in [Decide on a starting point](#decide-on-a-starting-point). You define the full instruction set, including any tool guidance and safety rules your agent needs.
-
-**Best for:**
-
-* Complete control over Claude's behavior
-* Specialized single-session tasks
-* Testing new prompt strategies
-* Situations where default tools aren't needed
-* Building specialized agents with unique behavior
 
 ## Combine approaches
 
@@ -404,28 +380,35 @@ The example below assumes a Code Reviewer output style is already active. The `a
   ```
 
   ```python Python theme={null}
+  import asyncio
+
   from claude_agent_sdk import query, ClaudeAgentOptions
 
   # Assuming "Code Reviewer" output style is active (via /config or settings)
   # Add session-specific focus areas
   messages = []
 
-  async for message in query(
-      prompt="Review this authentication module",
-      options=ClaudeAgentOptions(
-          system_prompt={
-              "type": "preset",
-              "preset": "claude_code",
-              "append": """
-              For this review, prioritize:
-              - OAuth 2.0 compliance
-              - Token storage security
-              - Session management
-              """,
-          }
-      ),
-  ):
-      messages.append(message)
+
+  async def main():
+      async for message in query(
+          prompt="Review this authentication module",
+          options=ClaudeAgentOptions(
+              system_prompt={
+                  "type": "preset",
+                  "preset": "claude_code",
+                  "append": """
+                  For this review, prioritize:
+                  - OAuth 2.0 compliance
+                  - Token storage security
+                  - Session management
+                  """,
+              }
+          ),
+      ):
+          messages.append(message)
+
+
+  asyncio.run(main())
   ```
 </CodeGroup>
 

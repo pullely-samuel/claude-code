@@ -23,8 +23,8 @@ Extensions plug into different parts of the agentic loop:
 * **[Code intelligence](/docs/en/tools-reference#lsp-tool-behavior)** connects Claude to a language server for symbol-level navigation and live type errors
 * **[MCP](/docs/en/mcp)** connects Claude to external services and tools
 * **[Subagents](/docs/en/sub-agents)** run their own loops in isolated context, returning summaries
-* **[Agent teams](/docs/en/agent-teams)** coordinate multiple independent sessions with shared tasks and peer-to-peer messaging
-* **[Hooks](/docs/en/hooks-guide)** fire on lifecycle events and can run a script, HTTP request, prompt, or subagent
+* **[Agent teams](/docs/en/agent-teams)** coordinate multiple independent sessions with peer-to-peer messaging, plus a shared task list for [agents that have the Task tools](/docs/en/tools-reference#task-tool-availability)
+* **[Hooks](/docs/en/hooks-guide)** run your script, HTTP request, prompt, or subagent when Claude Code reaches a lifecycle event
 * **[Plugins](/docs/en/plugins)** and **[marketplaces](/docs/en/plugin-marketplaces)** package and distribute these features
 
 [Skills](/docs/en/skills) are the most flexible extension. A skill is a markdown file containing knowledge, workflows, or instructions. You can invoke skills with a command like `/deploy`, or Claude can load them automatically when relevant. Skills can run in your current conversation or in an isolated context via subagents.
@@ -127,19 +127,19 @@ Some features can seem similar. For a deeper walkthrough of choosing between the
     * **Subagents** run inside your session and report results back to your main context
     * **Agent teams** are independent Claude Code sessions that communicate with each other
 
-    | Aspect            | Subagent                                         | Agent team                                          |
-    | ----------------- | ------------------------------------------------ | --------------------------------------------------- |
-    | **Context**       | Own context window; results return to the caller | Own context window; fully independent               |
-    | **Communication** | Reports results back to the main agent only      | Teammates message each other directly               |
-    | **Coordination**  | Main agent manages all work                      | Shared task list with self-coordination             |
-    | **Best for**      | Focused tasks where only the result matters      | Complex work requiring discussion and collaboration |
-    | **Token cost**    | Lower: results summarized back to main context   | Higher: each teammate is a separate Claude instance |
+    | Aspect            | Subagent                                         | Agent team                                                                                                                                    |
+    | ----------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+    | **Context**       | Own context window; results return to the caller | Own context window; fully independent                                                                                                         |
+    | **Communication** | Reports results back to the main agent only      | Teammates message each other directly                                                                                                         |
+    | **Coordination**  | Main agent manages all work                      | Self-coordination through messages, plus a shared task list for [agents that have the Task tools](/docs/en/tools-reference#task-tool-availability) |
+    | **Best for**      | Focused tasks where only the result matters      | Complex work requiring discussion and collaboration                                                                                           |
+    | **Token cost**    | Lower: results summarized back to main context   | Higher: each teammate is a separate Claude instance                                                                                           |
 
     **Use a subagent** when you need a quick, focused worker: research a question, verify a claim, review a file. The subagent does the work and returns a summary. Your main conversation stays clean.
 
     **Use an agent team** when teammates need to share findings, challenge each other, and coordinate independently. Agent teams are best for research with competing hypotheses, parallel code review, and new feature development where each teammate owns a separate piece.
 
-    **Transition point:** If you're running parallel subagents but hitting context limits, or if your subagents need to communicate with each other, agent teams are the natural next step.
+    **Transition point:** If you're running parallel subagents but hitting context limits, or if your subagents need to communicate with each other, agent teams are the natural next step. For separate sessions that pass messages to each other without a team, see [cross-session messaging](/docs/en/cross-session-messaging).
 
     <Note>
       Agent teams are experimental and disabled by default. See [agent teams](/docs/en/agent-teams) for setup and current limitations.
@@ -160,12 +160,10 @@ Some features can seem similar. For a deeper walkthrough of choosing between the
     **MCP** gives Claude purpose-built tools for an external system, with the connection and authentication handled by the server.
 
     **Skills** give Claude knowledge about how to use those tools effectively, plus workflows you can trigger with `/<name>`. A skill might include your team's database schema and query patterns, or a `/post-to-slack` workflow with your team's message formatting rules.
-
-    Example: An MCP server connects Claude to your database. A skill teaches Claude your data model, common query patterns, and which tables to use for different tasks.
   </Tab>
 
   <Tab title="Hook vs Skill">
-    A hook fires on a lifecycle event; a skill is loaded into context for Claude to apply.
+    Claude Code runs a hook at a lifecycle event; it loads a skill into context for Claude to apply.
 
     | Aspect           | Hook                                                                              | Skill                                                                 |
     | ---------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -230,7 +228,9 @@ Each feature has a different loading strategy and context cost:
 
 Each feature loads at different points in your session. The tabs below explain when each one loads and what goes into context.
 
-<img src="https://mintcdn.com/claude-code/ikqp3_70mqIahteV/images/context-loading.svg?fit=max&auto=format&n=ikqp3_70mqIahteV&q=85&s=aab139e750494a237ae2e0c8f9139b0a" alt="Context loading: CLAUDE.md loads at session start and stays in every request. MCP tool names load at start with full schemas deferred until use. Skills load descriptions at start, full content on invocation. Subagents get isolated context. Hooks run externally." width="720" height="382" data-path="images/context-loading.svg" />
+<img src="https://mintcdn.com/claude-code/ikqp3_70mqIahteV/images/context-loading.svg?fit=max&auto=format&n=ikqp3_70mqIahteV&q=85&s=aab139e750494a237ae2e0c8f9139b0a" className="dark:hidden" alt="Context loading: CLAUDE.md loads at session start and stays in every request. MCP tool names load at start with full schemas deferred until use. Skills load descriptions at start, full content on invocation. Subagents get isolated context. Hooks run externally." width="720" height="382" data-path="images/context-loading.svg" />
+
+<img src="https://mintcdn.com/claude-code/_xqph1dUOslCOwsj/images/context-loading-dark.svg?fit=max&auto=format&n=_xqph1dUOslCOwsj&q=85&s=b274089ef9612d9c760bca9838557626" className="hidden dark:block" alt="Context loading: CLAUDE.md loads at session start and stays in every request. MCP tool names load at start with full schemas deferred until use. Skills load descriptions at start, full content on invocation. Subagents get isolated context. Hooks run externally." width="720" height="382" data-path="images/context-loading-dark.svg" />
 
 <Tabs>
   <Tab title="CLAUDE.md">
@@ -295,7 +295,7 @@ Each feature loads at different points in your session. The tabs below explain w
   </Tab>
 
   <Tab title="Hooks">
-    **When:** On trigger. Hooks fire at specific lifecycle events like tool execution, session boundaries, prompt submission, permission requests, and compaction. See [Hooks](/docs/en/hooks) for the full list.
+    **When:** On trigger. Claude Code runs hooks at specific lifecycle events like tool execution, session boundaries, prompt submission, permission requests, and compaction. See [Hooks](/docs/en/hooks) for the full list.
 
     **What loads:** Nothing by default. Hooks execute outside the main conversation.
 

@@ -67,7 +67,9 @@ For all first party users, you can learn more about what data is logged for [loc
 
 The diagram below shows how Claude Code connects to external services during installation and normal operation. Solid lines indicate required connections, while dashed lines represent optional or user-initiated data flows.
 
-<img src="https://mintcdn.com/claude-code/YR4DRZyI3CdsXkiT/images/claude-code-data-flow.svg?fit=max&auto=format&n=YR4DRZyI3CdsXkiT&q=85&s=2846ea92cfc2297b8620c31c82b482ad" alt="Diagram showing Claude Code's external connections: install/update connects to the distribution server, and user requests connect to Anthropic's Console auth and public-api, with optional telemetry flows carrying metrics and error reports to Anthropic and third-party services. Feedback sent with /feedback goes to Google Cloud Storage and optionally creates a GitHub issue" width="720" height="520" data-path="images/claude-code-data-flow.svg" />
+<img src="https://mintcdn.com/claude-code/YR4DRZyI3CdsXkiT/images/claude-code-data-flow.svg?fit=max&auto=format&n=YR4DRZyI3CdsXkiT&q=85&s=2846ea92cfc2297b8620c31c82b482ad" className="dark:hidden" alt="Diagram showing Claude Code's external connections: install/update connects to the distribution server, and user requests connect to Anthropic's Console auth and public-api, with optional telemetry flows carrying metrics and error reports to Anthropic and third-party services. Feedback sent with /feedback goes to Google Cloud Storage and optionally creates a GitHub issue" width="720" height="520" data-path="images/claude-code-data-flow.svg" />
+
+<img src="https://mintcdn.com/claude-code/_xqph1dUOslCOwsj/images/claude-code-data-flow-dark.svg?fit=max&auto=format&n=_xqph1dUOslCOwsj&q=85&s=4fb6e8c88a9740845217bf2a2b040877" className="hidden dark:block" alt="Diagram showing Claude Code's external connections: install/update connects to the distribution server, and user requests connect to Anthropic's Console auth and public-api, with optional telemetry flows carrying metrics and error reports to Anthropic and third-party services. Feedback sent with /feedback goes to Google Cloud Storage and optionally creates a GitHub issue" width="720" height="520" data-path="images/claude-code-data-flow-dark.svg" />
 
 Claude Code runs locally. To interact with the LLM, Claude Code sends data over the network. This data includes all user prompts and model outputs, encrypted in transit via TLS 1.2+. Claude Code is compatible with most popular VPNs and LLM proxies.
 
@@ -84,7 +86,7 @@ Claude Code is built on Anthropic's APIs. For details on API security controls, 
 
 ### Cloud execution: Data flow and dependencies
 
-When using [Claude Code on the web](/docs/en/claude-code-on-the-web), sessions run in Anthropic-managed virtual machines instead of locally. In cloud environments:
+When using [Claude Code on the web](/docs/en/claude-code-on-the-web), sessions run in Anthropic-managed virtual machines by default instead of locally. Sessions your organization routes to a [self-hosted environment](/docs/en/self-hosted-environments) run on infrastructure you control; for what stays on your machines and what still goes to Anthropic, see [What stays on your infrastructure](/docs/en/self-hosted-environments#what-stays-on-your-infrastructure). In Anthropic-hosted cloud sessions:
 
 * **Code and data storage:** Your repository is cloned to an isolated VM. Code and session data are subject to the retention and usage policies for your account type (see Data retention section above)
 * **Credentials:** GitHub authentication is handled through a secure proxy; your GitHub credentials never enter the sandbox
@@ -95,7 +97,7 @@ For security details about cloud execution, see [Security](/docs/en/security#clo
 
 ## Telemetry services
 
-Claude Code sends two kinds of operational telemetry: usage metrics and error reports. You can turn each off individually with the environment variables below, or disable all non-essential traffic at once by setting `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`.
+Claude Code sends two kinds of operational telemetry: usage metrics and error reports. You can turn each off individually with the environment variables below, or disable all non-essential traffic at once by setting `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`. Setting `DISABLE_TELEMETRY` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` also disables the feature-flag evaluation that [Remote Control](/docs/en/remote-control#requirements) depends on; `DISABLE_ERROR_REPORTING` doesn't.
 
 **Metrics**: latency, reliability, and usage patterns, sent to Anthropic and to third-party logging infrastructure over TLS. Metrics never include your code, prompts, or file paths. Set `DISABLE_TELEMETRY=1` to opt out.
 
@@ -126,10 +128,10 @@ By default, error reporting, telemetry, and bug reporting are disabled when usin
 
 All environment variables can be checked into `settings.json` (see [settings reference](/docs/en/settings)).
 
-As of v2.1.126, when a host platform sets `CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST`, metrics default to on for Google Cloud's Agent Platform, Amazon Bedrock, and Microsoft Foundry, and follow the standard `DISABLE_TELEMETRY` opt-out. Error reporting and `/feedback` reports remain off by default on those providers.
+When a host platform sets `CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST`, metrics default to on for Google Cloud's Agent Platform, Amazon Bedrock, Microsoft Foundry, and Claude Platform on AWS, and follow the standard `DISABLE_TELEMETRY` opt-out. Error reporting and `/feedback` reports remain off by default on those providers.
 
 ### WebFetch domain safety check
 
-Before fetching a URL, the WebFetch tool sends the requested hostname to `api.anthropic.com` to check it against a safety blocklist maintained by Anthropic. Only the hostname is sent, not the full URL, path, or page contents. Results are cached per hostname for five minutes.
+Before fetching a URL, the WebFetch tool sends the requested hostname to `api.anthropic.com` to check it against a safety blocklist maintained by Anthropic. Only the hostname is sent, not the full URL, path, or page contents. Claude Code caches a hostname that passes the check for five minutes, and re-checks a blocked or failed hostname on the next request.
 
 This check runs regardless of which model provider you use and is not affected by `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`. If your network blocks `api.anthropic.com`, WebFetch requests fail until you either allowlist the domain or set `skipWebFetchPreflight: true` in [settings](/docs/en/settings). Disabling the check means WebFetch attempts to retrieve any URL without consulting the blocklist, so combine it with [`WebFetch` permission rules](/docs/en/permissions#webfetch) if you need to restrict which domains Claude can reach.

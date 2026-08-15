@@ -24,7 +24,7 @@ For detailed permission configuration, see [Permissions](/docs/en/permissions).
 
 To mitigate risks in agentic systems:
 
-* **Sandboxed bash tool**: [Sandbox](/docs/en/sandboxing) bash commands with filesystem and network isolation, reducing permission prompts while maintaining security. Enable with `/sandbox` to define boundaries where Claude Code can work autonomously
+* **Sandboxed bash tool**: [Sandbox](/docs/en/sandboxing) bash commands with filesystem and network isolation, reducing permission prompts while maintaining security. Configure with `/sandbox` to define boundaries where Claude Code can work autonomously
 * **Working directory boundary**: Claude Code can only write to the folder where it was started and its subfolders, and cannot modify files in parent directories without explicit permission. Reading paths outside this boundary with the Read, Grep, and Glob tools is possible after an approval prompt. Extend the boundary with [additional directories](/docs/en/permissions#working-directories) to skip the prompt, or restrict the broader read access available to read-only Bash commands with [sandbox `denyRead` rules](/docs/en/sandboxing#filesystem-isolation), which apply only when sandboxing is enabled
 * **Prompt fatigue mitigation**: Support for allowlisting frequently used safe commands per-user, per-codebase, or per-organization
 * **Accept Edits mode**: Auto-approves file edits and a fixed set of filesystem Bash commands like `mkdir`, `touch`, `rm`, `mv`, `cp`, and `sed` for paths in the working directory. Other Bash commands and out-of-scope paths still prompt
@@ -96,16 +96,16 @@ See [VS Code security and privacy](/docs/en/vs-code#security-and-privacy) for mo
 
 ## Cloud execution security
 
-When using [Claude Code on the web](/docs/en/claude-code-on-the-web), additional security controls are in place:
+When using [Claude Code on the web](/docs/en/claude-code-on-the-web), additional security controls are in place. Sessions your organization routes to a [self-hosted environment](/docs/en/self-hosted-environments) run on your own infrastructure, where isolation, network egress, and git credentials are your deployment's responsibility. In Anthropic-hosted environments:
 
 * **Isolated virtual machines**: Each cloud session runs in an isolated, Anthropic-managed VM
 * **Network access controls**: Network access is limited by default and can be configured to be disabled or allow only specific domains
 * **Credential protection**: Authentication is handled through a secure proxy that uses a scoped credential inside the sandbox, which is then translated to your actual GitHub authentication token
 * **Branch restrictions**: Git push operations are restricted to the current working branch
-* **Audit logging**: All operations in cloud environments are logged for compliance and audit purposes
-* **Automatic cleanup**: Cloud environments are automatically terminated after session completion
+* **Audit logging**: All operations in cloud sessions are logged for compliance and audit purposes
+* **Automatic cleanup**: Session VMs are reclaimed after a period of inactivity
 
-For more details on cloud execution, see [Claude Code on the web](/docs/en/claude-code-on-the-web).
+For more details on cloud execution, see [Claude Code on the web](/docs/en/claude-code-on-the-web); to configure network access for cloud sessions, see [Configure cloud environments](/docs/en/cloud-environments#network-access).
 
 [Remote Control](/docs/en/remote-control) sessions work differently: the web interface connects to a Claude Code process running on your local machine. All code execution and file access stays local, and session traffic travels through the Anthropic API over TLS; while connected, the session transcript is stored on Anthropic servers to sync the conversation across devices, as described in [Connection and security](/docs/en/remote-control#connection-and-security). No cloud VMs or sandboxing are involved. The connection uses multiple short-lived, narrowly scoped credentials, each limited to a specific purpose and expiring independently, to limit the blast radius of any single compromised credential.
 
@@ -138,9 +138,11 @@ If you discover a security vulnerability in Claude Code:
 ## Related resources
 
 * [Security guidance plugin](/docs/en/security-guidance): have Claude review and fix vulnerabilities in its own code changes during the session
+* [`/security-review`](/docs/en/commands#all-commands): run an on-demand security pass over the changes on your current branch
 * [Sandbox environments](/docs/en/sandbox-environments): compare isolation approaches and choose one for your threat model
 * [Sandboxing](/docs/en/sandboxing): filesystem and network isolation for Bash commands
 * [Permissions](/docs/en/permissions): configure permissions and access controls
 * [Monitoring usage](/docs/en/monitoring-usage): track and audit Claude Code activity
 * [Development containers](/docs/en/devcontainer): secure, isolated environments
 * [Anthropic Trust Center](https://trust.anthropic.com): security certifications and compliance
+* [CISO's guide to agentic AI](https://claude.com/blog/ciso-guide-to-agentic-ai): a security leader's framework for assessing agentic AI deployments

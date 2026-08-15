@@ -103,6 +103,8 @@ The following example sets the variables in a dictionary and passes them through
 
 Because the child process inherits your application's environment by default, you can achieve the same result by exporting these variables in a Dockerfile, Kubernetes manifest, or shell profile and omitting `options.env` entirely.
 
+To confirm that export is working, check your collector's logs for incoming spans, metrics, and log events after the task completes. The CLI fails silently on export errors by default: if the endpoint is unreachable or rejects the data, the agent still runs normally and the CLI drops the telemetry without surfacing an error in your application. To surface exporter errors, set [`CLAUDE_CODE_OTEL_DIAG_STDERR=1`](/docs/en/env-vars) alongside the exporter variables and read the diagnostics through the SDK's `stderr` callback (Python) or `stderr` option (TypeScript). Requires Claude Code v2.1.179 or later.
+
 <Note>
   The `console` exporter writes telemetry to standard output, which the SDK uses
   as its message channel. Do not set `console` as an exporter value when running
@@ -148,7 +150,7 @@ Traces give you the most detailed view of an agent run. With `CLAUDE_CODE_ENHANC
 
 The `llm_request`, `tool`, and `hook` spans are children of the enclosing `claude_code.interaction` span. When the agent spawns a subagent through the Task tool, the subagent's `llm_request` and `tool` spans nest under the parent agent's `claude_code.tool` span, so the full delegation chain appears as one trace.
 
-Spans carry a `session.id` attribute by default. When you make several `query()` calls against the same [session](/docs/en/agent-sdk/sessions), filter on `session.id` in your backend to see them as one timeline. The attribute is omitted if `OTEL_METRICS_INCLUDE_SESSION_ID` is set to a falsy value.
+Spans carry a `session.id` attribute by default. When you make several `query()` calls against the same [session](/docs/en/agent-sdk/sessions), filter on `session.id` in your backend to see them as one timeline. Claude Code omits the attribute if you set `OTEL_METRICS_INCLUDE_SESSION_ID` to a falsy value.
 
 <Note>
   Tracing is in beta. Span names and attributes may change between releases. See
@@ -160,7 +162,7 @@ Spans carry a `session.id` attribute by default. When you make several `query()`
 
 The SDK automatically propagates W3C trace context into the CLI subprocess. When you call `query()` while an OpenTelemetry span is active in your application, the SDK injects `TRACEPARENT` and `TRACESTATE` into the child process environment, and the CLI reads them so its `claude_code.interaction` span becomes a child of your span. The agent run then appears inside your application's trace instead of as a disconnected root.
 
-OTLP event log records emitted during the run carry the same trace context: with `TRACEPARENT` set, each record's `trace_id` and `span_id` match your application's trace, so you can join [events](/docs/en/monitoring-usage#events) to spans in your backend. {/* min-version: 2.1.212 */}Before v2.1.212, event records emitted outside an active span didn't carry `trace_id` or `span_id`.
+OTLP event log records emitted during the run carry the same trace context: with `TRACEPARENT` set, each record's `trace_id` and `span_id` match your application's trace, so you can join [events](/docs/en/monitoring-usage#events) to spans in your backend. Before v2.1.212, event records emitted outside an active span didn't carry `trace_id` or `span_id`.
 
 When trace-context propagation is enabled, the CLI also forwards `TRACEPARENT` to every Bash and PowerShell command it runs. If a command launched through the Bash tool emits its own OpenTelemetry spans, those spans nest under the `claude_code.tool.execution` span that wraps the command.
 
@@ -176,7 +178,7 @@ The following example renames the service and attaches deployment metadata. Thes
   ```python Python theme={null}
   options = ClaudeAgentOptions(
       env={
-          # ... exporter configuration ...
+          # ... exporter configuration from the Enable telemetry export example ...
           "OTEL_SERVICE_NAME": "support-triage-agent",
           "OTEL_RESOURCE_ATTRIBUTES": "service.version=1.4.0,deployment.environment=production",
       },
@@ -187,7 +189,7 @@ The following example renames the service and attaches deployment metadata. Thes
   const options = {
     env: {
       ...process.env,
-      // ... exporter configuration ...
+      // ... exporter configuration from the Enable telemetry export example ...
       OTEL_SERVICE_NAME: "support-triage-agent",
       OTEL_RESOURCE_ATTRIBUTES:
         "service.version=1.4.0,deployment.environment=production",
@@ -208,7 +210,8 @@ To make tool calls and MCP activity attributable to your application's end users
 
   options = ClaudeAgentOptions(
       env={
-          # ... exporter configuration ...
+          # ... exporter configuration from the Enable telemetry export example ...
+          # request is the incoming request object from your web framework.
           "OTEL_RESOURCE_ATTRIBUTES": f"enduser.id={quote(request.user_id)},tenant.id={quote(request.tenant_id)}",
       },
   )
@@ -218,7 +221,8 @@ To make tool calls and MCP activity attributable to your application's end users
   const options = {
     env: {
       ...process.env,
-      // ... exporter configuration ...
+      // ... exporter configuration from the Enable telemetry export example ...
+      // request is the incoming request object from your web framework.
       OTEL_RESOURCE_ATTRIBUTES: `enduser.id=${encodeURIComponent(request.userId)},tenant.id=${encodeURIComponent(request.tenantId)}`,
     },
   };
@@ -231,12 +235,12 @@ With end-user identity attached, the `tool_decision`, `tool_result`, `mcp_server
 
 Telemetry is structural by default. Durations, model names, and tool names are recorded on every span; token counts are recorded when the underlying API request returns usage data, so spans for failed or aborted requests may omit them. The content your agent reads and writes is not recorded by default. These opt-in variables add content to the exported data:
 
-| Variable                  | Adds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OTEL_LOG_USER_PROMPTS=1` | Prompt text on `claude_code.user_prompt` events and on the `claude_code.interaction` span                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `OTEL_LOG_TOOL_DETAILS=1` | Tool input arguments (file paths, shell commands, search patterns) on `claude_code.tool_result` events                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `OTEL_LOG_TOOL_CONTENT=1` | Full tool input and output bodies as span events on `claude_code.tool`, truncated at 60 KB by default, configurable via `CLAUDE_CODE_OTEL_CONTENT_MAX_LENGTH`, {/* min-version: 2.1.214 */}which requires Claude Code v2.1.214 or later. Requires [tracing](#read-agent-traces) to be enabled                                                                                                                                                                                                                                                                                                                                |
-| `OTEL_LOG_RAW_API_BODIES` | Full Anthropic Messages API request and response JSON as `claude_code.api_request_body` and `claude_code.api_response_body` log events. Set to `1` for inline bodies truncated at 60 KB by default, or `file:<dir>` for untruncated bodies on disk with a `body_ref` path in the event. `CLAUDE_CODE_OTEL_CONTENT_MAX_LENGTH` configures the inline truncation limit, {/* min-version: 2.1.214 */}and requires Claude Code v2.1.214 or later. Bodies include the entire conversation history and have extended-thinking content redacted. Enabling this implies consent to everything the three variables above would reveal |
+| Variable                  | Adds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `OTEL_LOG_USER_PROMPTS=1` | Prompt text on `claude_code.user_prompt` events and on the `claude_code.interaction` span                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `OTEL_LOG_TOOL_DETAILS=1` | Tool input arguments (file paths, shell commands, search patterns) on `claude_code.tool_result` events                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `OTEL_LOG_TOOL_CONTENT=1` | Full tool input and output bodies as span events on `claude_code.tool`, truncated at 60 KB by default, configurable via `CLAUDE_CODE_OTEL_CONTENT_MAX_LENGTH`, which requires Claude Code v2.1.214 or later. Requires [tracing](#read-agent-traces) to be enabled                                                                                                                                                                                                                                                                                                                                |
+| `OTEL_LOG_RAW_API_BODIES` | Full Anthropic Messages API request and response JSON as `claude_code.api_request_body` and `claude_code.api_response_body` log events. Set to `1` for inline bodies truncated at 60 KB by default, or `file:<dir>` for untruncated bodies on disk with a `body_ref` path in the event. `CLAUDE_CODE_OTEL_CONTENT_MAX_LENGTH` configures the inline truncation limit, and requires Claude Code v2.1.214 or later. Bodies include the entire conversation history and have extended-thinking content redacted. Enabling this implies consent to everything the three variables above would reveal |
 
 Leave these unset unless your observability pipeline is approved to store the data your agent handles. See [Security and privacy](/docs/en/monitoring-usage#security-and-privacy) in the Monitoring reference for the full list of attributes and redaction behavior.
 

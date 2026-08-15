@@ -17,7 +17,7 @@ Use the Agent SDK to build an AI agent that reads your code, finds bugs, and fix
 ## Prerequisites
 
 * **Node.js 18+** or **Python 3.10+**
-* An **Anthropic account** ([sign up here](https://platform.claude.com/))
+* An **Anthropic account**. If you don't have one, [sign up here](https://platform.claude.com/).
 
 ## Setup
 
@@ -45,7 +45,7 @@ Use the Agent SDK to build an AI agent that reads your code, finds bugs, and fix
         npm install --save-dev tsx
         ```
 
-        Setting `"type": "module"` in `package.json` lets your agent script use top-level `await`, and [tsx](https://tsx.is) runs TypeScript files directly. npm prints `added N packages` when the install succeeds.
+        Setting `"type": "module"` in `package.json` lets your agent script use top-level `await`, and [tsx](https://tsx.hirok.io) runs TypeScript files directly. npm prints `added N packages` when the install succeeds.
       </Tab>
 
       <Tab title="TypeScript (existing project)">
@@ -54,7 +54,7 @@ Use the Agent SDK to build an AI agent that reads your code, finds bugs, and fix
         npm install --save-dev tsx
         ```
 
-        [tsx](https://tsx.is) runs TypeScript files directly. If your project uses CommonJS, name your agent script `agent.mts` instead of `agent.ts`. The `.mts` extension makes tsx treat the file as an ES module, so top-level `await` works without converting your whole project to ES modules. Use `agent.mts` in place of `agent.ts` in the create and run steps later in this quickstart.
+        [tsx](https://tsx.hirok.io) runs TypeScript files directly. If your project uses CommonJS, name your agent script `agent.mts` instead of `agent.ts`. The `.mts` extension makes tsx treat the file as an ES module, so top-level `await` works without converting your whole project to ES modules. Use `agent.mts` in place of `agent.ts` in the create and run steps later in this quickstart.
       </Tab>
 
       <Tab title="Python (uv)">
@@ -90,7 +90,10 @@ Use the Agent SDK to build an AI agent that reads your code, finds bugs, and fix
     </Tabs>
 
     <Note>
-      Both the TypeScript and Python SDKs bundle a native Claude Code binary for your platform, so you don't need to install Claude Code separately.
+      Both the TypeScript and Python SDKs bundle a native Claude Code binary, so most installs need no separate Claude Code install. Some installs have no bundled binary:
+
+      * If pip installs the Python SDK's source distribution instead of a platform wheel, for example on ARM64 Windows, no binary is bundled. [Install Claude Code natively](/docs/en/setup#install-claude-code). The Python SDK finds it on your `PATH`.
+      * The TypeScript SDK installs its binary through npm optional dependencies, so an install that skips them, for example `npm ci --omit=optional`, gets no binary even on a supported platform. Reinstall without skipping optional dependencies, or [install Claude Code natively](/docs/en/setup#install-claude-code) and set `pathToClaudeCodeExecutable` to its path.
     </Note>
   </Step>
 
@@ -217,7 +220,7 @@ This code has three main parts:
 
 3. **`options`**: configuration for the agent. This example uses `allowedTools` to pre-approve `Read`, `Edit`, and `Glob`, and `permissionMode: "acceptEdits"` to auto-approve file changes. Other options include `systemPrompt`, `mcpServers`, and more. See all options for [Python](/docs/en/agent-sdk/python#claudeagentoptions) or [TypeScript](/docs/en/agent-sdk/typescript#options).
 
-The `async for` loop keeps running as Claude thinks, calls tools, observes results, and decides what to do next. Each iteration yields a message: Claude's reasoning, a tool call, a tool result, or the final outcome. The SDK handles the orchestration (tool execution, context management, retries) so you just consume the stream. The loop ends when Claude finishes the task or hits an error.
+The `async for` loop keeps running as Claude thinks, calls tools, observes results, and decides what to do next. Each iteration yields a message: Claude's reasoning, a tool call, a tool result, or the final outcome. The SDK handles the orchestration, tool execution, context management, and retries, so you consume the stream. The loop ends when Claude finishes the task or hits an error.
 
 The message handling inside the loop filters for human-readable output. Without filtering, you'd see raw message objects including system initialization and internal state, which is useful for debugging but noisy otherwise.
 
@@ -349,18 +352,7 @@ With `Bash` enabled, try: `"Write unit tests for utils.py, run them, and fix any
 | `Read`, `Edit`, `Glob`                 | Analyze and modify code |
 | `Read`, `Edit`, `Bash`, `Glob`, `Grep` | Full automation         |
 
-**Permission modes** control how much human oversight you want:
-
-| Mode                | Behavior                                                                                                                                                                                                                                                                                                                                                                             | Use case                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| `acceptEdits`       | Auto-approves file edits and common filesystem commands, asks for other actions                                                                                                                                                                                                                                                                                                      | Trusted development workflows             |
-| `plan`              | Runs read-only tools; file edits are never auto-approved and reach your `canUseTool` callback                                                                                                                                                                                                                                                                                        | Scoping a task before approving execution |
-| `dontAsk`           | Denies anything not in `allowedTools`; connector tools [your organization set to `ask`](/docs/en/mcp#organization-controls-on-connector-tools) and tools that require user interaction are denied even if you've listed them                                                                                                                                                              | Locked-down headless agents               |
-| `auto`              | A model classifier approves or denies permission prompts                                                                                                                                                                                                                                                                                                                             | Autonomous agents with safety guardrails  |
-| `bypassPermissions` | Runs every tool without prompting, except tools matched by an explicit [`ask` rule](/docs/en/agent-sdk/permissions#how-permissions-are-evaluated), connector tools [your organization set to `ask`](/docs/en/mcp#organization-controls-on-connector-tools), and tools that require user interaction. In the TypeScript SDK, also requires `allowDangerouslySkipPermissions: true` in `options` | Sandboxed CI, fully trusted environments  |
-| `default`           | Requires a `canUseTool` callback to handle approval                                                                                                                                                                                                                                                                                                                                  | Custom approval flows                     |
-
-The example above uses `acceptEdits` mode, which auto-approves file operations so the agent can run without interactive prompts. If you want to prompt users for approval, use `default` mode and provide a [`canUseTool` callback](/docs/en/agent-sdk/user-input) that collects user input. For more control, see [Permissions](/docs/en/agent-sdk/permissions).
+**Permission modes** control how much human oversight you want. The SDK evaluates the active mode together with your allow and deny rules in a fixed order, described in [How permissions are evaluated](/docs/en/agent-sdk/permissions#how-permissions-are-evaluated). For the full list of modes, their behavior, and when to use each, see [Permission mode in How the agent loop works](/docs/en/agent-sdk/agent-loop#permission-mode).
 
 ## Next steps
 

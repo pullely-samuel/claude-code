@@ -22,6 +22,9 @@ Pass a `canUseTool` callback in your query options. The callback fires whenever 
 
 <CodeGroup>
   ```python Python theme={null}
+  from claude_agent_sdk import ClaudeAgentOptions
+
+
   async def handle_tool_request(tool_name, input_data, context):
       # Prompt user and return allow or deny
       ...
@@ -210,7 +213,7 @@ Your callback returns one of two response types:
 | **Allow** | `PermissionResultAllow(updated_input=...)` | `{ behavior: "allow", updatedInput }` |
 | **Deny**  | `PermissionResultDeny(message=...)`        | `{ behavior: "deny", message }`       |
 
-When allowing, the tool runs with the input Claude requested unless you return a modified input, `updatedInput` in TypeScript or `updated_input` in Python. {/* min-version: 2.1.207 */}Before v2.1.207, Claude Code rejected an allow result that omitted `updatedInput` and denied the tool call with a validation error.
+When allowing, the tool runs with the input Claude requested unless you return a modified input, `updatedInput` in TypeScript or `updated_input` in Python. Before v2.1.207, Claude Code rejected an allow result that omitted `updatedInput` and denied the tool call with a validation error.
 
 When denying, provide a message explaining why. Claude sees this message and may adjust its approach.
 
@@ -242,6 +245,8 @@ Beyond allowing or denying, you can modify the tool's input or provide context t
 * **Reject**: block the tool and tell Claude why
 * **Suggest alternative**: block but guide Claude toward what the user wants instead
 * **Redirect entirely**: use [streaming input](/docs/en/agent-sdk/streaming-vs-single-mode) to send Claude a completely new instruction
+
+The `ask_user` and `askUser` helpers in the following snippets stand in for your application's own prompt UI.
 
 <Tabs>
   <Tab title="Approve">

@@ -134,7 +134,7 @@ az login
 
 **Option C: Bearer token authentication**
 
-{/* min-version: 2.1.203 */}Claude Code sends the value of `ANTHROPIC_FOUNDRY_AUTH_TOKEN` on every request as the `Authorization: Bearer` header. Use this option when another process, such as a host application or a sign-in script, has already obtained an access token for you. Requires Claude Code v2.1.203 or later.
+Claude Code sends the value of `ANTHROPIC_FOUNDRY_AUTH_TOKEN` on every request as the `Authorization: Bearer` header. Use this option when another process, such as a host application or a sign-in script, has already obtained an access token for you. Requires Claude Code v2.1.203 or later.
 
 Set the variable to a bearer token that Microsoft Entra ID issued for your resource:
 
@@ -170,7 +170,7 @@ export ANTHROPIC_FOUNDRY_RESOURCE={resource}
 
 Set the model variables to match the deployment names you created in step 1.
 
-Without `ANTHROPIC_DEFAULT_OPUS_MODEL`, the `opus` alias on Microsoft Foundry resolves to Opus 4.6. Set it to the Opus 4.8 ID to use the latest model:
+Without `ANTHROPIC_DEFAULT_OPUS_MODEL`, the `opus` alias on Microsoft Foundry resolves to Opus 4.6. Set it to the ID of a newer Opus model, such as Opus 4.8:
 
 ```bash theme={null}
 export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-8'

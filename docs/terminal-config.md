@@ -47,7 +47,7 @@ Some Claude Code shortcuts use the Option key, such as Option+Enter for a newlin
 
     If you accepted Claude Code's first-run terminal setup prompt, this is already done. That prompt runs `/terminal-setup` for you, which enables Option as Meta and turns off the audible bell in your Apple Terminal profile.
 
-    {/* min-version: 2.1.211 */}In [screen reader mode](/docs/en/accessibility), `/terminal-setup` leaves the bell setting unchanged so the terminal bell stays audible. Before v2.1.211, `/terminal-setup` turned the bell off even in screen reader mode. If an earlier run turned the bell off, turn it back on under Settings → Profiles → Advanced → "Audible bell".
+    In [screen reader mode](/docs/en/accessibility), `/terminal-setup` leaves the bell setting unchanged so the terminal bell stays audible. Before v2.1.211, `/terminal-setup` turned the bell off even in screen reader mode. If an earlier run turned the bell off, turn it back on under Settings → Profiles → Advanced → "Audible bell".
   </Tab>
 
   <Tab title="iTerm2">
@@ -65,7 +65,7 @@ For Ghostty, Kitty, and other terminals, look for an Option-as-Alt or Option-as-
 
 ## Get a terminal bell or notification
 
-When Claude finishes a task or pauses for a permission prompt, it fires a notification event. Surfacing this as a terminal bell or desktop notification lets you switch to other work while a long task runs.
+When Claude finishes a task or pauses for a permission prompt, and you appear to be away from the terminal, it fires a notification event. See [when each notification type fires](/docs/en/hooks#notification) for the exact timing. Surfacing this as a terminal bell or desktop notification lets you switch to other work while a long task runs.
 
 By default Claude Code sends a desktop notification only in Ghostty, Kitty, and iTerm2. In other terminals, set [`preferredNotifChannel`](/docs/en/settings#available-settings) to `"terminal_bell"` to ring the terminal bell instead, or configure a [Notification hook](#play-a-sound-with-a-notification-hook) for a custom sound or command. The following settings entry turns on the terminal bell:
 
@@ -126,10 +126,6 @@ Use the `/theme` command, or the theme picker in `/config`, to choose a Claude C
 To customize what appears at the bottom of the interface, configure a [custom status line](/docs/en/statusline) that shows the current model, working directory, git branch, or other context.
 
 ### Create a custom theme
-
-<Note>
-  Custom themes require Claude Code v2.1.118 or later.
-</Note>
 
 In addition to the built-in presets, `/theme` lists any custom themes you have defined and any themes contributed by installed [plugins](/docs/en/plugins-reference#themes). Select **New custom theme…** at the end of the list to create one interactively: you name the theme, then pick individual color tokens to override. Press `Ctrl+E` while a custom theme is highlighted to edit it.
 
@@ -210,7 +206,7 @@ The reference below covers the tokens you can set in `overrides`. The interactiv
 
   | Token          | Controls                                           |
   | :------------- | :------------------------------------------------- |
-  | `promptBorder` | Input box border in the default permission mode    |
+  | `promptBorder` | Input box border in Manual mode                    |
   | `planMode`     | Plan mode accent and border                        |
   | `autoAccept`   | Accept-edits mode accent and border                |
   | `bashBorder`   | Input box border when entering a `!` shell command |
@@ -266,14 +262,14 @@ The reference below covers the tokens you can set in `overrides`. The interactiv
 
   Each [subagent](/docs/en/sub-agents) and parallel task is shown in one of eight named colors so you can tell them apart in the transcript. The token names follow the pattern `<color>_FOR_SUBAGENTS_ONLY`, where `<color>` is `red`, `blue`, `green`, `yellow`, `purple`, `orange`, `pink`, or `cyan`. Override these to change what each named color looks like. For example, a subagent with `color: blue` in its definition is drawn using the `blue_FOR_SUBAGENTS_ONLY` value.
 
-  The [`ultrathink`](/docs/en/model-config#use-ultrathink-for-one-off-deep-reasoning) and [`ultraplan`](/docs/en/ultraplan) keywords in the prompt input are rendered with a seven-color rainbow gradient. The token names follow the pattern `rainbow_<color>` and `rainbow_<color>_shimmer`, where `<color>` is `red`, `orange`, `yellow`, `green`, `blue`, `indigo`, or `violet`.
+  Claude Code renders the [`ultrathink`](/docs/en/model-config#use-ultrathink-for-one-off-deep-reasoning) keyword in the prompt input with a seven-color rainbow gradient. The token names follow the pattern `rainbow_<color>` and `rainbow_<color>_shimmer`, where `<color>` is `red`, `orange`, `yellow`, `green`, `blue`, `indigo`, or `violet`.
 </Accordion>
 
 ## Switch to fullscreen rendering
 
 In [screen reader mode](/docs/en/accessibility), this section doesn't apply. Claude Code always renders as plain scrolling text except in attached [background sessions](/docs/en/agent-view), and if you run `/tui fullscreen` in any other session, Claude Code prints an explanation instead of switching.
 
-If the display flickers or the scroll position jumps while Claude is working, switch to [fullscreen rendering mode](/docs/en/fullscreen). It draws to a separate screen the terminal reserves for full-screen apps instead of appending to your normal scrollback, which keeps memory usage flat and adds mouse support for scrolling and selection. In this mode you scroll with the mouse or PageUp inside Claude Code rather than with your terminal's native scrollback; see the [fullscreen page](/docs/en/fullscreen#search-and-review-the-conversation) for how to search and copy.
+If the display flickers or the scroll position jumps while Claude is working, switch to [fullscreen rendering mode](/docs/en/fullscreen). In this mode you scroll with the mouse or PageUp inside Claude Code rather than with your terminal's native scrollback; see the [fullscreen page](/docs/en/fullscreen#search-and-review-the-conversation) for how to search and copy.
 
 If flicker is the only problem and your terminal supports synchronized output but isn't auto-detected, such as Emacs `eat`, set [`CLAUDE_CODE_FORCE_SYNC_OUTPUT=1`](/docs/en/env-vars) to stop the flicker without changing renderers.
 
@@ -300,6 +296,13 @@ Run `/tui fullscreen` to switch and save the preference. Your conversation relau
 ## Paste large content
 
 When you paste more than 800 characters or more than two lines into the prompt, Claude Code collapses the input to a placeholder such as `[Pasted text #1 +120 lines]` so the input box stays usable. The full content is still sent to Claude when you submit.
+
+Claude Code keeps the collapsed content under `~/.claude/paste-cache/`, so when you recall a prompt from [command history](/docs/en/interactive-mode#command-history) and resubmit it, Claude Code sends the full pasted content again, including in a later session, until the retention sweep removes the cache file.
+
+Claude Code deletes cache files older than [`cleanupPeriodDays`](/docs/en/settings#available-settings), following the [retention sweep rules](/docs/en/claude-directory#cleaned-up-automatically), so a recalled prompt can reference pasted text that no longer exists. When you submit such a prompt, Claude Code never sends the literal `[Pasted text #N]` string, and shows a notification naming the missing paste:
+
+* In a plain prompt with text remaining, Claude Code removes the placeholder and sends the remaining text.
+* In a [shell mode](/docs/en/interactive-mode#shell-mode-with-prefix) command or a `/` command, where the removal would change what runs, and in any prompt the removal leaves empty, Claude Code cancels the submission and keeps the original text in the input, with the placeholder still in it. Delete the placeholder or edit the command, then resubmit.
 
 The VS Code integrated terminal can drop characters from very large pastes before they reach Claude Code, so prefer file-based workflows there. For very large inputs such as entire files or long logs, write the content to a file and ask Claude to read it instead of pasting. This keeps the conversation transcript readable and lets Claude reference the file by path in later turns.
 

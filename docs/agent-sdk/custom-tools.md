@@ -8,8 +8,6 @@
 
 Custom tools extend the Agent SDK by letting you define your own functions that Claude can call during a conversation. Using the SDK's in-process MCP server, you can give Claude access to databases, external APIs, domain-specific logic, or any other capability your application needs.
 
-This guide covers how to define tools with input schemas and handlers, bundle them into an MCP server, pass them to `query`, and control which tools Claude can access. It also covers error handling, tool annotations, and returning non-text content like images.
-
 ## Quick reference
 
 | If you want to...                            | Do this                                                                                                                                                                                                       |
@@ -317,14 +315,7 @@ See `ToolAnnotations` in the [TypeScript](/docs/en/agent-sdk/typescript#toolanno
 
 ## Control tool access
 
-The [weather tool example](#weather-tool-example) registered a server and listed tools in `allowedTools`. This section covers how tool names are constructed and how to scope access when you have multiple tools or want to restrict built-ins.
-
-### Tool name format
-
-When MCP tools are exposed to Claude, their names follow a specific format:
-
-* Pattern: `mcp__{server_name}__{tool_name}`
-* Example: A tool named `get_temperature` in server `weather` becomes `mcp__weather__get_temperature`
+The [weather tool example](#weather-tool-example) registered a server and listed tools in `allowedTools`. This section covers how to scope access when you have multiple tools or want to restrict built-ins. For how tool names are constructed, see [Call a custom tool](#call-a-custom-tool).
 
 ### Configure allowed tools
 
@@ -357,8 +348,6 @@ The example below catches two kinds of failures inside the handler and composes 
   import json
   import httpx
   from typing import Any
-  from claude_agent_sdk import tool
-
   from claude_agent_sdk import tool
 
 
@@ -452,7 +441,7 @@ The example below catches two kinds of failures inside the handler and composes 
 
 ## Return images and resources
 
-The `content` array in a tool result accepts `text`, `image`, `audio`, `resource`, and `resource_link` blocks. You can mix them in the same response. In TypeScript, audio blocks are saved to disk and Claude receives a text block with the saved file path; in Python, the SDK drops audio blocks from the tool result and logs a warning. Resource link blocks are converted to a text block containing the link's name, URI, and description.
+The `content` array in a tool result accepts `text`, `image`, `audio`, `resource`, and `resource_link` blocks. You can mix them in the same response. In TypeScript, the SDK saves audio blocks to disk and Claude receives a text block with the saved file path; in Python, the SDK drops audio blocks from the tool result and logs a warning. The SDK converts resource link blocks to a text block containing the link's name, URI, and description.
 
 ### Images
 
@@ -468,8 +457,6 @@ An image block carries the image bytes inline, encoded as base64. There is no UR
   ```python Python theme={null}
   import base64
   import httpx
-  from claude_agent_sdk import tool
-
   from claude_agent_sdk import tool
 
 
@@ -851,7 +838,7 @@ Because [tool search](/docs/en/agent-sdk/tool-search) is on by default, the outp
 
 ## Next steps
 
-Custom tools wrap async functions in a standard interface. You can mix the patterns on this page in the same server: a single server can hold a database tool, an API gateway tool, and an image renderer alongside each other.
+You can mix the patterns on this page in the same server: a single server can hold a database tool, an API gateway tool, and an image renderer alongside each other.
 
 From here:
 

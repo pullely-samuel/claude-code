@@ -27,7 +27,7 @@ npm install @anthropic-ai/claude-agent-sdk@0.2
 ```
 
 <Note>
-  The SDK bundles a native Claude Code binary for your platform as an optional dependency, so you don't need to install Claude Code separately.
+  The SDK bundles a native Claude Code binary for your platform as an optional dependency, so most installs need no separate Claude Code install. See the [quickstart's install note](/docs/en/agent-sdk/quickstart) for the installs that need one.
 </Note>
 
 ## Quick start
@@ -304,6 +304,8 @@ for await (const msg of resumedSession.stream()) {
 ### Cleanup
 
 Sessions can be closed manually or automatically using [`await using`](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html#using-declarations-and-explicit-resource-management), a TypeScript 5.2+ feature for automatic resource cleanup. If you're using an older TypeScript version or encounter compatibility issues, use manual cleanup instead.
+
+The examples below show only the cleanup pattern and don't send any messages, so running them produces no output.
 
 **Automatic cleanup (TypeScript 5.2+):**
 

@@ -7,10 +7,10 @@
 > Install and update the Claude desktop app on Ubuntu and Debian
 
 <Note>
-  Linux support for the Claude desktop app is in beta. The Chat, Cowork, and Code tabs are all available.
+  Linux support for the Claude desktop app is in beta.
 </Note>
 
-The desktop app on Linux gives you the same Chat, Cowork, and Claude Code experience as macOS and Windows: parallel sessions, visual diff review, an integrated terminal and editor, and live app preview. See [Use Claude Code Desktop](/docs/en/desktop) for the full feature reference.
+The desktop app on Linux gives you the same Chat, Cowork, and Claude Code experience as on macOS and Windows: parallel sessions, visual diff review, an integrated terminal and editor, and live app preview. See [Use Claude Code Desktop](/docs/en/desktop) for the feature reference.
 
 ## Requirements
 
@@ -25,10 +25,10 @@ Install from Anthropic's apt repository so that updates arrive through your syst
 
 <Steps>
   <Step title="Add Anthropic's apt repository">
-    This step downloads the signing key with `curl`, which fresh Debian and Ubuntu installations may not include. If the download command fails with `sudo: curl: command not found`, install curl first:
+    This step downloads the signing key with `curl` and verifies it with `gpg`, which fresh Debian and Ubuntu installations may not include. If either command reports `command not found`, install both first:
 
     ```bash theme={null}
-    sudo apt install curl
+    sudo apt install curl gnupg
     ```
 
     Download Anthropic's signing key:
@@ -36,6 +36,14 @@ Install from Anthropic's apt repository so that updates arrive through your syst
     ```bash theme={null}
     sudo curl -fsSLo /usr/share/keyrings/claude-desktop-archive-keyring.asc https://downloads.claude.ai/claude-desktop/key.asc
     ```
+
+    If this download fails, `apt update` later fails with `NO_PUBKEY BAA929FF1A7ECACE`. Confirm the key downloaded and belongs to Anthropic before continuing:
+
+    ```bash theme={null}
+    gpg --show-keys /usr/share/keyrings/claude-desktop-archive-keyring.asc
+    ```
+
+    The fingerprint gpg prints should be `31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE`. If gpg reports that the file can't be opened or contains no valid OpenPGP data, the download failed or returned the wrong content: confirm your network can reach `downloads.claude.ai`, then rerun the download command.
 
     Register the repository:
 
@@ -57,16 +65,6 @@ Install from Anthropic's apt repository so that updates arrive through your syst
   </Step>
 </Steps>
 
-<Accordion title="Verify the signing key">
-  You can confirm the downloaded signing key belongs to Anthropic:
-
-  ```bash theme={null}
-  gpg --show-keys /usr/share/keyrings/claude-desktop-archive-keyring.asc
-  ```
-
-  The fingerprint should be `31DD DE24 DDFA B679 F42D 7BD2 BAA9 29FF 1A7E CACE`.
-</Accordion>
-
 ### Install from a downloaded file
 
 If you can't install through the apt repository, download the `.deb` package directly from the repository's package pool. This command looks up the newest package for your architecture in the repository index, then downloads it to the current directory:
@@ -77,6 +75,8 @@ curl -fLO "https://downloads.claude.ai/claude-desktop/apt/stable/$(curl -s "http
 
 If the command fails with `Remote file name has no length`, the lookup returned no package path. This can mean the repository index couldn't be fetched, for example when your network blocks `downloads.claude.ai`, or that no package exists for your architecture. Confirm that your network can reach `downloads.claude.ai` and that `dpkg --print-architecture` prints `amd64` or `arm64`; the repository doesn't publish packages for other architectures.
 
+To install without registering Anthropic's apt repository, first create `/etc/default/claude-desktop` with the line `CLAUDE_DESKTOP_ADD_REPO="false"`. Without the repository, apt doesn't deliver new versions; to update, re-run the download command and reinstall, or [register the repository](#install) later.
+
 Then open the downloaded file with your software installer, such as GNOME Software, or install it with apt from the directory that contains the downloaded file:
 
 ```bash theme={null}
@@ -85,7 +85,7 @@ sudo apt install ./claude-desktop_*.deb
 
 If apt reports `E: Unsupported file ./claude-desktop_*.deb given on commandline`, the pattern didn't match a `.deb` file in the current directory. Confirm the download completed, then run the command again from the directory that contains the file.
 
-A `.deb` installed this way doesn't receive updates. To get updates through apt, register the repository from the [Add Anthropic's apt repository](#install) step. The package also writes a commented-out repository entry to `/etc/apt/sources.list.d/claude-desktop.list`; uncommenting its `deb` line is equivalent.
+Installing the `.deb` also registers Anthropic's apt repository at `/etc/apt/sources.list.d/claude-desktop.list`, so future updates arrive with your system's [regular package updates](#update).
 
 ## Update
 
@@ -103,7 +103,7 @@ Your distribution's graphical software updater will also pick up new versions.
 sudo apt remove claude-desktop
 ```
 
-This removes the signing key along with the app, so if you added the repository entry during install, remove it too:
+Uninstalling the package also removes the repository entry and signing key it registered. If you added the repository entry yourself with the [Add Anthropic's apt repository](#install) step, remove it too:
 
 ```bash theme={null}
 sudo rm /etc/apt/sources.list.d/claude-desktop.list

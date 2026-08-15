@@ -102,7 +102,7 @@ config/secrets.json`,
         icon: 'folder',
         color: 'var(--ce-accent)',
         oneLiner: 'Project-level configuration, rules, and extensions',
-        description: 'Everything Claude Code reads that is specific to this project. If you use git, commit most files here so your team shares them; a few, like settings.local.json, are automatically gitignored. Each file badge shows which.',
+        description: 'Everything Claude Code reads that is specific to this project. If you use git, commit most files here so your team shares them; a few, like settings.local.json, are gitignored when Claude Code saves settings to them. Each file badge shows which.',
         children: [{
           id: 'settings-json',
           label: 'settings.json',
@@ -146,8 +146,8 @@ config/secrets.json`,
           badge: 'gitignored',
           oneLiner: 'Your personal settings overrides for this project',
           when: 'Highest of the user-editable settings files; CLI flags and managed settings still take precedence',
-          description: 'Personal settings that take precedence over the project defaults. Same JSON format as settings.json, but not committed. Use this when you need different permissions or defaults than the team config.',
-          tips: [<>Same schema as settings.json. Array settings like <C>permissions.allow</C> combine across scopes; scalar settings like <C>model</C> use the local value</>, <>Claude Code adds this file to <C>~/.config/git/ignore</C> the first time it writes one. If you use a custom <C>core.excludesFile</C>, add the pattern there too. To share the ignore rule with your team, also add it to the project <C>.gitignore</C></>],
+          description: 'Personal settings that take precedence over the project defaults. Same JSON format as settings.json, gitignored when Claude Code saves a setting to it. Use this when you need different permissions or defaults than the team config.',
+          tips: [<>Same schema as settings.json. Array settings like <C>permissions.allow</C> combine across scopes; scalar settings like <C>model</C> use the local value</>, <>When Claude Code saves a setting to this file in a repository that doesn't already ignore it, it adds <C>**/.claude/settings.local.json</C> to your global git excludes file: <C>core.excludesFile</C> from your global git config when it's set to an absolute or <C>~</C>-prefixed path, otherwise <C>$XDG_CONFIG_HOME/git/ignore</C>, or <C>~/.config/git/ignore</C>. To share the ignore rule with your team, also add it to the project <C>.gitignore</C></>],
           exampleIntro: 'This example adds Docker permissions on top of whatever the team settings.json allows.',
           example: `{
   "permissions": {
@@ -1446,11 +1446,11 @@ Click files in the tree to see what each one does, when it loads, and an example
 
 The explorer covers files you author and edit. A few related files live elsewhere:
 
-| File                    | Location                   | Purpose                                                                                                                                                                                                                                                             |
-| ----------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `managed-settings.json` | System-level, varies by OS | Enterprise-enforced settings that you can't override. See [server-managed settings](/docs/en/server-managed-settings).                                                                                                                                                   |
-| `CLAUDE.local.md`       | Project root               | Your private preferences for this project, loaded alongside CLAUDE.md. Create it manually and add it to `.gitignore`.                                                                                                                                               |
-| Installed plugins       | `~/.claude/plugins`        | Cloned marketplaces, installed plugin versions, and per-plugin data, managed by `claude plugin` commands. Orphaned versions are deleted 14 days after a plugin update or uninstall. See [plugin caching](/docs/en/plugins-reference#plugin-caching-and-file-resolution). |
+| File                    | Location                   | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `managed-settings.json` | System-level, varies by OS | Enterprise-enforced settings that you can't override, apart from [narrow exceptions](/docs/en/settings#exceptions-to-managed-settings-precedence). See [server-managed settings](/docs/en/server-managed-settings).                                                                                                                                                                                                                                                                |
+| `CLAUDE.local.md`       | Project root               | Your private preferences for this project, loaded alongside CLAUDE.md. Create it manually and add it to `.gitignore`.                                                                                                                                                                                                                                                                                                                                                    |
+| Installed plugins       | `~/.claude/plugins`        | Cloned marketplaces, installed plugin versions, and per-plugin data, managed by `claude plugin` commands. For a plugin installed from a marketplace [`command` source](/docs/en/plugin-marketplaces#command-sources) in link mode, Claude Code stores links here instead of a copy, and the plugin's files stay in the directory the command prints. See [plugin caching](/docs/en/plugins-reference#plugin-caching-and-file-resolution) for how orphaned versions are cleaned up. |
 
 `~/.claude` also holds data Claude Code writes as you work: transcripts, prompt history, file snapshots, caches, and logs. See [application data](#application-data) below.
 
@@ -1478,7 +1478,7 @@ This table lists every file the explorer covers. Project-scope files live in you
 <Note>
   Several things can override what you put in these files:
 
-  * [Managed settings](/docs/en/server-managed-settings) deployed by your organization take precedence over everything
+  * [Managed settings](/docs/en/server-managed-settings) deployed by your organization take precedence over everything, apart from the [exceptions under Settings precedence](/docs/en/settings#exceptions-to-managed-settings-precedence)
   * CLI flags like `--permission-mode` or `--settings` override `settings.json` for that session
   * Some environment variables take precedence over their equivalent setting, but this varies: check the [environment variables reference](/docs/en/env-vars) for each one
 
@@ -1492,7 +1492,7 @@ Click a filename to open that node in the explorer above.
 | [`CLAUDE.md`](#ce-claude-md)                        | Project and global | ✓      | Instructions loaded every session                                                                             | [Memory](/docs/en/memory)                                            |
 | [`rules/*.md`](#ce-rules)                           | Project and global | ✓      | Topic-scoped instructions, optionally path-gated                                                              | [Rules](/docs/en/memory#organize-rules-with-claude/rules/)           |
 | [`settings.json`](#ce-settings-json)                | Project and global | ✓      | Permissions, hooks, env vars, model defaults                                                                  | [Settings](/docs/en/settings)                                        |
-| [`settings.local.json`](#ce-settings-local-json)    | Project only       |        | Your personal overrides, gitignored when Claude Code creates it                                               | [Settings scopes](/docs/en/settings#settings-files)                  |
+| [`settings.local.json`](#ce-settings-local-json)    | Project only       |        | Your personal overrides, gitignored when Claude Code saves a setting to it                                    | [Settings scopes](/docs/en/settings#settings-files)                  |
 | [`.mcp.json`](#ce-mcp-json)                         | Project only       | ✓      | Team-shared MCP servers                                                                                       | [MCP scopes](/docs/en/mcp#mcp-installation-scopes)                   |
 | [`.worktreeinclude`](#ce-worktreeinclude)           | Project only       | ✓      | Gitignored files to copy into new worktrees                                                                   | [Worktrees](/docs/en/worktrees#copy-gitignored-files-into-worktrees) |
 | [`skills/<name>/SKILL.md`](#ce-skills)              | Project and global | ✓      | Reusable prompts invoked with `/name` or auto-invoked                                                         | [Skills](/docs/en/skills)                                            |
@@ -1516,7 +1516,7 @@ Beyond the config you author, `~/.claude` holds data Claude Code writes during s
 
 ### Cleaned up automatically
 
-Files in the paths below are deleted on startup once they're older than [`cleanupPeriodDays`](/docs/en/settings#available-settings). The default is 30 days.
+Claude Code deletes the files in the paths below once they're older than [`cleanupPeriodDays`](/docs/en/settings#available-settings), as long as it can safely determine the retention period. The default is 30 days and the minimum is 1; setting `0` fails with a validation error. The same age cutoff applies to automatic removal of [orphaned worktrees](/docs/en/worktrees#clean-up-subagent-and-background-session-worktrees).
 
 | Path under `~/.claude/`                      | Contents                                                                                                                                                                                                                                                |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1532,9 +1532,15 @@ Files in the paths below are deleted on startup once they're older than [`cleanu
 | `shell-snapshots/`                           | Aliases, functions, and shell options captured at startup and applied by the [Bash tool](/docs/en/tools-reference#bash-tool-behavior) to each command. Removed on clean exit. The sweep clears any left after a crash.                                       |
 | `backups/`                                   | Timestamped copies of `~/.claude.json` taken before config migrations                                                                                                                                                                                   |
 | `feedback-bundles/`                          | Redacted transcript archives written by `/feedback` on third-party providers or when no Anthropic credentials are configured, for sending to your Anthropic account team                                                                                |
+| `usage-data/`                                | `report.html` and timestamped report copies written by [`/insights`](/docs/en/costs#analyze-your-usage-patterns), plus cached per-session analysis data used to build them                                                                                   |
 | `todos/`, `statsig/`, `logs/`                | Legacy directories from older versions. No longer written. The sweep removes their contents and then the empty directory.                                                                                                                               |
 
-`sessions/` holds one small file per running session, used to detect concurrent sessions and crashes. It isn't part of the age-based sweep: Claude Code removes each file when its session exits and clears crash leftovers on the next launch.
+Claude Code makes four exceptions to this sweep:
+
+* **`sessions/`**: holds one small file per running session, used to detect concurrent sessions and crashes. It isn't part of the age-based sweep: Claude Code removes each file when its session exits and clears crash leftovers on the next launch.
+* **Auto memory**: Claude Code excludes a project's [auto memory](/docs/en/memory#auto-memory) directory, `projects/<project>/memory/`, from this sweep, and removes the directory itself only after it has been empty for the whole retention period. Before v2.1.228, the sweep treated folders inside the memory directory as session data and could delete old files beneath it.
+* **Bare mode**: when you run `claude -p` with [`--bare`](/docs/en/headless#start-faster-with-bare-mode), Claude Code doesn't run the sweep in that session.
+* **Paused sweep**: if Claude Code can't safely determine the retention period, it pauses the retention cleanup sweep; the [`retention_sweep` event](/docs/en/monitoring-usage#retention-sweep-event) lists each configuration that pauses it. When the cause is a settings file that can't be read or parsed, or settings errors with `cleanupPeriodDays` explicitly set, Claude Code also shows a warning in `/status` until you fix the settings errors. When [managed settings](/docs/en/server-managed-settings) provide `cleanupPeriodDays`, Claude Code runs the sweep at the managed value in either case.
 
 ### Kept until you delete them
 
@@ -1555,12 +1561,12 @@ Other small cache and lock files appear depending on which features you use and 
 Transcripts and history are not encrypted at rest. OS file permissions are the only protection. If a tool reads a `.env` file or a command prints a credential, that value is written to `projects/<project>/<session>.jsonl`. To reduce exposure:
 
 * Lower `cleanupPeriodDays` to shorten how long transcripts are kept
-* Set the [`CLAUDE_CODE_SKIP_PROMPT_HISTORY`](/docs/en/env-vars) environment variable to skip writing transcripts and prompt history in any mode. In non-interactive mode, you can instead pass `--no-session-persistence` alongside `-p`, or set `persistSession: false` in the Agent SDK.
+* Set the [`CLAUDE_CODE_SKIP_PROMPT_HISTORY`](/docs/en/env-vars) environment variable to skip writing transcripts and prompt history in any mode. In non-interactive mode, you can instead pass `--no-session-persistence` alongside `-p`, or set `persistSession: false` in the TypeScript Agent SDK; the Python SDK has no equivalent option.
 * Use [permission rules](/docs/en/permissions) to deny reads of credential files
 
 ### Clear local data
 
-Run `claude project purge` to delete the state Claude Code holds for one project. The command requires Claude Code v2.1.124 or later. It deletes:
+Run `claude project purge` to delete the state Claude Code holds for one project. It deletes:
 
 * Transcripts and auto memory under `projects/`
 * Per-session `tasks/`, `debug/`, and `file-history/` entries
@@ -1616,17 +1622,20 @@ The command leaves `shell-snapshots/` and `backups/` alone because those are not
 
 You can also delete any of the application-data paths above by hand. New sessions are unaffected. The table below shows what you lose for past sessions.
 
-| Delete                                                                                                                                                                                       | You lose                                                     |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `~/.claude/projects/`                                                                                                                                                                        | Resume, continue, and rewind for past sessions               |
-| `~/.claude/history.jsonl`                                                                                                                                                                    | Up-arrow prompt recall                                       |
-| `~/.claude/file-history/`                                                                                                                                                                    | Checkpoint restore for past sessions                         |
-| `~/.claude/stats-cache.json`                                                                                                                                                                 | Historical totals shown by `/usage`                          |
-| `~/.claude/remote-settings.json`                                                                                                                                                             | Nothing. Re-fetched on next launch.                          |
-| `~/.claude/cache/changelog.md`                                                                                                                                                               | Nothing. Refreshed in the background.                        |
-| `~/.claude/policy-limits.json`                                                                                                                                                               | Nothing. Refreshed automatically.                            |
-| `~/.claude/debug/`, `~/.claude/plans/`, `~/.claude/paste-cache/`, `~/.claude/image-cache/`, `~/.claude/session-env/`, `~/.claude/tasks/`, `~/.claude/shell-snapshots/`, `~/.claude/backups/` | Nothing user-facing                                          |
-| `~/.claude/todos/`, `~/.claude/statsig/`, `~/.claude/logs/`                                                                                                                                  | Nothing. Legacy directories not written by current versions. |
+| Delete                                                                                                                                                             | You lose                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `~/.claude/projects/`                                                                                                                                              | Resume, continue, and rewind for past sessions, and auto memory for every project                                 |
+| `~/.claude/history.jsonl`                                                                                                                                          | Up-arrow prompt recall                                                                                            |
+| `~/.claude/paste-cache/`                                                                                                                                           | Pasted text in recalled prompts; see [paste large content](/docs/en/terminal-config#paste-large-content)               |
+| `~/.claude/file-history/`                                                                                                                                          | Checkpoint restore for past sessions                                                                              |
+| `~/.claude/stats-cache.json`                                                                                                                                       | Historical totals shown by `/usage`                                                                               |
+| `~/.claude/usage-data/`                                                                                                                                            | Past [`/insights`](/docs/en/costs#analyze-your-usage-patterns) reports and the cached analysis data used to build them |
+| `~/.claude/feedback-bundles/`                                                                                                                                      | Feedback and bug-report archives you haven't yet sent to your Anthropic account team                              |
+| `~/.claude/remote-settings.json`                                                                                                                                   | Nothing. Re-fetched on next launch.                                                                               |
+| `~/.claude/cache/changelog.md`                                                                                                                                     | Nothing. Refreshed in the background.                                                                             |
+| `~/.claude/policy-limits.json`                                                                                                                                     | Nothing. Refreshed automatically.                                                                                 |
+| `~/.claude/debug/`, `~/.claude/plans/`, `~/.claude/image-cache/`, `~/.claude/session-env/`, `~/.claude/tasks/`, `~/.claude/shell-snapshots/`, `~/.claude/backups/` | Nothing user-facing                                                                                               |
+| `~/.claude/todos/`, `~/.claude/statsig/`, `~/.claude/logs/`                                                                                                        | Nothing. Legacy directories not written by current versions.                                                      |
 
 Don't delete `~/.claude.json`, `~/.claude/settings.json`, or `~/.claude/plugins/`: those hold your auth, preferences, and installed plugins.
 

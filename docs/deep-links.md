@@ -21,7 +21,7 @@ This page covers how to [build a link](#build-a-link), [embed one in a runbook o
 
 ## How it works
 
-The `claude-cli://` prefix is a custom URL scheme that Claude Code registers with your operating system, similar to how `mailto:` links open your email client. The link can live on a web page, in a wiki, in a Slack message, or in any app that renders links. When you click one:
+The `claude-cli://` prefix is a custom URL scheme that Claude Code registers with your operating system, similar to how `mailto:` links open your email client. When you click a deep link:
 
 1. The browser or app hands the URL to your operating system.
 2. The operating system recognizes the `claude-cli://` prefix and starts Claude Code on your machine.
@@ -73,7 +73,7 @@ Investigate the failed deploy of payments-api.
 Check recent commits to main and the last successful build.
 ```
 
-You can edit the prompt before pressing Enter to send it. If you have no local clone of the repository, the session opens in your home directory instead. See [Choose between `cwd` and `repo`](#choose-between-cwd-and-repo) for how the local path is selected when you have multiple clones or worktrees.
+You can edit the prompt before pressing Enter to send it. See [Choose between `cwd` and `repo`](#choose-between-cwd-and-repo) for how the local path is selected when you have multiple clones or worktrees.
 
 ### Choose between `cwd` and `repo`
 
@@ -81,9 +81,8 @@ Use `cwd` when everyone who clicks the link has the project at the same absolute
 
 Use `repo` when the link is shared and each person clones to a different location. Claude Code resolves the slug to a local path as follows:
 
-* Each time you run `claude` in a Git repository, that directory's filesystem path is recorded against the repository's GitHub `owner/name` slug.
-* When a deep link arrives, `repo` opens whichever matching path you used most recently. Multiple clones and worktrees are tracked separately, so it picks the one you worked in last.
-* The lookup only finds paths where you have already run Claude Code at least once.
+* Each time you run `claude` in a Git repository, Claude Code records that directory's path against the repository's GitHub `owner/name` slug.
+* When a deep link arrives, `repo` opens whichever matching path you used most recently. Claude Code tracks multiple clones and worktrees separately, so it picks the one you worked in last.
 * The link does not change which branch is checked out. The session opens in whatever state that directory is currently in.
 
 The welcome header shows which path it picked so you can confirm the right clone opened.
@@ -182,7 +181,7 @@ Some Markdown renderers only allow `http` and `https` links and strip other URL 
 
 ### The session opens in my home directory instead of the repo
 
-The `repo` parameter only resolves to clones Claude Code has already seen. Run `claude` inside the clone once so its path is recorded, or switch the link to use `cwd` with an absolute path.
+The `repo` parameter only resolves to clones Claude Code has already seen. Run `claude` inside the clone once so Claude Code records its path, or switch the link to use `cwd` with an absolute path.
 
 ### The link opens the wrong terminal
 

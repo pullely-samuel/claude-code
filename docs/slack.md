@@ -4,11 +4,14 @@
 
 # Claude Code in Slack
 
-> Delegate coding tasks directly from your Slack workspace
+> Delegate coding tasks directly from your Slack workspace. Anthropic is retiring this earlier version for Team and Enterprise workspaces in favor of Claude Tag; it remains the setup path on Pro and Max plans.
 
-<Note>
-  Claude Code in Slack is being replaced by [Claude Tag](https://claude.com/product/tag) for Team and Enterprise workspaces. Claude Tag runs @Claude as your organization's shared identity with admin-configured access, under the same Slack app, so there is nothing to reinstall and existing setups continue to work during the transition. To switch a workspace, see [Migrate from the earlier Claude in Slack](https://claude.com/docs/claude-tag/admins/migrate-from-earlier).
-</Note>
+<Warning>
+  This page documents the earlier Claude Code in Slack, which runs each session under an individual user's account.
+
+  * **Team and Enterprise plans:** Anthropic is retiring this version in favor of [Claude Tag](https://claude.com/product/tag), which runs @Claude as your organization's shared identity with admin-configured access. Your existing Slack app and @Claude handle stay, and your Anthropic account team can tell you the cutover date. [Set up Claude Tag](https://claude.com/docs/claude-tag/overview) for a new workspace; to move one that already uses this version, see [Migrate from the earlier Claude in Slack](https://claude.com/docs/claude-tag/admins/migrate-from-earlier).
+  * **Pro and Max plans:** Claude Tag isn't available on individual plans, so this page remains the setup path.
+</Warning>
 
 Claude Code in Slack brings the power of Claude Code directly into your Slack workspace. When you mention `@Claude` with a coding task, Claude automatically detects the intent and creates a Claude Code session on the web, allowing you to delegate development work without leaving your team conversations.
 
@@ -147,20 +150,13 @@ Slack workspace administrators control whether the Claude app is available in th
 
 ### Channel-based access control
 
-Claude is not automatically added to any channels after installation. Users must explicitly invite Claude to channels where they want to use it:
-
-* **Invite required**: Type `/invite @Claude` in any channel to add Claude to that channel
-* **Channel membership controls access**: Claude can only respond to @mentions in channels where it has been added
-* **Access gating through channels**: Admins can control who uses Claude Code by managing which channels Claude is invited to and who has access to those channels
-* **Private channel support**: Claude works in both public and private channels, giving teams flexibility in controlling visibility
-
-This channel-based model allows teams to restrict Claude Code usage to specific channels, providing an additional layer of access control beyond workspace-level permissions.
+Installing the app doesn't add Claude to any channels. Claude responds to @mentions only in channels where it has been added; invite it with `/invite @Claude`. It works in both public and private channels. Admins can control who uses Claude Code by managing which channels Claude is invited to and who has access to those channels. This adds a layer of access control beyond workspace-level permissions.
 
 ## What's accessible where
 
 **In Slack**: You'll see status updates, completion summaries, and action buttons. The full transcript is preserved and always accessible.
 
-**On the web**: The complete Claude Code session with full conversation history, all code changes, file operations, and the ability to continue the session or create pull requests.
+**On the web**: The complete Claude Code session with full conversation history, all code changes, and file operations. Sessions stay in your Claude Code history at [claude.ai/code](https://claude.ai/code), where you can continue past sessions, reference them, or create pull requests.
 
 For Enterprise and Team accounts, sessions created from Claude in Slack are
 automatically visible to the organization. See [Claude Code on the Web sharing](/docs/en/claude-code-on-the-web#share-sessions)
@@ -193,6 +189,17 @@ This error means your Claude account has no cloud environment yet, not that an a
 2. Check that you have Claude Code on the web access enabled
 3. Ensure you have at least one GitHub repository connected to Claude Code
 
+### Sessions from a Claude Tag channel fail to start
+
+This entry applies to workspaces using [Claude Tag](https://claude.com/docs/claude-tag/overview), where Claude works in channels as your organization's shared identity, not as any member's account. If you created the channel's cloud environment at [claude.ai/code](https://claude.ai/code), it belongs to your personal account, and Claude can't start channel sessions in a personal environment. Claude Code fails the session immediately, and retrying doesn't help.
+
+If you're an Owner or admin, recreate the environment as an [organization-shared environment](/docs/en/cloud-environments#organization-shared-environments) from the **Cloud environments** page in [admin settings](https://claude.ai/admin-settings). You can apply it in two ways:
+
+* Set it as the organization default at [claude.ai/admin-settings/claude-code](https://claude.ai/admin-settings/claude-code).
+* [Set it on the channel](https://claude.com/docs/claude-tag/admins/troubleshooting#channel-sessions-use-the-wrong-environment-or-can%E2%80%99t-find-one) in the Claude Tag admin settings.
+
+If you're not an Owner or admin, send this entry to one.
+
 ### Repository not showing
 
 1. Connect the repository in Claude Code on the web at [claude.ai/code](https://claude.ai/code)
@@ -210,17 +217,11 @@ This error means your Claude account has no cloud environment yet, not that an a
 2. Ensure you're signed into the correct Claude account in your browser
 3. Check that your Claude plan includes Claude Code access
 
-### Session expiration
-
-1. Sessions remain accessible in your Claude Code history on the web
-2. You can continue or reference past sessions from [claude.ai/code](https://claude.ai/code)
-
 ## Current limitations
 
-* **GitHub only**: Currently supports repositories on GitHub.
-* **One PR at a time**: Each session can create one pull request.
-* **Rate limits apply**: Sessions use your individual Claude plan's rate limits.
-* **Web access required**: Users must have Claude Code on the web access; those without it will only get standard Claude chat responses.
+* **GitHub only**: repositories must be on GitHub.
+* **One PR at a time**: each session can create one pull request.
+* **Web access required**: users need access to Claude Code on the web; without it, Claude replies with standard chat responses.
 
 ## Related resources
 

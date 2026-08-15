@@ -10,7 +10,7 @@ The security guidance plugin makes Claude review its own code changes for common
 
 Once installed, the plugin runs automatically. There is nothing to invoke and no separate command to remember.
 
-The plugin is the in-session companion to [Code Review](/docs/en/code-review), which runs on pull requests. This plugin reduces what reaches the PR. Code Review catches what does. For how the plugin layers with on-demand review and CI scanning, see [How this fits with other security tools](#how-this-fits-with-other-security-tools).
+The plugin is the in-session companion to [Code Review](/docs/en/code-review), which runs on pull requests. This plugin reduces what reaches the PR. Code Review catches what does. For how the plugin layers with on-demand review and CI scanning, or to scan code you already have rather than changes Claude is writing, see [How this fits with other security tools](#how-this-fits-with-other-security-tools).
 
 ## Prerequisites
 
@@ -33,9 +33,14 @@ In a terminal Claude Code session, install from the [official Anthropic marketpl
 * **Claude desktop app, local or SSH session**: open the [plugin browser](/docs/en/desktop#install-plugins) by clicking the **+** button next to the prompt, then **Plugins**, then **Add plugin**
 * **Claude Code on the web or a desktop cloud session**: declare the plugin in `.claude/settings.json` as shown under [Enable in cloud sessions](#enable-in-cloud-sessions-and-shared-repositories)
 
-The terminal install prompts for a scope. Choose user scope to write the plugin to your user settings, so it loads in every new local session you start on this machine. If Claude Code reports `Marketplace "claude-plugins-official" not found`, add the marketplace with `/plugin marketplace add anthropics/claude-plugins-official`. If it reports that the plugin is not found in the marketplace, your local copy is outdated: refresh it with `/plugin marketplace update claude-plugins-official`. Then retry the install.
+The terminal install prompts for a scope. Choose user scope to write the plugin to your user settings, so it loads in every new local session you start on this machine.
 
-Then activate it in the current session with `/reload-plugins`, which applies pending plugin changes without a restart:
+If the install fails, match the message Claude Code reports:
+
+* `Marketplace "claude-plugins-official" not found`: add the marketplace with `/plugin marketplace add anthropics/claude-plugins-official`, then retry the install.
+* The plugin is [not found in the marketplace](/docs/en/discover-plugins#install-plugins): check the plugin name.
+
+Check the install summary. If it reports `Run /reload-plugins to activate.`, apply the pending change without a restart:
 
 ```text theme={null}
 /reload-plugins
@@ -43,7 +48,7 @@ Then activate it in the current session with `/reload-plugins`, which applies pe
 
 ### Enable in cloud sessions and shared repositories
 
-User-scoped plugins do not carry into [Claude Code on the web](/docs/en/claude-code-on-the-web), because those sessions run on Anthropic infrastructure rather than your machine. To enable the plugin there, or to turn it on for everyone who clones a repository, declare it in the project's checked-in settings:
+User-scoped plugins do not carry into [Claude Code on the web](/docs/en/claude-code-on-the-web), because those sessions run in the cloud rather than on your machine. To enable the plugin there, or to turn it on for everyone who clones a repository, declare it in the project's checked-in settings:
 
 ```json .claude/settings.json theme={null}
 {
@@ -156,17 +161,17 @@ The plugin also reads `.claude/security-patterns.yml` and `.claude/security-patt
 
 The plugin looks for `claude-security-guidance.md` and `security-patterns.yaml` in the same locations, independently of how the plugin was enabled:
 
-| Scope         | Path                                        | Notes                                    |
-| :------------ | :------------------------------------------ | :--------------------------------------- |
-| User          | `~/.claude/claude-security-guidance.md`     | Applies to every project on your machine |
-| Project       | `.claude/claude-security-guidance.md`       | Checked in with the repository           |
-| Project local | `.claude/claude-security-guidance.local.md` | Gitignored, for personal overrides       |
+| Scope         | Path                                        | Notes                                               |
+| :------------ | :------------------------------------------ | :-------------------------------------------------- |
+| User          | `~/.claude/claude-security-guidance.md`     | Applies to every project on your machine            |
+| Project       | `.claude/claude-security-guidance.md`       | Checked in with the repository                      |
+| Project local | `.claude/claude-security-guidance.local.md` | For personal overrides; add it to your `.gitignore` |
 
 The plugin loads all locations that exist and concatenates them, with a combined cap of 8 KB for the guidance file. Administrators can distribute organization-wide rules by pushing the user-scope file to `~/.claude/` through device management. The same paths apply to `security-patterns.yaml`.
 
 ## Usage cost
 
-The [per-edit pattern check](#on-each-file-edit) makes no model call and adds no cost. The [end-of-turn](#at-the-end-of-each-turn) and [commit](#on-each-commit-or-push-claude-makes) reviews each spend additional model usage that counts toward your [usage](/docs/en/costs) like any other Claude request. The commit review is agentic and may take several model turns per commit, capped at 20 reviews per rolling hour. Expect roughly one review call per turn that changes files and one deeper review per commit, both subject to the caps above.
+The [per-edit pattern check](#on-each-file-edit) makes no model call and adds no cost. The [end-of-turn](#at-the-end-of-each-turn) and [commit](#on-each-commit-or-push-claude-makes) reviews each spend additional model usage that counts toward your [usage](/docs/en/costs) like any other Claude request. The commit review is agentic and may take several model turns per commit. Expect roughly one review call per turn that changes files and one deeper review per commit, both subject to the caps above.
 
 Both model-backed reviews use Claude Opus 4.7 by default. Set `SECURITY_REVIEW_MODEL` to choose a different model for the end-of-turn review and `SG_AGENTIC_MODEL` for the commit review.
 
@@ -196,7 +201,7 @@ To remove it from your user scope:
 /plugin uninstall security-guidance@claude-plugins-official
 ```
 
-If the plugin was enabled through a project's `.claude/settings.json`, disabling it from `/plugin` writes an override to your `.claude/settings.local.json` rather than editing the checked-in file, so the plugin stays off for you while teammates are unaffected. {/* min-version: 2.1.203 */}The same dialog also offers to uninstall the plugin for everyone by removing it from the shared `.claude/settings.json`; that option requires Claude Code v2.1.203 or later. If it was enabled through [managed settings](/docs/en/admin-setup), only an administrator can disable it.
+If the plugin was enabled through a project's `.claude/settings.json`, disabling it from `/plugin` writes an override to your `.claude/settings.local.json` rather than editing the checked-in file, so the plugin stays off for you while teammates are unaffected. The same dialog also offers to uninstall the plugin for everyone by removing it from the shared `.claude/settings.json`. If it was enabled through [managed settings](/docs/en/admin-setup), only an administrator can disable it.
 
 ## How the plugin integrates with Claude Code
 
@@ -224,7 +229,7 @@ The plugin is one layer in a defense-in-depth approach. It catches issues earlie
 | On pull request        | [Code Review](/docs/en/code-review), Team and Enterprise plans | Multi-agent correctness and security review with full codebase context                                   |
 | In CI                  | Your existing static analysis and dependency scanners     | Language-specific rules, supply-chain checks, and policy enforcement the plugin does not attempt         |
 
-Each later stage catches what earlier ones miss. The plugin's value is reducing the volume that reaches them, not eliminating the need for them.
+To find security issues in code you already have, rather than in changes Claude is writing, ask Claude in a session to review a specific file or directory for vulnerabilities, or use the [Claude Security plugin](/docs/en/claude-security) for a deeper multi-agent scan of the whole repository; [`/security-review`](/docs/en/commands#all-commands) covers only the changes on your current branch. Either way, the review reads the source code in your checkout, not a running site or deployed service.
 
 ## Troubleshooting
 

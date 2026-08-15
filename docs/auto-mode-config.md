@@ -9,12 +9,12 @@
 [Auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode) lets Claude Code run without routine permission prompts by routing tool calls through a classifier that blocks anything irreversible, destructive, or aimed outside your environment. Deny and explicit ask rules are evaluated before the classifier and still block or prompt. Use the `autoMode` settings block to tell that classifier which repos, buckets, and domains your organization trusts, so it stops blocking routine internal operations.
 
 <Note>
-  Auto mode is available to all users on every provider, including the Anthropic API, [Claude Platform on AWS](/docs/en/claude-platform-on-aws), Amazon Bedrock, Google Cloud's Agent Platform, Microsoft Foundry, and signed-in [Claude apps gateway](/docs/en/claude-apps-gateway) sessions. If Claude Code reports auto mode as unavailable for your account, check the [full requirements](/docs/en/permission-modes#eliminate-prompts-with-auto-mode), which also cover the supported models and Owner enablement on Team and Enterprise plans. {/* min-version: 2.1.207 */}In v2.1.158 through v2.1.206, auto mode on Amazon Bedrock, Google Cloud's Agent Platform, Microsoft Foundry, and Claude apps gateway sessions required setting `CLAUDE_CODE_ENABLE_AUTO_MODE=1`; v2.1.207 removed the requirement.
+  Auto mode is available to all users on every provider, including the Anthropic API, [Claude Platform on AWS](/docs/en/claude-platform-on-aws), Amazon Bedrock, Google Cloud's Agent Platform, Microsoft Foundry, and signed-in [Claude apps gateway](/docs/en/claude-apps-gateway) sessions. If Claude Code reports auto mode as unavailable for your account, check the [full requirements](/docs/en/permission-modes#eliminate-prompts-with-auto-mode), which also cover the supported models and the organization-level control on Team and Enterprise plans. In v2.1.158 through v2.1.206, auto mode on Amazon Bedrock, Google Cloud's Agent Platform, Microsoft Foundry, and Claude apps gateway sessions required setting `CLAUDE_CODE_ENABLE_AUTO_MODE=1`; v2.1.207 removed the requirement.
 </Note>
 
 By default, the classifier trusts only the working directory and the current repo's configured remotes. Actions like pushing to your company's source-control org or writing to a team cloud bucket are blocked until you add them to `autoMode.environment`.
 
-For how to enable auto mode and what it blocks by default, see [Permission modes](/docs/en/permission-modes#eliminate-prompts-with-auto-mode). This page is the configuration reference.
+For how sessions end up in auto mode and what the classifier blocks by default, see [auto mode on the Permission modes page](/docs/en/permission-modes#eliminate-prompts-with-auto-mode). This page is the configuration reference.
 
 This page covers how to:
 
@@ -87,7 +87,7 @@ As of Claude Code v2.1.198, `claude auto-mode defaults` prints three kinds of en
   * **Organization**
   * **Primary use of Claude Code**: defaults to software development
   * **Cloud provider(s)**
-  * **Repository visibility**: a repository is assumed private unless its remote host and name indicate otherwise, {/* min-version: 2.1.200 */}or a visibility check earlier in the conversation the classifier reads shows it is public. The classifier reads your messages and the commands Claude runs, not their output, so the evidence has to be something it can read, such as your own message naming the repository as public; the output of a `gh repo view` on its own doesn't reach it. The transcript-evidence check requires Claude Code v2.1.200 or later
+  * **Repository visibility**: a repository is assumed private unless its remote host and name indicate otherwise, or a visibility check earlier in the conversation the classifier reads shows it is public. The classifier reads your messages and the commands Claude runs, not their output, so the evidence has to be something it can read, such as your own message naming the repository as public; the output of a `gh repo view` on its own doesn't reach it. The transcript-evidence check requires Claude Code v2.1.200 or later
   * **Internal sharing / snippet hosting**: public paste and gist services are treated as outside the trust boundary until you name one
   * **Org-specific CLIs**
   * **Secrets management**
@@ -95,7 +95,7 @@ As of Claude Code v2.1.198, `claude auto-mode defaults` prints three kinds of en
   * **Network posture**
   * **Protected deployment namespaces / environments**: falls back to the Sensitive remote targets heuristic until you name them
   * **Data retention / declassification**
-* **Trust slots**: name what the classifier treats as inside your boundary. The slots are Trusted repo, Source control, Trusted internal domains, Trusted cloud buckets, Key internal services, and Internal package registry. The repo and source-control entries default to the working repository and its configured remotes. Every other trust slot defaults to `None configured`, so nothing else is trusted until you add it. {/* min-version: 2.1.203 */}A repository's visibility scopes only confidential material: a private repository is an acceptable destination for confidential material, but making a repository private never clears secrets or personal or entrusted data into it, and the classifier treats content ported, repointed, or first read from outside the working repository as not that repository's own work. This scoping requires Claude Code v2.1.203 or later.
+* **Trust slots**: name what the classifier treats as inside your boundary. The slots are Trusted repo, Source control, Trusted internal domains, Trusted cloud buckets, Key internal services, and Internal package registry. The repo and source-control entries default to the working repository and its configured remotes. Every other trust slot defaults to `None configured`, so nothing else is trusted until you add it. A repository's visibility scopes only confidential material: a private repository is an acceptable destination for confidential material, but making a repository private never clears secrets or personal or entrusted data into it, and the classifier treats content ported, repointed, or first read from outside the working repository as not that repository's own work. This scoping requires Claude Code v2.1.203 or later.
 * **Sensitivity slots**: name what the protective rules treat as high-risk. The slots are Sensitive data locations & audiences, Sensitive remote targets, and Protected IaC scopes. Each defaults to a broad heuristic, such as treating any host or namespace whose name carries `prod` or `production` as a sensitive remote target, so the protective rules are active before you configure anything. Naming concrete targets in a sensitivity slot makes those rules apply to the named targets instead of the heuristic.
 
 <Info>Before v2.1.211, the context slots also included a Default / protected branches entry that treated `main` and `master` as protected until you named others. v2.1.211 removed it: [pushes to any branch of the repository you're working in](#common-boundaries) are allowed by default, so there is no protected-branch default to configure.</Info>
@@ -128,7 +128,7 @@ Entries are prose, not regex or tool patterns. The classifier reads them as natu
 * **Trusted internal domains**: hostnames for APIs, dashboards, and services inside your network, like `*.internal.example.com`
 * **Key internal services**: CI, artifact registries, internal package indexes, incident tooling
 * **Internal package registry**: the private npm, PyPI, or other registry that installs should route through, so installs that bypass it for a public registry get blocked
-* **Sensitive data locations & audiences**: the buckets, databases, or paths that hold personal data, confidential business data, credentials, regulated data, or similarly sensitive material, and the audiences that data in each location may be shared with, so the classifier protects those locations instead of guessing from content. {/* min-version: 2.1.195 */}{/* max-version: 2.1.197 */}Claude Code v2.1.195 through v2.1.197 name this entry PII / regulated-data locations and cover only locations that hold personal or regulated data, without the audience dimension
+* **Sensitive data locations & audiences**: the buckets, databases, or paths that hold personal data, confidential business data, credentials, regulated data, or similarly sensitive material, and the audiences that data in each location may be shared with, so the classifier protects those locations instead of guessing from content. Claude Code v2.1.195 through v2.1.197 name this entry PII / regulated-data locations and cover only locations that hold personal or regulated data, without the audience dimension
 * **Sensitive remote targets**: the namespaces, hosts, or containers that count as production, so remote shells and port-forwards into them need your explicit approval
 * **Protected IaC scopes**: the infrastructure resources whose apply or destroy should always require you to name the change
 * **Additional context**: regulated-industry constraints, multi-tenant infrastructure, or compliance requirements that affect what the classifier should treat as risky
@@ -251,7 +251,7 @@ Print the built-in `environment`, `allow`, `soft_deny`, and `hard_deny` rules as
 claude auto-mode defaults
 ```
 
-{/* min-version: 2.1.208 */}To read one rule's full wording without piping through `jq`, pass `--label` with the start of the rule's label, such as `claude auto-mode defaults --label 'Git Destructive'`. Matching is a case-insensitive prefix on each rule's label, and sections with no match print as empty lists. Requires Claude Code v2.1.208 or later.
+To read one rule's full wording without piping through `jq`, pass `--label` with the start of the rule's label, such as `claude auto-mode defaults --label 'Git Destructive'`. Matching is a case-insensitive prefix on each rule's label, and sections with no match print as empty lists. Requires Claude Code v2.1.208 or later.
 
 Print what the classifier actually uses as JSON, with your settings applied where set and defaults otherwise:
 
@@ -289,8 +289,6 @@ claude auto-mode critique
 
 Run `claude auto-mode config` after saving your settings to confirm the effective rules are what you expect, with `"$defaults"` expanded in place. If you've written custom rules, `claude auto-mode critique` reviews them and flags entries that are ambiguous, redundant, or likely to cause false positives.
 
-If you need to remove or rewrite a built-in rule rather than add alongside it, save the output of `claude auto-mode defaults` to a file, edit the lists, and paste the result into your settings file in place of `"$defaults"`.
-
 To discard your customizations and return to the built-in defaults, run the reset subcommand. It requires Claude Code v2.1.212 or later and removes the `autoMode` section from your user settings file:
 
 ```bash theme={null}
@@ -301,9 +299,21 @@ The command summarizes what it will remove and asks `Reset auto mode configurati
 
 ## Review denials
 
-When auto mode denies a tool call, the denial is recorded in `/permissions` under the Recently denied tab. Press `r` on a denied action to mark it for retry: when you exit the dialog, Claude Code sends a message telling the model it may retry that tool call and resumes the conversation.
+To review and retry actions the auto mode classifier denied, open `/permissions` and select the **Recently denied** tab, where Claude Code records each denial. Press `r` on a denied action to mark it for retry: when you exit the dialog, Claude Code sends a message telling the model it may retry that tool call and resumes the conversation.
 
-In Claude Code v2.1.193 and later, the classifier's reason for each denial appears alongside the blocked tool call in the transcript, in the denial notification, and under each entry on the Recently denied tab. Use the reason to decide whether the fix is an `environment` entry, an `allow` exception, or retrying with explicit intent in your next message.
+When the classifier produces [no verdict on the action](/docs/en/errors#auto-mode-cannot-determine-the-safety-of-an-action), because a safety check separate from auto mode refused the classifier's own request or its response didn't parse, Claude Code denies the action without recording it under **Recently denied**. The linked error entry covers what Claude is told and how to run the action if you need it.
+
+### Fix a denial with an allow rule, an environment entry, or a retry
+
+Claude Code shows the blocked tool call wherever the denial appears, including the transcript, the denial notification, and the **Recently denied** tab. Pick the fix from what the call was trying to reach or do:
+
+* A destination Claude needs throughout the task, such as a package registry, an internal domain, or a repository host: add it to `autoMode.environment`.
+* A command you want to run without review from now on: add an `allow` rule.
+* A one-off action you did intend: state that intent in your next message and let Claude retry.
+
+The reason shown with the call is the fixed text `Blocked by classifier` in most sessions, in Claude Code v2.1.208 and later: the classifier scores each action on an internal severity scale rather than writing an explanation. Some sessions run a classifier model that writes a short explanation instead, in v2.1.193 and later; when one appears, treat it as a hint about which destination or intent the classifier was missing. Claude Code selects the classifier model, so which reason you see isn't something you configure.
+
+### Fix repeated denials
 
 Repeated denials for the same destination usually mean the classifier is missing context. Add that destination to `autoMode.environment`, then run `claude auto-mode config` to confirm it took effect.
 
@@ -311,7 +321,7 @@ To react to denials programmatically, use the [`PermissionDenied` hook](/docs/en
 
 ## See also
 
-* [Permission modes](/docs/en/permission-modes#eliminate-prompts-with-auto-mode): what auto mode is, what it blocks by default, and how to enable it
+* [Permission modes](/docs/en/permission-modes#eliminate-prompts-with-auto-mode): what auto mode is, what it blocks by default, and which sessions start in it
 * [Managed settings](/docs/en/server-managed-settings): deploy `autoMode` configuration across your organization
 * [Permissions](/docs/en/permissions): allow, ask, and deny rules that apply before the classifier runs
 * [Settings](/docs/en/settings): the full settings reference, including the `autoMode` key

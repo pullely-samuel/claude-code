@@ -15,20 +15,12 @@ With checkpointing, you can:
 * **Recover from errors** when the agent makes incorrect modifications
 
 <Warning>
-  Only changes made through the Write, Edit, and NotebookEdit tools are tracked. Changes made through Bash commands (like `echo > file.txt` or `sed -i`) are not captured by the checkpoint system.
+  Only changes made through the Write, Edit, and NotebookEdit tools are tracked. Changes made through Bash commands (like `echo > file.txt` or `sed -i`) are not captured by the checkpoint system, and neither are edits a [subagent](/docs/en/agent-sdk/subagents) applies, except a [skill with `context: fork`](/docs/en/skills#run-skills-in-a-subagent) that runs in the foreground.
 </Warning>
 
 ## How checkpointing works
 
 When you enable file checkpointing, the SDK creates backups of files before modifying them through the Write, Edit, or NotebookEdit tools. User messages in the response stream include a checkpoint UUID that you can use as a restore point.
-
-Checkpoint works with these built-in tools that the agent uses to modify files:
-
-| Tool         | Description                                                        |
-| ------------ | ------------------------------------------------------------------ |
-| Write        | Creates a new file or overwrites an existing file with new content |
-| Edit         | Makes targeted edits to specific parts of an existing file         |
-| NotebookEdit | Modifies cells in Jupyter notebooks (`.ipynb` files)               |
 
 <Note>
   File rewinding restores files on disk to a previous state. It does not rewind the conversation itself. The conversation history and context remain intact after calling `rewindFiles()` (TypeScript) or `rewind_files()` (Python).
@@ -40,7 +32,7 @@ The checkpoint system tracks:
 * Files modified during the session
 * The original content of modified files
 
-When you rewind to a checkpoint, created files are deleted and modified files are restored to their content at that point.
+When you rewind to a checkpoint, Claude Code deletes the files it created and restores the files it modified to their content at that point. Claude Code skips a tracked path that is a symlink, hard link, or other non-regular file. It also skips a tracked file whose parent directory no longer resolves to its checkpoint-time location, or whose backup it can't read safely. [`RewindFilesResult`](/docs/en/agent-sdk/typescript#rewindfilesresult) counts every skipped path in its `skippedLinks` field. Skipping requires Claude Code v2.1.216 or later; before v2.1.216, a rewind wrote and deleted through links at tracked paths.
 
 ## Implement checkpointing
 
@@ -191,7 +183,7 @@ The following example shows the complete flow: enable checkpointing, capture the
   <Step title="Capture checkpoint UUID and session ID">
     With the `replay-user-messages` option set (shown above), each user message in the response stream has a UUID that serves as a checkpoint.
 
-    For most use cases, capture the first user message UUID (`message.uuid`); rewinding to it restores all files to their original state. To store multiple checkpoints and rewind to intermediate states, see [Multiple restore points](#multiple-restore-points).
+    For most use cases, capture the first user message UUID (`message.uuid`); rewinding to it restores the tracked files to their original state. To store multiple checkpoints and rewind to intermediate states, see [Multiple restore points](#multiple-restore-points).
 
     Capturing the session ID (`message.session_id`) is optional; you only need it if you want to rewind later, after the stream completes. If you're calling `rewindFiles()` immediately while still processing messages (as the example in [Checkpoint before risky operations](#checkpoint-before-risky-operations) does), you can skip capturing the session ID.
 
@@ -686,13 +678,6 @@ Before you begin, make sure you have the [Claude Agent SDK installed](/docs/en/a
       main();
       ```
     </CodeGroup>
-
-    This example demonstrates the complete checkpointing workflow:
-
-    1. **Enable checkpointing**: configure the SDK with `enable_file_checkpointing=True` and `permission_mode="acceptEdits"` to auto-approve file edits
-    2. **Capture checkpoint data**: as the agent runs, store the first user message UUID (your restore point) and the session ID
-    3. **Prompt for rewind**: after the agent finishes, check your utility file to see the doc comments, then decide if you want to undo the changes
-    4. **Resume and rewind**: if yes, resume the session with an empty prompt and call `rewind_files()` to restore the original file
   </Step>
 
   <Step title="Run the example">
@@ -724,12 +709,13 @@ Before you begin, make sure you have the [Claude Agent SDK installed](/docs/en/a
 
 File checkpointing has the following limitations:
 
-| Limitation                         | Description                                                          |
-| ---------------------------------- | -------------------------------------------------------------------- |
-| Write/Edit/NotebookEdit tools only | Changes made through Bash commands are not tracked                   |
-| Same session                       | Checkpoints are tied to the session that created them                |
-| File content only                  | Creating, moving, or deleting directories is not undone by rewinding |
-| Local files                        | Remote or network files are not tracked                              |
+| Limitation                         | Description                                                                                                                                                                      |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Write/Edit/NotebookEdit tools only | Changes made through Bash commands are not tracked                                                                                                                               |
+| Subagent edits                     | Edits a [subagent](/docs/en/agent-sdk/subagents) applies aren't tracked or restored, except a skill with `context: fork` running in the foreground; use git to revert untracked edits |
+| Same session                       | Checkpoints are tied to the session that created them                                                                                                                            |
+| File content only                  | Creating, moving, or deleting directories is not undone by rewinding                                                                                                             |
+| Local files                        | Remote or network files are not tracked                                                                                                                                          |
 
 ## Troubleshooting
 
@@ -750,7 +736,7 @@ If `message.uuid` is `undefined` or missing, you're not receiving checkpoint UUI
 
 **Solution**: Add `extra_args={"replay-user-messages": None}` (Python) or `extraArgs: { 'replay-user-messages': null }` (TypeScript) to your options.
 
-### "No file checkpoint found for message" error
+### "No file checkpoint found for this message" error
 
 This error occurs when the checkpoint data doesn't exist for the specified user message UUID.
 
