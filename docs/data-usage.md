@@ -23,6 +23,8 @@ If you explicitly opt in to methods to provide us with materials to train on, su
 
 If you choose to send us feedback about Claude Code using the `/feedback` command, we may use your feedback to improve our products and services. Transcripts shared via `/feedback`, or via `/bug` and `/share`, which report through the same path, are retained for 5 years.
 
+With [Claude-drafted feedback](/docs/en/tools-reference#sendfeedback-tool-behavior), Claude can also draft a feedback report and queue it on your machine for you to review. Claude Code sends nothing until you choose to send the draft, and a sent draft goes through the same submission path and retention as other `/feedback` reports.
+
 ### Session quality surveys
 
 When you see the "How is Claude doing this session?" prompt in Claude Code, responding to this survey, including selecting "Dismiss", records only your rating. We do not collect or store any conversation transcripts, inputs, outputs, or other session data as part of the rating prompt itself. Unlike thumbs up/down feedback or `/feedback` reports, this session quality survey is a simple product satisfaction metric.
@@ -35,7 +37,7 @@ After the rating prompt, you may see a separate follow-up asking "Can Anthropic 
 
 Nothing is uploaded unless you explicitly select **Yes**. Organizations with [zero data retention](/docs/en/zero-data-retention), or where product feedback is disabled by organization policy, or where `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set, never see this follow-up. Your responses to this survey, including session transcripts submitted after the rating prompt, do not impact your data training preferences and cannot be used to train our AI models.
 
-To disable these surveys, set `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1`. The survey is also disabled when `DISABLE_TELEMETRY`, `DO_NOT_TRACK`, or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set. Organizations that block nonessential traffic but capture survey responses through their own [OpenTelemetry collector](/docs/en/monitoring-usage) can opt the survey back in by setting `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL=1`. The survey then logs ratings to the configured collector only. The transcript-share follow-up and all other Anthropic-bound feedback traffic stay disabled. To control frequency instead of disabling, set [`feedbackSurveyRate`](/docs/en/settings#available-settings) in your settings file to a probability between `0` and `1`.
+To disable these surveys, set `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1`. The survey is also disabled when `DISABLE_TELEMETRY`, `DO_NOT_TRACK`, or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is set. Organizations that block nonessential traffic but capture survey responses through their own [OpenTelemetry collector](/docs/en/monitoring-usage) can opt the survey back in by setting `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL=1`. The survey then logs ratings to the configured collector only. The transcript-share follow-up and all other Anthropic-bound feedback traffic stay disabled. To control frequency instead of disabling, set [`feedbackSurveyRate`](/docs/en/settings-reference#feedbacksurveyrate) in your settings file to a probability between `0` and `1`.
 
 ### Data retention
 
@@ -52,6 +54,8 @@ Anthropic retains Claude Code data based on your account type and preferences.
 * Standard: 30-day retention period
 * [Zero data retention](/docs/en/zero-data-retention): available to qualified accounts for Claude Code on Claude for Enterprise. ZDR is not included in the standard Enterprise plan; it is enabled on a per-organization basis by your account team after confirming eligibility
 * Local caching: Claude Code clients store session transcripts locally in plaintext under `~/.claude/projects/` for 30 days by default to enable session resumption. Adjust the period with `cleanupPeriodDays`. See [application data](/docs/en/claude-directory#application-data) for what's stored and how to clear it.
+
+  Transcripts of sessions started or most recently continued in Claude Desktop or Cowork are [exempt from that limit by default](/docs/en/claude-directory#cleaned-up-automatically).
 
 You can delete individual Claude Code on the web sessions at any time. Deleting a session permanently removes the session's event data. For instructions on how to delete sessions, see [Delete sessions](/docs/en/claude-code-on-the-web#delete-sessions).
 
@@ -110,7 +114,7 @@ Error reporting is on only when all of these apply:
 * you're connecting directly to the Claude API
 * your organization doesn't have a zero data retention or HIPAA agreement
 
-When you run the `/feedback` command, a copy of your conversation history including code is sent to Anthropic. The `/bug` and `/share` commands submit through the same path. Before submitting, you choose how much history to include: the current session only, which is the default, or also other sessions from the same project over the last 24 hours or 7 days. The data is encrypted in transit via TLS and stored in Google Cloud Storage, which encrypts stored data at rest by default. Optionally, a GitHub issue is created in the public repository. To opt out, set the `DISABLE_FEEDBACK_COMMAND` environment variable to `1`.
+When you run the `/feedback` command, a copy of your conversation history including code is sent to Anthropic. The `/bug` and `/share` commands submit through the same path. Before submitting a report from the feedback dialog, you choose how much history to include: the current session only, which is the default, or also other sessions from the same project over the last 24 hours or 7 days. Claude Code submits [Claude-drafted feedback](/docs/en/tools-reference#sendfeedback-tool-behavior) through the same path, including the transcript when you chose to include it on the draft's review screen. The data is encrypted in transit via TLS and stored in Google Cloud Storage, which encrypts stored data at rest by default. Optionally, a GitHub issue is created in the public repository. To opt out, set the `DISABLE_FEEDBACK_COMMAND` environment variable to `1`.
 
 When you use a third-party provider such as Amazon Bedrock or Google Cloud's Agent Platform, or have no Anthropic credentials configured, `/feedback` writes the report to a local archive under `~/.claude/feedback-bundles/` instead of sending it to Anthropic. Known API key and token patterns are redacted before the archive is written. Nothing leaves your machine until you send that file to your Anthropic account representative or attach it to a support request.
 
@@ -126,7 +130,7 @@ By default, error reporting, telemetry, and bug reporting are disabled when usin
 | **Session quality surveys**          | Default on.<br />`CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1` to disable.                                  | Default on.<br />`CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1` to disable.                   | Default on.<br />`CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1` to disable.                   | Default on.<br />`CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1` to disable.                   | Default on.<br />`CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1` to disable.                   |
 | **WebFetch domain safety check**     | Default on.<br />`skipWebFetchPreflight: true` in [settings](/docs/en/settings) to disable.                | Default on.<br />`skipWebFetchPreflight: true` in [settings](/docs/en/settings) to disable. | Default on.<br />`skipWebFetchPreflight: true` in [settings](/docs/en/settings) to disable. | Default on.<br />`skipWebFetchPreflight: true` in [settings](/docs/en/settings) to disable. | Default on.<br />`skipWebFetchPreflight: true` in [settings](/docs/en/settings) to disable. |
 
-All environment variables can be checked into `settings.json` (see [settings reference](/docs/en/settings)).
+All environment variables can be checked into `settings.json` (see [settings reference](/docs/en/settings-reference)).
 
 When a host platform sets `CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST`, metrics default to on for Google Cloud's Agent Platform, Amazon Bedrock, Microsoft Foundry, and Claude Platform on AWS, and follow the standard `DISABLE_TELEMETRY` opt-out. Error reporting and `/feedback` reports remain off by default on those providers.
 

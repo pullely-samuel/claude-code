@@ -8,7 +8,7 @@
 
 The Claude Security plugin runs a multi-agent vulnerability scan of your codebase inside a Claude Code session. A team of Claude agents maps your architecture, builds a threat model, hunts for vulnerabilities, and independently reviews every finding before writing the report. Use the plugin to scan a whole repository or [only a set of changes](#scan-only-your-changes), such as a branch's diff, a pull request's diff, or a single commit, then turn the findings you choose into patches that you review and apply yourself.
 
-The plugin runs locally in your session, and each scan counts against your plan's usage limits. If you want a managed service that monitors your repositories, see the [Claude Security](https://claude.com/product/claude-security) product, available on the Enterprise plan. The plugin reaches code the managed product can't reach, such as repositories hosted on GitLab or Bitbucket, or on networks that don't allow inbound connections.
+The plugin runs locally in your session, uses whichever models you have access to in Claude Code, and each scan counts against your plan's usage limits. If you want a managed service that monitors your repositories, or want to run scans on [Claude Mythos 5](https://platform.claude.com/docs/en/about-claude/models/introducing-claude-fable-5-and-claude-mythos-5), see the [Claude Security](https://claude.com/product/claude-security) product, available on the Enterprise plan. The plugin reaches code the managed product can't reach, such as repositories hosted on GitLab or Bitbucket, or on networks that don't allow inbound connections.
 
 The plugin is also distinct from the review tools already in Claude Code: the [security guidance plugin](/docs/en/security-guidance) reviews code as Claude writes it, [`/security-review`](/docs/en/commands#all-commands) runs a single pass over your branch, and [Code Review](/docs/en/code-review) reviews pull requests. For how the layers stack, see [How the plugin fits with other security tools](#how-the-plugin-fits-with-other-security-tools).
 
@@ -16,7 +16,7 @@ The plugin is also distinct from the review tools already in Claude Code: the [s
 
 To run the plugin, you need:
 
-* Claude Code v2.1.154 or later on a paid plan, for the [dynamic workflows](/docs/en/workflows) the scan uses to orchestrate its agents. On Pro, turn them on from the Dynamic workflows row in `/config`.
+* A paid plan, for the [dynamic workflows](/docs/en/workflows) the scan uses to orchestrate its agents. On Pro, turn them on from the Dynamic workflows row in `/config`.
 * Python 3.9.6 or later available on your `PATH` as `python3`. Check with `python3 --version`. The plugin's tooling uses only the Python standard library, so nothing is installed.
 * Linux, macOS, or Windows.
 * Git, for change scans and for turning findings into patches; those jobs don't support other version control systems. A full scan works in any directory, with or without version control.
@@ -94,6 +94,7 @@ Every scan writes its results into a timestamped `CLAUDE-SECURITY-<timestamp>/` 
 
 * **`CLAUDE-SECURITY-RESULTS.md`**: the report, with each finding's ID, such as `F1`, plus its impact, exploit scenario, severity, confidence, and recommendation
 * **`CLAUDE-SECURITY-RESULTS.jsonl`**: the same findings in machine-readable form, one JSON object per line
+* **`CLAUDE-SECURITY-RESULTS.sarif`**: the same findings as a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) log for GitHub code scanning and any other tool that reads the standard. The scan classifies findings under their [CWE](https://cwe.mitre.org/) weakness categories
 * **`CLAUDE-SECURITY-REVISION-<commit>.json`**: the revision stamp, recording which commit was scanned, at what effort, whether uncommitted changes were part of the scanned tree, and how thoroughly the run was verified, so a report is always tied to the code it describes. A scan outside version control stamps `UNVERSIONED` in place of the commit
 
 That directory is the only change a scan makes to your checkout, and it carries its own `.gitignore`, so a stray `git add` never sweeps a report into a commit. To keep a report in history for an audit trail, delete that one `.gitignore` file and commit the directory like any other.

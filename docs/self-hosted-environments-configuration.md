@@ -7,7 +7,7 @@
 > Customize self-hosted environment sessions with wrapper scripts for per-session credentials, lifecycle hooks, and on-demand runner spawning.
 
 <Note>
-  Self-hosted environments are in public beta on Team and Enterprise plans; an [Owner or admin](/docs/en/cloud-environments#organization-shared-environments) enables them by turning on **Allow self-hosted environments** on the [**Cloud environments** admin page](https://claude.ai/admin-settings/cloud-environments). This page assumes a working runner; see the [quickstart](/docs/en/self-hosted-environments-quickstart) for setup and [Deploy to production](/docs/en/self-hosted-environments-deploy) for the fleet recipes.
+  Self-hosted environments are in public beta on Team and Enterprise plans; an [Owner](/docs/en/cloud-environments#organization-shared-environments) enables them by turning on **Allow self-hosted environments** on the [**Cloud environments** admin page](https://claude.ai/admin-settings/cloud-environments). This page assumes a working runner; see the [quickstart](/docs/en/self-hosted-environments-quickstart) for setup and [Deploy to production](/docs/en/self-hosted-environments-deploy) for the fleet recipes.
 </Note>
 
 A [self-hosted environment](/docs/en/self-hosted-environments) runs Claude Code [cloud sessions](/docs/en/claude-code-on-the-web) on your own infrastructure, executed by a runner process you deploy. With no configuration, that runner clones the session's repository, spawns Claude Code, and cleans up. This page is for the platform engineer operating the runners: it covers the extension points for when those defaults don't fit, from per-session credential provisioning to replacing checkout entirely. Wrappers and hooks run as executable files on the runner host, which is Linux or macOS, and the examples on this page assume a POSIX shell.
@@ -132,7 +132,7 @@ The hook fires on every session end where a child process was spawned, whatever 
 
 * `completed`: a clean exit, including a session archived or deleted while the child was still connected.
 * `failed`: a child crash or a setup failure after spawn.
-* `interrupted`: an idle release, startup timeout, server deassign, drain, watchdog kill, or the [`released=false` backstop](/docs/en/self-hosted-environments-reference#session-lifecycle-counter-semantics).
+* `interrupted`: an idle release, startup timeout, server deassign, drain, or watchdog kill.
 * `abandoned`: reserved for sessions another runner claimed; the hook doesn't currently fire in that case.
 
 The [session lifecycle counter semantics](/docs/en/self-hosted-environments-reference#session-lifecycle-counter-semantics) classify an idle release, a startup timeout, and a server deassign as `completed` instead: those are clean handoffs from the session's perspective even though this hook reports them as `interrupted`.
@@ -161,6 +161,15 @@ done
 ```
 
 The hook pushes with whatever git credentials are available in its own environment on the runner host. Under the [no-credentials-in-the-image posture](/docs/en/self-hosted-environments-deploy#configure-git), including when the built-in clone goes through the Anthropic git proxy, there are none, so mint a short-lived push credential inside the hook before pushing: exchange the session token the hook receives in `CLAUDE_CODE_SESSION_ACCESS_TOKEN` with your own token service, verifying it as [Verify session identity](/docs/en/self-hosted-environments-identity) describes. When the hook holds a credential the session didn't, also pin where it pushes: replace `origin` with an operator-supplied URL and pass `-c credential.helper=` plus your own helper, so repo-local config the session wrote can't redirect the credentialed push.
+
+#### Hook timing when the runner releases a session
+
+A released session can resume on another runner. On a runner on v2.1.236 or later, what the session was doing at release decides whether it can resume before this hook finishes:
+
+* **Idle after a turn, or timed out at startup**: the runner stops the child and runs this hook to completion. Only then does it release the session. A user message sent while the hook runs can't resume the session on another runner before the hook finishes.
+* **Waiting for the user to answer a prompt, such as a permission prompt**: the runner releases the session first, then runs this hook. A user message sent while the hook runs can resume the session on another runner before the hook finishes.
+
+A release at the [`--retire-at`](/docs/en/self-hosted-environments-reference#runner-cli-flags) time follows the same two paths. During a `SIGTERM` drain, the runner holds the session lease until the hook finishes; see [Shutdown timing](/docs/en/self-hosted-environments-deploy#shutdown-timing). Before v2.1.236, the runner released the session first and then ran this hook on both paths.
 
 ### command
 
@@ -197,7 +206,7 @@ The orchestrator runs `${hooks-dir}/spawn-runner` once per spawn request. The ho
 | `CLAUDE_RUNNER_ATTEMPT`               | How many spawn requests this session has had. `0` for pre-warming requests.                                                                                                                                                                                                                                                           |
 | `CLAUDE_RUNNER_ORDER_SERVER_TIME`     | Server time from the poll response's HTTP `Date` header. When the hook verifies the work-order JWT's `exp`, compare against this value instead of the local clock to tolerate skew. Empty when the gateway omitted the header.                                                                                                        |
 | `CLAUDE_RUNNER_POOL_ID`               | The ID of the environment the new runner should join, in `ccpool_...` form                                                                                                                                                                                                                                                            |
-| `CLAUDE_RUNNER_ACCOUNT_ID`            | Tagged ID of the account that enqueued the session, for per-account routing, quota, or chargeback. Empty when unavailable.                                                                                                                                                                                                            |
+| `CLAUDE_RUNNER_ACCOUNT_ID`            | Tagged ID of the account that enqueued the session, for per-account routing, quota, or chargeback. Empty when unavailable, and always empty for Claude Tag channel sessions, which no account enqueues.                                                                                                                               |
 | `CLAUDE_RUNNER_ACCOUNT_EMAIL`         | Email of the account that enqueued the session. Empty when unavailable. Treat the email as personally identifiable information and don't log it.                                                                                                                                                                                      |
 | `CLAUDE_RUNNER_PRIMARY_REPO_URL`      | URL of the session's first git source, for routing to a runner with that repository pre-warmed. Empty when the session has no git sources.                                                                                                                                                                                            |
 | `CLAUDE_RUNNER_PRIMARY_REPO_REVISION` | Revision of the session's first git source: branch, SHA, or tag. Empty when unspecified.                                                                                                                                                                                                                                              |
@@ -216,7 +225,7 @@ The contract has four provisioner-agnostic rules:
 
 1. **Be idempotent on `CLAUDE_RUNNER_ORDER_ID`.** Redelivery of the same request must spawn at most one runner. Derive a deterministic resource name from the ID and let your platform reject the duplicate.
 2. **Don't retry the workload.** One order ID means at most one created workload. If the runner never registers, Anthropic re-requests with a fresh order ID after `--expected-spawn-seconds`.
-3. **Use the exit-code contract.** Exit 0 means submitted. Exit 1 means retryable failure; the session backs off and is re-offered. Exit 2 or higher means non-retryable; the session is blocked from spawning again until an [Owner or admin](/docs/en/cloud-environments#organization-shared-environments) selects **Retry** on it in the environment's **Activity** tab. On non-zero exit, the tail of the hook's stderr appears there as the failure reason, so write the actionable error to stderr and never secrets. For a pre-warming request there is no session to fail: the orchestrator logs a non-zero exit locally only, and the server re-requests the spawn after the lease.
+3. **Use the exit-code contract.** Exit 0 means submitted. Exit 1 means retryable failure; the session backs off and is re-offered. Exit 2 or higher means non-retryable; the session is blocked from spawning again until an [Owner](/docs/en/cloud-environments#organization-shared-environments) selects **Retry** on it in the environment's **Activity** tab. On non-zero exit, the tail of the hook's stderr appears there as the failure reason, so write the actionable error to stderr and never secrets. For a pre-warming request there is no session to fail: the orchestrator logs a non-zero exit locally only, and the server re-requests the spawn after the lease.
 4. **Set `--expected-spawn-seconds` to at least your p99 boot time.** This is the server-side lease. All orchestrator replicas must use the same value.
 
 Everything the hook writes to stdout or stderr appears in the orchestrator's log with credentials automatically redacted. If sessions stay queued, check the orchestrator's `/healthz` body for queue counts, then open your environment's **Activity** tab on the [**Cloud environments** admin page](https://claude.ai/admin-settings/cloud-environments): expand a failed session there for its spawn error, and select **Retry** to re-request it.
@@ -314,7 +323,7 @@ fi
 #   - init+fetch checkouts (runner default: only FETCH_HEAD exists)
 #   - clone-based checkouts (origin/* exist)
 #   - the runner default: the child starts on the session's outcome
-#     branch, which the runner creates with checkout -B after checkout
+#     branch, which the runner creates after checkout
 #   - detached HEAD, when a custom setup skips that branch creation
 # With no reference point at all (never fetched), stay silent rather
 # than false-positive on a read-only turn.
@@ -369,13 +378,13 @@ To pre-approve specific tools instead, append `--allowed-tools` with your rules,
 
 The runner gives each session its own config directory, seeded from an in-memory snapshot of the host's `~/.claude/` that the runner captures once at startup: `settings.json`, `CLAUDE.md`, hooks, agents, commands, and skills in your runner image apply to every session as the user-level baseline. Because the snapshot is taken at startup, config changes on a running host take effect only after a runner restart. Set `SELF_HOSTED_RUNNER_HOST_CONFIG_DIR` to seed from a different path, or point it at an empty directory to disable seeding.
 
-Repository-committed `.claude/settings.json` layers on top as project settings. Sessions also read [`managed-settings.json`](/docs/en/settings#settings-files) from the standard system path in your runner image, but the managed tier uses one source at a time, and [server-managed settings](/docs/en/server-managed-settings) are checked first: if your organization delivers any server-managed keys, sessions ignore the runner image's managed file, except that `env` blocks merge per key across managed sources. See [settings precedence](/docs/en/settings#settings-precedence).
+Repository-committed `.claude/settings.json` layers on top as project settings. Sessions also read [`managed-settings.json`](/docs/en/settings#where-settings-live) from the standard system path in your runner image. Whether its keys apply alongside [server-managed settings](/docs/en/server-managed-settings) follows [how Claude Code combines managed sources](/docs/en/managed-settings#how-claude-code-combines-managed-sources): by default, when your organization delivers any server-managed keys, sessions ignore the runner image's file apart from the [keys Claude Code reads from every admin source](/docs/en/managed-settings#keys-read-from-every-admin-source), such as the `env` block, the sandbox locks, the sandbox binary paths, and `forceRemoteSettingsRefresh`. See [settings precedence](/docs/en/settings#settings-precedence).
 
 When Anthropic's control plane supplies a session with [Claude Code hooks](/docs/en/hooks), the runner installs them alongside, not over, your own configuration. Requires Claude Code v2.1.229 or later.
 
 * **Where they land**: the runner writes each supplied hook script to a reserved `hooks/.ccr-launcher/` subdirectory of the session's config directory and registers the scripts in a separate settings file it passes to the session with `--settings`, leaving the seeded `settings.json` and your own scripts at `hooks/<name>` untouched. The runner recreates the reserved subdirectory for each session and doesn't seed host content at `~/.claude/hooks/.ccr-launcher/` into sessions.
 * **Who authors them**: the control plane populates the scripts from fixed constants in its own deployment, never from per-session or third-party input.
-* **What still governs them**: hooks delivered through `--settings` enter the ordinary merged hook configuration, not the managed tier, so your managed settings still apply. `disableAllHooks` disables them, and they are not among the categories [`allowManagedHooksOnly`](/docs/en/settings#hook-configuration) keeps loaded.
+* **What still governs them**: hooks delivered through `--settings` enter the ordinary merged hook configuration, not the managed tier, so your managed settings still apply. `disableAllHooks` disables them, and they are not among the categories [`allowManagedHooksOnly`](/docs/en/settings-reference#allowmanagedhooksonly) keeps loaded.
 
 ### Repository-committed permission rules
 

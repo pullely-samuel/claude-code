@@ -78,7 +78,7 @@ The pre-check queries Postgres with a two-second timeout. If the store is unreac
 
 ### Usage warnings in Claude Code
 
-Claude Code warns a developer as they approach their cap: once utilization passes 75%, and again past 95% of their fullest cap. When the gateway blocks a request, Claude Code shows the gateway's `429` message as is, including your `admin.blocked_message`.
+Claude Code warns a developer as they approach their cap: once utilization passes 75%, and again past 95% of their most-consumed cap. When the gateway blocks a request, Claude Code shows the gateway's `429` message as is, including your `admin.blocked_message`.
 
 The warning works off response headers:
 
@@ -86,6 +86,8 @@ The warning works off response headers:
 * With v2.1.225 or later on the developer's machine as well, Claude Code reads the headers and shows the warning.
 
 The headers always describe the developer's own cap: the gateway strips the upstream provider's rate-limit headers, which describe your shared quota, and never forwards them.
+
+With v2.1.251 or later on the developer's machine, Claude Code also reads the same headers to show a **Spend limit** bar in `/usage`, with the percentage of their cap used and when it resets, and to add a `rate_limits.spend_limit` object to the [status line](/docs/en/statusline#rate-limit-usage) input. Claude Code shows both as a percentage rather than a dollar amount, and needs nothing newer than v2.1.225 on the gateway server.
 
 ## Admin API reference
 
@@ -153,8 +155,6 @@ The gateway holds four spend-related tables; an hourly sweep enforces the retent
 | `spend_limits`     | The configured caps                                                           | Until deleted via the API                                                                               |
 | `admin_audit`      | The mutation trail                                                            | [`admin.audit_retention_days`](/docs/en/claude-apps-gateway-config#admin), default 365                       |
 | `principal_emails` | Each principal's last-seen email, display name, and IdP groups. Contains PII. | [`admin.identity_retention_days`](/docs/en/claude-apps-gateway-config#admin) since last activity, default 90 |
-
-`identity_retention_days` is deliberately shorter than `spend_retention_months`: a deprovisioned identity stops refreshing and ages out, while its anonymous spend counters remain for year-over-year reporting.
 
 When a developer leaves, delete any per-user cap via `DELETE /v1/organizations/spend_limits/{id}`; their spend and identity rows age out on the retention windows above. To erase one person immediately, for offboarding or a data subject access request (DSAR), run `DELETE FROM principal_emails WHERE principal = '<sub>'` directly against the gateway database. That removes the only table holding their email, name, and groups. The `spend` and `admin_audit` rows reference the pseudonymous OIDC `sub` only and age out on their own windows.
 

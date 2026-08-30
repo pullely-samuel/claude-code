@@ -6,7 +6,7 @@
 
 > A guide to securing Claude Code and Agent SDK deployments with isolation, credential management, and network controls
 
-Claude Code and the Agent SDK are powerful tools that can execute code, access files, and interact with external services on your behalf.
+Claude Code and the Agent SDK can execute code, access files, and interact with external services on your behalf.
 
 Unlike traditional software that follows predetermined code paths, these tools generate their actions dynamically based on context and goals. This flexibility is what makes them useful, but it also means their behavior can be influenced by the content they process: files, webpages, or user input. This is sometimes called prompt injection. For example, if a repository's README contains unusual instructions, Claude Code might incorporate those into its actions in ways the operator didn't anticipate. This guide covers practical ways to reduce this risk.
 
@@ -23,7 +23,7 @@ Defense in depth is still good practice though. For example, if an agent process
 Claude Code includes several security features that address common concerns. See the [security documentation](/docs/en/security) for full details.
 
 * **Permissions system**: Every tool and bash command can be configured to allow, block, or prompt the user for approval. Use glob patterns to create rules like "allow all npm commands" or "block any command with sudo". Organizations can set policies that apply across all users. See [permissions](/docs/en/permissions).
-* **Command parsing for permissions**: Before executing bash commands, Claude Code parses them into an AST and matches the result against your permission rules. Commands that cannot be parsed cleanly, or that do not match an allow rule, require explicit approval. A small set of constructs such as `eval` always require approval regardless of allow rules. This is a permission gate, not a sandbox; it does not infer whether a command is dangerous from its target path or effects.
+* **Command parsing for permissions**: Before executing bash commands, Claude Code parses them into an AST and matches the result against your permission rules. Commands that cannot be parsed cleanly, or that do not match an allow rule, require explicit approval. A small set of constructs such as `eval` always require approval regardless of allow rules. This is a permission gate, not a sandbox; apart from built-in safety checks such as the [critical-path check](/docs/en/permission-modes#critical-paths) on `rm` and `rmdir` and the [protected paths](/docs/en/permission-modes#protected-paths) list, it does not infer whether a command is dangerous from its target path or effects.
 * **Web search summarization**: Search results are summarized rather than passing raw content directly into the context, reducing the risk of prompt injection from malicious web content.
 * **Sandbox mode**: Bash commands can run in a sandboxed environment that restricts filesystem and network access. See the [sandboxing documentation](/docs/en/sandboxing) for details.
 

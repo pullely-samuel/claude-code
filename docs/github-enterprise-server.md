@@ -85,7 +85,7 @@ Claude generates the app's webhook URL when you save the connection. After you c
 
 ### Network requirements
 
-For Anthropic-hosted sessions, your GHES instance must be reachable from Anthropic infrastructure so Claude can clone repositories and post review comments. If your GHES instance is behind a firewall, allowlist the [Anthropic API IP addresses](https://platform.claude.com/docs/en/api/ip-addresses). Sessions in a [self-hosted environment](/docs/en/self-hosted-environments-deploy#configure-git) clone from inside your network instead, unless the runner opts into the [Anthropic git proxy](/docs/en/self-hosted-environments-deploy#use-the-anthropic-git-proxy), which fetches from Anthropic's side and needs the same reachability; the [SCM connector](/docs/en/self-hosted-environments-reference#scm-connector-flags) covers the hosted pre-session flows, such as the repository picker, for a GHES host that's only routable internally.
+For Anthropic-hosted sessions, your GHES instance must be reachable from Anthropic infrastructure so Claude can clone repositories and post review comments. If your GHES instance is behind a firewall, allowlist Anthropic's [outbound IP addresses](https://platform.claude.com/docs/en/api/ip-addresses#outbound-ip-addresses). Sessions in a [self-hosted environment](/docs/en/self-hosted-environments-deploy#configure-git) clone from inside your network instead, unless the runner opts into the [Anthropic git proxy](/docs/en/self-hosted-environments-deploy#use-the-anthropic-git-proxy), which fetches from Anthropic's side and needs the same reachability; the [SCM connector](/docs/en/self-hosted-environments-reference#scm-connector-flags) covers the hosted pre-session flows, such as the repository picker, for a GHES host that's only routable internally.
 
 ## Developer workflow
 
@@ -146,7 +146,7 @@ See [Create and distribute a plugin marketplace](/docs/en/plugin-marketplaces) f
 
 ### Pre-register GHES marketplaces with managed settings
 
-The `extraKnownMarketplaces` setting pre-registers a marketplace so developers get it without manual setup. It works from [any settings file](/docs/en/settings#extraknownmarketplaces), including a repository's `.claude/settings.json`; managed settings deliver it organization-wide:
+The `extraKnownMarketplaces` setting pre-registers a marketplace so developers get it without manual setup. It works from [any settings file](/docs/en/settings-reference#extraknownmarketplaces), including a repository's `.claude/settings.json`; managed settings deliver it organization-wide:
 
 ```json theme={null}
 {
@@ -166,11 +166,11 @@ Claude Code installs these marketplaces locally: it registers each entry and clo
 * **Use a full git URL.** The `owner/repo` shorthand always resolves to github.com and cannot reference a GHES host.
 * **Prefer HTTPS URLs.** SSH clones fail on machines that do not already trust your GHES host key. An HTTPS URL with your organization's standard git credential helper works on any machine with credentials configured.
 * **Confirm each machine can clone from your GHES host.** If a machine lacks credentials, the marketplace is registered but never installed, and its plugins report as not found instead of prompting for credentials.
-* **Confirm the setting reaches each machine.** A managed settings file only takes effect on machines it's deployed to, for example through your device management system. See [managed settings](/docs/en/settings#settings-files) for file locations.
+* **Confirm the setting reaches each machine.** A managed settings file only takes effect on machines it's deployed to, for example through your device management system. See [Deploy managed settings](/docs/en/managed-settings#delivery-mechanisms) for file locations.
 
 ### Allowlist GHES marketplaces in managed settings
 
-If your organization uses [managed settings](/docs/en/settings) to restrict which marketplaces developers can add, use the `hostPattern` source type to allow all marketplaces from your GHES instance without enumerating each repository. See [settings files](/docs/en/settings#settings-files) for file locations on each platform. Add the JSON to your `managed-settings.json` file or equivalent MDM policy:
+If your organization uses [managed settings](/docs/en/settings) to restrict which marketplaces developers can add, use the `hostPattern` source type to allow all marketplaces from your GHES instance without enumerating each repository. See [Delivery mechanisms](/docs/en/managed-settings#delivery-mechanisms) for file locations on each platform. Add the JSON to your `managed-settings.json` file or equivalent MDM policy:
 
 ```json theme={null}
 {
@@ -183,7 +183,7 @@ If your organization uses [managed settings](/docs/en/settings) to restrict whic
 }
 ```
 
-See the [strictKnownMarketplaces](/docs/en/settings#strictknownmarketplaces) and [extraKnownMarketplaces](/docs/en/settings#extraknownmarketplaces) settings reference for the complete schema.
+See the [strictKnownMarketplaces](/docs/en/settings-reference#strictknownmarketplaces) and [extraKnownMarketplaces](/docs/en/settings-reference#extraknownmarketplaces) settings reference for the complete schema.
 
 ## Limitations
 
@@ -212,7 +212,7 @@ On other claude.ai surfaces, a "Repository not found. If it's private, GitHub ac
 
 ### GHES instance not reachable
 
-If reviews or Anthropic-hosted web sessions time out, your GHES instance may not be reachable from Anthropic infrastructure. Confirm your firewall allows inbound connections from the [Anthropic API IP addresses](https://platform.claude.com/docs/en/api/ip-addresses). Sessions in a [self-hosted environment](/docs/en/self-hosted-environments) reach GHES from inside your network, so for them check the runner's own network path and the [SCM connector](/docs/en/self-hosted-environments-reference#scm-connector-flags) instead.
+If reviews or Anthropic-hosted web sessions time out, your GHES instance may not be reachable from Anthropic infrastructure. Confirm your firewall allows inbound connections from Anthropic's [outbound IP addresses](https://platform.claude.com/docs/en/api/ip-addresses#outbound-ip-addresses). Sessions in a [self-hosted environment](/docs/en/self-hosted-environments) reach GHES from inside your network, so for them check the runner's own network path and the [SCM connector](/docs/en/self-hosted-environments-reference#scm-connector-flags) instead.
 
 ### Session start fails with `Unable to get organization UUID`
 
