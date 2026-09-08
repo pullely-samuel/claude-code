@@ -308,7 +308,7 @@ Each cloud session is separated from your machine and from other sessions throug
 * **Isolated virtual machines**: each session runs in an isolated, Anthropic-managed VM. Sessions your organization routes to a [self-hosted environment](/docs/en/self-hosted-environments) run on your own infrastructure instead, where isolation is your deployment's responsibility
 * **Network access controls**: in Anthropic-hosted environments, network access is limited by default and can be disabled. In a self-hosted environment, you restrict session egress at your own network boundary. When running with network access disabled, Claude Code can still communicate with the Anthropic API, which may allow data to exit the VM.
 * **Credential protection**: in Anthropic-hosted environments, git credentials and signing keys stay outside the sandbox, and a proxy authenticates on the session's behalf with scoped credentials. In a self-hosted environment, your deployment supplies git credentials; see [Configure git](/docs/en/self-hosted-environments-deploy#configure-git)
-* **API credentials**: in Anthropic-hosted environments, keys you [add to a cloud environment](/docs/en/cloud-environments#add-api-credentials) stay outside the sandbox the same way, attached to matching requests after they leave the session. A self-hosted environment doesn't have API credentials
+* **API credentials**: in Anthropic-hosted environments on Pro and Max plans, keys you [add to a cloud environment](/docs/en/cloud-environments#add-api-credentials) stay outside the sandbox the same way, attached to matching requests after they leave the session. A self-hosted environment doesn't have API credentials, and Team and Enterprise plans don't have them yet
 * **Secure analysis**: code is analyzed and modified within the session's isolated environment before creating PRs
 
 ## Troubleshooting
@@ -358,7 +358,7 @@ Before relying on cloud sessions for a workflow, account for these constraints:
 * [Ultrareview](/docs/en/ultrareview): run a deep multi-agent code review in a cloud sandbox
 * [Routines](/docs/en/routines): automate work on a schedule, via API call, or in response to GitHub events
 * [Hooks configuration](/docs/en/hooks): run scripts at session lifecycle events
-* [Settings reference](/docs/en/settings-reference): all configuration options
+* [All settings](/docs/en/settings-reference): all configuration options
 * [Security](/docs/en/security): isolation guarantees and data handling
 * [Data usage](/docs/en/data-usage): what Anthropic retains from cloud sessions
 * [Claude Tag](https://claude.com/docs/claude-tag/overview): an organization-managed @Claude in Slack that runs on the same cloud infrastructure

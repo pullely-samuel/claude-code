@@ -22,20 +22,20 @@ The API caches by matching the start of each request, called the prefix, against
 
 To get the most out of prefix matching, Claude Code orders each request so content that rarely changes between turns comes first:
 
-| Layer           | Content                                           | Changes when                                                           |
-| --------------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
-| System prompt   | Core instructions, tool definitions, output style | The set of loaded tool definitions changes, or Claude Code is upgraded |
-| Project context | CLAUDE.md, auto memory, unscoped rules            | Session starts, or after `/clear` or `/compact`                        |
-| Conversation    | Your messages, Claude's responses, tool results   | Every turn                                                             |
+| Layer           | Content                                           | Changes when                                                                                    |
+| --------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| System prompt   | Core instructions, tool definitions, output style | The set of loaded tool definitions changes, you switch output style, or Claude Code is upgraded |
+| Project context | CLAUDE.md, auto memory, unscoped rules            | Session starts, or after `/clear` or `/compact`                                                 |
+| Conversation    | Your messages, Claude's responses, tool results   | Every turn                                                                                      |
 
-A change to the conversation layer leaves the system prompt and project context cached. A change to the system prompt invalidates everything, because all later content now sits behind a different prefix. The third column gives common triggers rather than an exhaustive list, and the sections below cover the full set, including content such as output style that is fixed at session start.
+A change to the conversation layer leaves the system prompt and project context cached. A change to the system prompt invalidates everything, because all later content now sits behind a different prefix. The third column gives common triggers rather than an exhaustive list, and the sections below cover the full set.
 
 The prefix-match rule explains most of the behaviors on this page. [Plan mode](/docs/en/permission-modes#analyze-before-you-edit-with-plan-mode) and [skill loading](/docs/en/skills), for example, append their instructions as conversation messages, so the cached prefix stays intact.
 
-Two settings aren't part of the prompt text at all, so they don't appear in the layer table, but both are part of the cache key:
+Two settings don't appear in the layer table but still affect what stays cached:
 
 * **Model**: each model has its own cache. Switching models recomputes the entire request even when the content is identical. See [Switching models](#switching-models) below.
-* **Effort level**: each effort level has its own cache for the same model. Changing effort mid-session recomputes the entire request. See [Changing effort level](#changing-effort-level) below.
+* **Effort level**: on most models, each effort level has its own cache, so changing effort mid-session recomputes the entire request. On Fable 5.1 with an API key or a Claude subscription, the cache stays intact by default. See [Changing effort level](#changing-effort-level) below.
 
 <Tip>
   Pick your model and effort level at the top of a session, then save `/compact` for natural breaks between tasks. The fewer changes you make mid-task, the higher your cache hit rate.
@@ -72,7 +72,9 @@ These actions cause the next request to miss part or all of the cache. You see a
 * [Connecting or disconnecting an MCP server](#connecting-or-disconnecting-an-mcp-server)
 * [Enabling or disabling a plugin](#enabling-or-disabling-a-plugin)
 * [Denying an entire tool](#denying-an-entire-tool)
+* [Changing output style](#changing-output-style)
 * [Compacting the conversation](#compacting-the-conversation)
+* [Accumulating many images](#accumulating-many-images)
 * [Upgrading Claude Code](#upgrading-claude-code)
 
 ### Switching models
@@ -87,11 +89,15 @@ You can also require this confirmation or skip it with a [PreModelSwitch hook](/
 
 The [`opusplan` model setting](/docs/en/model-config#opusplan-model-setting) resolves to Opus during plan mode and Sonnet during execution, so each plan-mode toggle is a model switch and starts a fresh cache.
 
-[Automatic model fallback](/docs/en/model-config#automatic-model-fallback) on Fable 5 and Opus 5 is also a model switch. When a safety classifier flags a request and the flagged category has a fallback model, Claude Code re-runs the request on that model and the session continues there.
+[Automatic model fallback](/docs/en/model-config#automatic-model-fallback) on Fable 5.1, Fable 5, and Opus 5 is also a model switch. When a safety classifier flags a request and the flagged category has a fallback model, Claude Code re-runs the request on that model and the session continues there.
 
 ### Changing effort level
 
-The cache is keyed by [effort level](/docs/en/model-config#adjust-effort-level) as well as model, so switching with `/effort` means the next request reads the entire conversation history with no cache hits. Changing effort follows the same confirmation as [switching models](#switching-models). When a change resolves to the same level already in effect, such as setting the model's default explicitly, Claude Code keeps the cache and applies the change without asking.
+On most models, changing the [effort level](/docs/en/model-config#adjust-effort-level) mid-session means the next request reads the entire conversation history with no cache hits. While the cache is still warm, Claude Code asks you to confirm the change first.
+
+On Fable 5.1 with an API key or a Claude subscription, changing effort keeps the cache, and Claude Code applies the new level without asking. This doesn't apply on Amazon Bedrock, Google Cloud's Agent Platform, or a [Claude apps gateway](/docs/en/claude-apps-gateway), or when you set [`CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS`](/docs/en/llm-gateway-protocol#disable-pre-release-capabilities) or your organization has a HIPAA configuration.
+
+Before v2.1.260, changing effort on Fable 5.1 with an API key or a Claude subscription also invalidated the cache.
 
 ### Turning on fast mode
 
@@ -149,6 +155,12 @@ Adding a bare tool name like `Bash` or `WebFetch` as a [deny rule](/docs/en/perm
 
 Only a deny rule that matches in the tool-name position has this effect: a bare tool name, the equivalent `Bash(*)` form, or a [tool-name glob](/docs/en/permissions#tool-name-wildcards) like `"*"`. A glob that matches only MCP tools, such as `"mcp__*"`, removes those tools the same way but leaves the cache intact when the matched tools are [deferred](#connecting-or-disconnecting-an-mcp-server), the default, since deferred definitions were never in the cached prefix. Scoped deny rules like `Bash(rm *)`, and all allow and ask rules, don't change which tools Claude sees. Claude Code checks them when Claude attempts a call, leaving the prefix intact.
 
+### Changing output style
+
+[Output style](/docs/en/output-styles) is part of the system prompt. When you switch styles mid-session with `/config` or the `outputStyle` setting, Claude uses the new style starting with your next message, and that request reads the entire conversation history with no cache hits. To keep that cost small, switch styles before your first message in a session or right after `/clear` or `/compact`, when there is little or no conversation history to re-read.
+
+Before v2.1.251, a mid-session style switch kept the cache but didn't apply until you ran `/clear` or started a new session.
+
 ### Compacting the conversation
 
 [Compaction](/docs/en/context-window#what-survives-compaction) replaces your message history with a summary. By design, this invalidates the conversation layer, since the next request has a new, shorter history that doesn't share a prefix with the old one. Claude Code reuses the system prompt layer and reloads project context from disk, which cache-hits only if CLAUDE.md and memory are unchanged since the session started.
@@ -161,6 +173,14 @@ After a break longer than the [cache lifetime](#cache-lifetime), there is no cac
   Compaction works in your favor when the context you discard is content you no longer need. To choose when its overhead happens, run `/compact` at a natural break in your work, such as between tasks, instead of waiting for auto-compaction to trigger mid-task. If you've gone down a path you want to abandon entirely, [`/rewind`](#rewinding-the-conversation) to an earlier turn instead. Rewinding truncates back to a prefix that is already cached, rather than building a new one as compaction does.
 </Tip>
 
+### Accumulating many images
+
+The API limits how many images and PDFs each request can carry. For the current numbers, see [Request limits](https://platform.claude.com/docs/en/build-with-claude/vision#request-limits) in the API docs. Claude Code also caps the total size of the images and PDFs in a request, so large screenshots reach the limit with fewer images than small ones.
+
+When the next request would pass either limit, Claude Code removes a batch of the oldest images and PDFs from what it sends, which leaves room for more before it needs to remove any again. Claude can no longer see the removed images. If Claude needs one of them again, share it again.
+
+Removing images changes the messages that held them, so the next request reprocesses the conversation from the earliest of those messages onward. Because Claude Code removes a batch at a time, you see one slower turn per batch rather than one with each new screenshot.
+
 ### Upgrading Claude Code
 
 A new Claude Code version typically updates the system prompt or tool definitions, so the first request after an upgrade rebuilds the cache from the top. [Auto-update](/docs/en/setup#auto-updates) downloads new versions in the background but applies them on the next launch, never mid-session, so you see this as an uncached first turn after restarting rather than a surprise during a session. Set `DISABLE_AUTOUPDATER=1` to control when upgrades apply.
@@ -171,11 +191,10 @@ A new Claude Code version typically updates the system prompt or tool definition
 
 ## Actions that keep the cache
 
-These actions either append to the end of the conversation or don't touch the request at all. Some of them, such as editing CLAUDE.md or changing output style, are also why a setting change waits for a restart to apply.
+These actions either append to the end of the conversation or don't touch the request at all. Some of them, such as editing CLAUDE.md, keep the cache for the same reason the change doesn't reach the running session until `/clear`, `/compact`, or a restart.
 
 * [Editing files in your repository](#editing-files-in-your-repository)
 * [Editing CLAUDE.md mid-session](#editing-claude-md-mid-session)
-* [Changing output style](#changing-output-style)
 * [Changing permission mode](#changing-permission-mode)
 * [Invoking skills and commands](#invoking-skills-and-commands)
 * [Running `/recap`](#running-%2Frecap)
@@ -191,10 +210,6 @@ File contents enter context only when Claude reads them, and reads append to the
 Your project-root and user-level CLAUDE.md files are read once at session start and held in memory. Editing them mid-session does not invalidate the cache, but the edit also doesn't apply. Claude keeps working with the version that was loaded at session start. The new content loads on the next `/clear`, `/compact`, or restart.
 
 [Nested CLAUDE.md files in subdirectories](/docs/en/memory) and [rules with `paths:` frontmatter](/docs/en/memory#path-specific-rules) load later, when Claude first reads a matching file. Editing one before it loads does take effect. After it loads, the content is part of the conversation history, so a mid-session edit doesn't retroactively change it.
-
-### Changing output style
-
-[Output style](/docs/en/output-styles) is part of the system prompt, which Claude Code reads once at session start. Changing it via `/config` or the `outputStyle` setting mid-session does not invalidate the cache, but the change also doesn't apply. Claude keeps using the style that was loaded at session start. The new style loads on the next `/clear` or restart.
 
 ### Changing permission mode
 
@@ -283,6 +298,8 @@ A high read-to-creation ratio means caching is working well. If creation stays h
 
 For a per-session summary, run `/usage`. After the main conversation's first response, Claude Code adds a [`Prompt cache (main)` line](/docs/en/costs#prompt-cache-statistics) to the Session block, showing the session's hit ratio, miss count, and whether the cache is warm right now. A status line script can read the same numbers from the [`prompt_cache` object](/docs/en/statusline#prompt-cache-fields). Both require Claude Code v2.1.251 or later.
 
+The `Prompt cache (main)` line also names the likely cause of the last miss when Claude Code can identify one, for example `likely cause: tool definitions changed`. The likely-cause text requires Claude Code v2.1.260 or later.
+
 For visibility across an organization, the OpenTelemetry exporter reports cache read and creation tokens per user and session. See [Monitor usage](/docs/en/monitoring-usage) for the metric and event attribute reference.
 
 ## Subagents and the cache
@@ -291,7 +308,13 @@ A [subagent](/docs/en/sub-agents) starts its own conversation with its own syste
 
 The parent's cache is unaffected. From the parent's side, the subagent's call and result append to the conversation, leaving the parent's prefix intact.
 
-A [fork](/docs/en/sub-agents#fork-the-current-conversation), by contrast, inherits the parent's system prompt, tools, and conversation history exactly, so its first request reads the parent's cache. The compaction summarization call described in [Compacting the conversation](#compacting-the-conversation) uses the same prefix-sharing approach. In a [workflow fan-out](/docs/en/workflows#prompt-caching-in-a-fan-out) of same-prefix agents, Claude Code briefly holds all but the first so their first requests can read the prefix the first agent cached.
+A [fork](/docs/en/sub-agents#fork-the-current-conversation), by contrast, inherits the parent's system prompt, tools, and conversation history exactly, so its first request reads the parent's cache.
+
+Other requests can also read a prefix that an earlier request cached:
+
+* **Session copies**: a session you [copy with `/fork`](/docs/en/agent-view#copy-the-session-with-%2Ffork) receives its isolation instruction as a message at the end of the copied conversation, so the cache that the original conversation built stays intact.
+* **Compaction**: the summarization call described in [Compacting the conversation](#compacting-the-conversation) uses the same prefix-sharing approach.
+* **Workflow fan-outs**: in a [workflow fan-out](/docs/en/workflows#prompt-caching-in-a-fan-out) of same-prefix agents, Claude Code holds all but the first for up to 5 seconds by default, so their first requests can read the prefix that the first agent cached.
 
 ## Disable prompt caching
 
