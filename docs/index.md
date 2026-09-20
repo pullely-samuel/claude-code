@@ -22,7 +22,7 @@
 
 ### Use Claude Code
 
-- [How Claude remembers your project](memory.md): Give Claude persistent instructions with CLAUDE.md files, and let Claude accumulate learnings automatically with auto memory.
+- [How Claude remembers your project](memory.md): Give Claude persistent instructions with CLAUDE.md or AGENTS.md files, and let Claude accumulate learnings automatically with auto memory.
 - [Manage sessions](sessions.md): Name, resume, branch, and switch between Claude Code conversations. Covers `--continue`, `--resume`, `--from-pr`, the `/resume` picker, session naming, exporting transcripts, and where transcripts are stored.
 - [Common workflows](common-workflows.md): Step-by-step guides for exploring codebases, fixing bugs, refactoring, testing, and other everyday tasks with Claude Code.
 - [Prompt library](prompt-library.md): Copy-paste prompts for Claude Code, tagged by task and role.
@@ -32,6 +32,7 @@
 
 - [Platforms and integrations](platforms.md): Choose where to run Claude Code and what to connect it to. Compare the CLI, Desktop, VS Code, JetBrains, web, mobile, and integrations like Chrome, Slack, and CI/CD.
 - [Continue local sessions from any device with Remote Control](remote-control.md): Continue a local Claude Code session from your phone, tablet, or any browser using Remote Control. Works with claude.ai/code and the Claude mobile app.
+- [Let Claude coordinate ongoing work with Projects](claude-projects.md): Give Claude a body of related work in one conversation and let it coordinate parallel cloud sessions that share repositories, instructions, and memory.
 - [Claude Code on mobile](mobile.md): Start, monitor, and steer Claude Code tasks from your phone with the Claude app for iOS and Android.
 - [Use Claude Code with Chrome](chrome.md): Connect Claude Code to your Chrome browser to test web apps, debug with console logs, automate form filling, and extract data from web pages.
 - [Let Claude use your computer from the CLI](computer-use.md): Enable computer use in the Claude Code CLI so Claude can open apps, click, type, and see your screen on macOS. Test native apps, debug visual issues, and automate GUI-only tools without leaving your terminal.
@@ -40,10 +41,10 @@
 - [Claude Code in Slack](slack.md): Delegate coding tasks directly from your Slack workspace. Anthropic is retiring this earlier version for Team and Enterprise workspaces in favor of Claude Tag; it remains the setup path on Pro and Max plans.
 - [Claude Tag](claude-tag.md): Bring Claude into your team's Slack channels with Claude Tag and find its setup and usage documentation on claude.com.
 
-#### Claude Code on the web
+#### Claude Code in the cloud
 
-- [Get started with Claude Code on the web](web-quickstart.md): Run Claude Code in the cloud from your browser or phone. Connect a GitHub repository, submit a task, and review the PR without local setup.
-- [Use Claude Code on the web](claude-code-on-the-web.md): Move sessions between web and terminal with `--cloud` and `--teleport`, manage and share sessions, and auto-fix pull requests from the cloud.
+- [Get started with Claude Code in the cloud](web-quickstart.md): Run Claude Code in the cloud from your browser or phone. Connect a GitHub repository, submit a task, and review the PR without local setup.
+- [Use Claude Code in the cloud](claude-code-on-the-web.md): Run Claude Code sessions in the cloud from your browser, phone, desktop app, or terminal, move them with --cloud and --teleport, and auto-fix pull requests.
 - [Automate work with routines](routines.md): Put Claude Code on autopilot. Define routines that run on a schedule, trigger on API calls, or react to GitHub events from cloud infrastructure.
 - [Find bugs with ultrareview](ultrareview.md): Run a deep, multi-agent code review in the cloud with /code-review ultra to find and verify bugs before you merge.
 
@@ -63,18 +64,18 @@
 - [Code Review](code-review.md): Set up automated PR reviews that catch logic errors, security vulnerabilities, and regressions using multi-agent analysis of your full codebase
 - [Claude Code GitHub Actions](github-actions.md): Run Claude Code in GitHub Actions workflows to respond to @claude mentions, automate tasks, and turn issues into pull requests
 - [Use Claude Code GitHub Actions with cloud providers](github-actions-cloud-providers.md): Run Claude Code GitHub Actions through Amazon Bedrock, Google Cloud's Agent Platform, or Microsoft Foundry instead of the Claude API
-- [Claude Code with GitHub Enterprise Server](github-enterprise-server.md): Connect Claude Code to your self-hosted GitHub Enterprise Server instance for web sessions, code review, and plugin marketplaces.
+- [Claude Code with GitHub Enterprise Server](github-enterprise-server.md): Connect Claude Code to your self-hosted GitHub Enterprise Server instance for cloud sessions, code review, and plugin marketplaces.
 - [Claude Code GitLab CI/CD](gitlab-ci-cd.md): Learn about integrating Claude Code into your development workflow with GitLab CI/CD
 
 ## Build with Claude Code
 
 ### Agents and parallel work
 
-- [Run agents in parallel](agents.md): Compare the ways Claude Code can take on multiple tasks at once: subagents, agent view, agent teams, and dynamic workflows.
+- [Run agents in parallel](agents.md): Compare the ways Claude Code can take on multiple tasks at once: subagents, agent view, agent teams, dynamic workflows, and projects.
 - [Create custom subagents](sub-agents.md): Create and use specialized AI subagents in Claude Code for task-specific workflows and improved context management.
 - [Manage multiple agents with agent view](agent-view.md): Dispatch and manage many Claude Code sessions from one screen. Agent view shows what every session is doing and which ones need your input.
 - [Orchestrate teams of Claude Code sessions](agent-teams.md): Coordinate multiple Claude Code instances working together as a team, with shared tasks, inter-agent messaging, and centralized management.
-- [Message your other Claude Code sessions](cross-session-messaging.md): Let Claude list and message your other Claude Code sessions on this machine, and reach your sessions on other machines or on the web.
+- [Message your other Claude Code sessions](cross-session-messaging.md): Let Claude list and message your other Claude Code sessions on this machine, and reach your sessions on other machines or in the cloud.
 - [Orchestrate subagents at scale with dynamic workflows](workflows.md): Dynamic workflows orchestrate many subagents from a script Claude writes and you can rerun. Use them for codebase audits, large migrations, and cross-checked research.
 - [Run parallel sessions with worktrees](worktrees.md): Isolate parallel Claude Code sessions in separate git worktrees so changes don't collide. Covers the `--worktree` flag, subagent isolation, `.worktreeinclude`, cleanup, and non-git VCS hooks.
 
@@ -91,6 +92,7 @@
 
 - [Discover and install prebuilt plugins through marketplaces](discover-plugins.md): Find and install plugins from marketplaces to extend Claude Code with new skills, agents, and capabilities.
 - [Create plugins](plugins.md): Create custom plugins to extend Claude Code with skills, agents, hooks, and MCP servers.
+- [Test plugins with evals](plugin-evals.md): Write eval cases for your Claude Code plugin, run them with claude plugin eval, grade the results, compare against a no-plugin baseline, and gate CI on the score.
 
 ### Artifacts
 
@@ -125,7 +127,7 @@
 - [Authentication](authentication.md): Log in to Claude Code and configure authentication for individuals, teams, and organizations.
 - [Deploy managed settings](managed-settings.md): Deploy managed settings to every developer's machine: delivery mechanisms per OS, how Claude Code combines managed sources, and how to verify enforcement.
 - [Configure server-managed settings](server-managed-settings.md): Centrally configure Claude Code for your organization through server-delivered settings, without requiring device management infrastructure.
-- [Control MCP server access for your organization](managed-mcp.md): Restrict which MCP servers users can add or connect to with managed configuration files, allowlists, and denylists.
+- [Control MCP server access for your organization](managed-mcp.md): Restrict which MCP servers users can add or connect to, or provide servers to every user, with managed configuration files, managed settings, allowlists, and denylists.
 - [Configure auto mode](auto-mode-config.md): Tell the auto mode classifier which repos, buckets, and domains your organization trusts. Set environment context, override the default block and allow rules, and inspect your effective config with the auto-mode CLI subcommands.
 
 ### Deployment
@@ -258,6 +260,7 @@
 
 ### Build agents
 
+- [Configure your agent](agent-sdk/configuration.md): Configure Agent SDK sessions: compose the options object, set the model, environment, and limits, and find each feature option's page.
 - [Examples](agent-sdk/examples.md): Find a complete, runnable Agent SDK project or a guided recipe in the Claude Cookbook that matches what you want to build.
 
 ### Core concepts
@@ -265,7 +268,7 @@
 - [How the agent loop works](agent-sdk/agent-loop.md): Understand the message lifecycle, tool execution, context window, and architecture that power your SDK agents.
 - [Use Claude Code features in the SDK](agent-sdk/claude-code-features.md): Load project instructions, skills, hooks, and other Claude Code features into your SDK agents.
 - [Work with sessions](agent-sdk/sessions.md): How sessions persist agent conversation history, and when to use continue, resume, and fork to return to a prior run.
-- [Persist sessions to external storage](agent-sdk/session-storage.md): Mirror session transcripts to S3, Redis, or your own backend so other hosts can resume your sessions.
+- [Persist sessions to external storage](agent-sdk/session-storage.md): Mirror Agent SDK session transcripts to your own object store, key-value store, or database so other hosts can resume your sessions.
 
 ### Input and output
 
@@ -312,6 +315,9 @@
 ### What's New
 
 - [What's new](whats-new/index.md): A weekly digest of notable Claude Code features, with code snippets, demos, and context on why they matter.
+- [Week 37 · September 7–11, 2026](whats-new/2026-w37.md): Test your plugins with claude plugin eval and pop Claude Code Desktop panes out into their own windows.
+- [Week 36 · August 31 – September 4, 2026](whats-new/2026-w36.md): Switch to Claude Fable 5.1, let computer use run in the background on Desktop, and watch Claude's edits in a live /diff panel.
+- [Week 35 · August 24–28, 2026](whats-new/2026-w35.md): Resume terminal sessions in the Claude Code Desktop app, review feedback reports that Claude drafts for you, and start a session in restricted mode.
 - [Week 34 · August 17–21, 2026](whats-new/2026-w34.md): Draft editable UI artboards with the /design skill, set the Concise output style, and start a Claude Code session on your machine from your phone.
 - [Week 33 · August 10–14, 2026](whats-new/2026-w33.md): Claude Code Desktop auto-continues after a usage limit resets, fork mode turns on by default, and GitLab merge requests and marketplaces join GitHub.
 - [Week 32 · August 3–7, 2026](whats-new/2026-w32.md): Claude Code sessions message each other, self-hosted environments run cloud sessions on your infrastructure, and auto mode becomes the default permission mode.
@@ -344,14 +350,14 @@
 
 ## Indexes
 
-- [French (166 pages)](https://code.claude.com/docs/_llms/fr.md): Documentation for French.
-- [German (166 pages)](https://code.claude.com/docs/_llms/de.md): Documentation for German.
-- [Italian (166 pages)](https://code.claude.com/docs/_llms/it.md): Documentation for Italian.
-- [Japanese (166 pages)](https://code.claude.com/docs/_llms/jp.md): Documentation for Japanese.
-- [Spanish (166 pages)](https://code.claude.com/docs/_llms/es.md): Documentation for Spanish.
-- [Korean (166 pages)](https://code.claude.com/docs/_llms/ko.md): Documentation for Korean.
-- [Chinese (166 pages)](https://code.claude.com/docs/_llms/cn.md): Documentation for Chinese.
-- [Traditional Chinese (166 pages)](https://code.claude.com/docs/_llms/zh-hant.md): Documentation for Traditional Chinese.
-- [Russian (166 pages)](https://code.claude.com/docs/_llms/ru.md): Documentation for Russian.
-- [Indonesian (166 pages)](https://code.claude.com/docs/_llms/id.md): Documentation for Indonesian.
-- [Brazilian Portuguese (166 pages)](https://code.claude.com/docs/_llms/pt-br.md): Documentation for Brazilian Portuguese.
+- [French (197 pages)](https://code.claude.com/docs/_llms/fr.md): Documentation for French.
+- [German (197 pages)](https://code.claude.com/docs/_llms/de.md): Documentation for German.
+- [Italian (197 pages)](https://code.claude.com/docs/_llms/it.md): Documentation for Italian.
+- [Japanese (196 pages)](https://code.claude.com/docs/_llms/jp.md): Documentation for Japanese.
+- [Spanish (197 pages)](https://code.claude.com/docs/_llms/es.md): Documentation for Spanish.
+- [Korean (197 pages)](https://code.claude.com/docs/_llms/ko.md): Documentation for Korean.
+- [Chinese (197 pages)](https://code.claude.com/docs/_llms/cn.md): Documentation for Chinese.
+- [Traditional Chinese (197 pages)](https://code.claude.com/docs/_llms/zh-hant.md): Documentation for Traditional Chinese.
+- [Russian (197 pages)](https://code.claude.com/docs/_llms/ru.md): Documentation for Russian.
+- [Indonesian (197 pages)](https://code.claude.com/docs/_llms/id.md): Documentation for Indonesian.
+- [Brazilian Portuguese (197 pages)](https://code.claude.com/docs/_llms/pt-br.md): Documentation for Brazilian Portuguese.
