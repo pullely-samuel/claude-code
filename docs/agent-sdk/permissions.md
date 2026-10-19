@@ -14,7 +14,7 @@ When Claude requests a tool, the SDK checks permissions in this order:
 
 <Steps>
   <Step title="Hooks">
-    Run [hooks](/docs/en/agent-sdk/hooks) first. A hook can deny the call outright or pass it on. A hook that returns `allow` does not skip the deny and ask rules below; those are evaluated regardless of the hook result. A `PreToolUse` hook allow also can't approve an `rm` or `rmdir` removal targeting a [critical path](/docs/en/permission-modes#critical-paths).
+    Run [hooks](/docs/en/agent-sdk/hooks) first. A hook can deny the call outright or pass it on. A hook that returns `allow` does not skip the deny and ask rules below; those are evaluated regardless of the hook result. A `PreToolUse` hook that returns `allow` also can't approve an `rm` or `rmdir` removal targeting a [critical path](/docs/en/permission-modes#critical-paths). For what that `allow` does in plan mode, see [Hook approvals in plan mode](/docs/en/permissions#hook-approvals-in-plan-mode).
   </Step>
 
   <Step title="Deny rules">
@@ -39,7 +39,11 @@ When Claude requests a tool, the SDK checks permissions in this order:
   </Step>
 
   <Step title="Allow rules">
-    Check `allow` rules (from `allowed_tools` and settings.json). If a rule matches, the tool is approved. A call the tool approves on its own is resolved at this step too, with no rule needed: for example a file read inside your working directories or a [read-only Bash command](/docs/en/permissions#read-only-commands). `rm` and `rmdir` removals targeting a [critical path](/docs/en/permission-modes#critical-paths) are never approved by an allow rule: they reach your callback in the modes that prompt, go to the [classifier](/docs/en/permission-modes#eliminate-prompts-with-auto-mode) in `auto` mode on Claude Code v2.1.218 or later, and are denied in `dontAsk` mode.
+    Check `allow` rules (from `allowed_tools` and settings.json). If a rule matches, the tool is approved. A call the tool approves on its own is resolved at this step too, with no rule needed: for example a file read inside your working directories or a [read-only Bash command](/docs/en/permissions#read-only-commands).
+
+    `rm` and `rmdir` removals targeting a [critical path](/docs/en/permission-modes#critical-paths) are never approved by an allow rule. Whether they then reach your callback depends on the permission mode: in an Agent SDK session in `auto` mode, for example, Claude Code denies them by default without calling it. The [Critical paths](/docs/en/permission-modes#critical-paths) mode table lists what each mode does with them.
+
+    An allow rule doesn't approve a read from a [network path](/docs/en/permissions#network-paths).
   </Step>
 
   <Step title="canUseTool callback">
@@ -56,7 +60,7 @@ When Claude requests a tool, the SDK checks permissions in this order:
 If you pass a `canUseTool` callback in a configuration where the TypeScript SDK expects the evaluation order to auto-approve calls before the callback is consulted, the SDK emits a Node.js process warning once when the query is constructed. The warning's code is `CLAUDE_SDK_CAN_USE_TOOL_SHADOWED`. Two configurations trigger it:
 
 * `permissionMode: 'bypassPermissions'`, which auto-approves every call that reaches the permission mode step apart from the [actions no mode auto-approves](/docs/en/permission-modes#actions-no-mode-auto-approves)
-* Each bare `allowedTools` entry such as `"Read"`, which auto-approves that whole tool before the callback is consulted, apart from the [actions no mode auto-approves](/docs/en/permission-modes#actions-no-mode-auto-approves)
+* Each bare `allowedTools` entry such as `"Read"`, which auto-approves that whole tool before the callback is consulted, apart from the [actions no mode auto-approves](/docs/en/permission-modes#actions-no-mode-auto-approves) and [reads from network paths](/docs/en/permissions#network-paths)
 
 Entries with a specifier such as `Bash(ls *)` and the `acceptEdits` mode don't trigger it, and allow rules coming from settings files aren't visible to the check.
 
@@ -71,12 +75,12 @@ This page focuses on **allow and deny rules** and **permission modes**. For the 
 
 `allowed_tools` and `disallowed_tools` (TypeScript: `allowedTools` / `disallowedTools`) add entries to the allow and deny rule lists in the evaluation flow above. If you name one of the [task-tracking tools](/docs/en/agent-sdk/todo-tracking#model-availability) in `allowed_tools`, Claude Code also opts the session in. Any other tool not listed in `allowed_tools` is still available to Claude, and a call to it that needs approval falls through to the permission mode. Deny rules behave differently depending on whether they name a tool or scope a pattern within one.
 
-| Option                            | Effect                                                                                                                                                                                                                                         |
-| :-------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `allowed_tools=["Read", "Grep"]`  | `Read` and `Grep` are auto-approved. Other tools not listed here still exist, and calls to them that need approval fall through to the permission mode and `canUseTool`.                                                                       |
-| `disallowed_tools=["Bash"]`       | The `Bash` tool definition is removed from the request. Claude does not see the tool and cannot attempt it.                                                                                                                                    |
+| Option | Effect |
+| :- | :- |
+| `allowed_tools=["Read", "Grep"]` | `Read` and `Grep` are auto-approved, apart from [reads from network paths](/docs/en/permissions#network-paths). Other tools not listed here still exist, and calls to them that need approval fall through to the permission mode and `canUseTool`. |
+| `disallowed_tools=["Bash"]` | The `Bash` tool definition is removed from the request. Claude does not see the tool and cannot attempt it. |
 | `disallowed_tools=["Bash(rm *)"]` | `Bash` stays available. Calls matching `rm *` [as written](/docs/en/permissions#bash-rule-limits) are denied in every permission mode, including `bypassPermissions`. Other `Bash` calls, including `/bin/rm`, fall through to the permission mode. |
-| `disallowed_tools=["*"]`          | Every tool definition is removed from the request. Tool-name globs are supported in deny rules: `"*"` matches every tool and `"mcp__*"` matches every MCP tool across all servers.                                                             |
+| `disallowed_tools=["*"]` | Every tool definition is removed from the request. Tool-name globs are supported in deny rules: `"*"` matches every tool and `"mcp__*"` matches every MCP tool across all servers. |
 
 Allow rules accept tool-name globs only after a literal `mcp__<server>__` prefix. The server segment must be glob-free so the rule names a specific server you configured: `mcp__puppeteer__*` matches every tool from the `puppeteer` server, and `mcp__github__get_*` matches its `get_` tools. An unanchored entry like `allowed_tools=["*"]` or `allowed_tools=["mcp__*"]` is ignored with a startup warning and does not auto-approve anything.
 
@@ -85,9 +89,11 @@ Scoped rules for `Read` and `Edit` take a path pattern. `Edit(path)` rules gover
 Use `//path` for an absolute filesystem path: a deny rule of `Edit(//secrets/**)` blocks writes anywhere under `/secrets` on disk. With a single leading slash, `Edit(/secrets/**)` anchors at the rule's source instead. For rules passed through `allowed_tools` or `disallowed_tools`, that means the session's working directory, so the rule doesn't block `/secrets` on disk. See [Read and Edit rules](/docs/en/permissions#read-and-edit) for the four anchor forms and how rules from settings files resolve.
 
 <Warning>
-  **Auto-approved tools never reach `canUseTool`.** A tool call approved at any earlier step, by `acceptEdits` or `bypassPermissions`, or by an allow rule, skips your `canUseTool` callback, so permission checks you put there are silently bypassed for that tool. `AskUserQuestion`, MCP tools marked [`_meta["anthropic/requiresUserInteraction"]`](/docs/en/mcp#require-approval-for-a-specific-tool), connector tools [your organization set to `ask`](/docs/en/mcp#organization-controls-on-connector-tools), and `rm` and `rmdir` removals targeting a [critical path](/docs/en/permission-modes#critical-paths) still reach the callback, even when an allow rule matches. In `auto` mode, critical-path removals go to the [classifier](/docs/en/permission-modes#eliminate-prompts-with-auto-mode) instead of the callback, while the other calls listed here still reach it; the classifier routing requires Claude Code v2.1.218 or later. In `dontAsk` mode these calls are denied instead, without invoking the callback.
+  **Auto-approved tools never reach `canUseTool`.** A tool call approved at any earlier step, by `acceptEdits` or `bypassPermissions`, or by an allow rule, skips your `canUseTool` callback, so permission checks you put there are silently bypassed for that tool.
 
-  Coverage depends on the entry's form: a bare name like `Read` or `mcp__github__get_issue` auto-approves every call to that tool apart from the exceptions above, while a scoped rule like `Bash(npm test *)` auto-approves only matching calls, and other `Bash` calls that need approval still fall through to the callback. For checks that must run on every tool call, use a [`PreToolUse` hook](/docs/en/agent-sdk/hooks): hooks run before every other step, and a hook deny applies even in `bypassPermissions` mode.
+  An allow rule never auto-approves `AskUserQuestion`, MCP tools marked [`_meta["anthropic/requiresUserInteraction"]`](/docs/en/mcp#require-approval-for-a-specific-tool), connector tools [your organization set to `ask`](/docs/en/mcp#organization-controls-on-connector-tools), or `rm` and `rmdir` removals targeting a [critical path](/docs/en/permission-modes#critical-paths). In `dontAsk` mode Claude Code denies these calls without invoking the callback. In other modes the first three reach the callback. Depending on the [permission mode](/docs/en/permission-modes#critical-paths), a critical-path removal reaches the callback too or Claude Code denies it without calling it, as it does by default for an Agent SDK session in `auto` mode.
+
+  Coverage depends on the entry's form: a bare name like `Read` or `mcp__github__get_issue` auto-approves every call to that tool apart from those exceptions and [reads from network paths](/docs/en/permissions#network-paths), while a scoped rule like `Bash(npm test *)` auto-approves only matching calls, and other `Bash` calls that need approval still fall through to the callback. For checks that must run on every tool call, use a [`PreToolUse` hook](/docs/en/agent-sdk/hooks): hooks run before every other step, and a hook deny applies even in `bypassPermissions` mode.
 </Warning>
 
 For a locked-down agent, pair `allowedTools` with `permissionMode: "dontAsk"`:
@@ -99,7 +105,7 @@ const options = {
 };
 ```
 
-Listed tools are approved, apart from the [actions no mode auto-approves](/docs/en/permission-modes#actions-no-mode-auto-approves), and every other call that would prompt is denied instead. Calls that need no approval in `default` mode run whether or not you list them, such as [read-only Bash commands](/docs/en/permissions#read-only-commands), tools like `Agent` that don't ask before running, and file reads inside your working directories. To put a tool out of Claude's reach entirely, add its bare name to `disallowedTools`.
+Listed tools are approved, apart from the [actions no mode auto-approves](/docs/en/permission-modes#actions-no-mode-auto-approves) and [reads from network paths](/docs/en/permissions#network-paths), and every other call that would prompt is denied instead. Calls that need no approval in `default` mode run whether or not you list them, such as [read-only Bash commands](/docs/en/permissions#read-only-commands), tools like `Agent` that don't ask before running, and file reads inside your working directories. To remove a tool from the request entirely, add its bare name to `disallowedTools`.
 
 <Warning>
   **`allowed_tools` does not constrain `bypassPermissions`.** `allowed_tools` pre-approves the tools you list. Other unlisted tools are not matched by any allow rule and fall through to the permission mode, where `bypassPermissions` approves them. Setting `allowed_tools=["Read"]` alongside `permission_mode="bypassPermissions"` still approves every tool, including `Bash`, `Write`, and `Edit`. If you need `bypassPermissions` but want specific tools blocked, use `disallowed_tools`.
@@ -111,21 +117,23 @@ You can also configure allow, deny, and ask rules declaratively in `.claude/sett
 
 Permission modes provide global control over how Claude uses tools. You can set the permission mode when calling `query()` or change it dynamically during streaming sessions.
 
+With Claude Code v2.1.302 or later, your app starts in `default` mode unless you set a permission mode or it gets one from [`permissions.defaultMode`](/docs/en/settings-reference#permissions-defaultmode) in its settings files. In `default` mode, Claude Code denies any tool call needing approval unless you approve it through an allow rule, hook, `canUseTool` callback, or permission prompt tool. If tool calls are denied, see [Tool calls denied in `claude -p` and Agent SDK runs](/docs/en/permission-modes#which-mode-a-non-interactive-run-starts-in).
+
 ### Available modes
 
 The SDK supports these permission modes:
 
-| Mode                | Description                  | Tool behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| :------------------ | :--------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `default`           | Standard permission behavior | No mode-based auto-approvals; calls that need approval and match no allow rule trigger your `canUseTool` callback                                                                                                                                                                                                                                                                                                                                                                |
-| `dontAsk`           | Deny instead of prompting    | Any call that would otherwise prompt is denied. Calls approved by `allowed_tools` or rules run, and so do calls that need no approval in `default` mode; connector tools [your organization set to `ask`](/docs/en/mcp#organization-controls-on-connector-tools) and tools that require user interaction are denied even if you've pre-approved them, as are `rm` and `rmdir` removals targeting a [critical path](/docs/en/permission-modes#critical-paths). `canUseTool` is never called |
-| `acceptEdits`       | Auto-accept file edits       | File edits and [filesystem operations](#accept-edits-mode-acceptedits) (`mkdir`, `rm`, `mv`, etc.) are automatically approved                                                                                                                                                                                                                                                                                                                                                    |
-| `bypassPermissions` | Bypass permission checks     | Tools run without permission prompts, except for the [actions no mode auto-approves](/docs/en/permission-modes#actions-no-mode-auto-approves). Use with caution                                                                                                                                                                                                                                                                                                                       |
-| `plan`              | Planning mode                | Claude explores and plans without editing your source files; file edits are never auto-approved and prompt through your `canUseTool` callback                                                                                                                                                                                                                                                                                                                                    |
-| `auto`              | Model-classified approvals   | A model classifier approves or denies permission prompts. See [Auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode) for availability                                                                                                                                                                                                                                                                                                                                |
+| Mode | Description | Tool behavior |
+| :- | :- | :- |
+| `default` | Standard permission behavior | No mode-based auto-approvals; calls that need approval and match no allow rule trigger your `canUseTool` callback |
+| `dontAsk` | Deny instead of prompting | Any call that would otherwise prompt is denied. Calls approved by `allowed_tools` or rules run, and so do calls that need no approval in `default` mode; connector tools [your organization set to `ask`](/docs/en/mcp#organization-controls-on-connector-tools) and tools that require user interaction are denied even if you've pre-approved them, as are [reads from network paths](/docs/en/permissions#network-paths) and `rm` and `rmdir` removals targeting a [critical path](/docs/en/permission-modes#critical-paths). `canUseTool` is never called |
+| `acceptEdits` | Auto-accept file edits | File edits and [filesystem operations](#accept-edits-mode-acceptedits) (`mkdir`, `rm`, `mv`, etc.) are automatically approved |
+| `bypassPermissions` | Bypass permission checks | Tools run without permission prompts, except for the [actions no mode auto-approves](/docs/en/permission-modes#actions-no-mode-auto-approves). Use with caution |
+| `plan` | Planning mode | Claude explores and plans without editing your source files; file edits are never auto-approved and prompt through your `canUseTool` callback |
+| `auto` | Model-classified approvals | A model classifier reviews actions such as shell commands and network requests, allowing or blocking each one it reviews. See [Auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode) for availability and the decision order |
 
 <Warning>
-  **Subagent inheritance:** A subagent runs in the parent session's permission mode unless you set `permissionMode` on its [`AgentDefinition`](/docs/en/agent-sdk/typescript#agentdefinition) and the parent session is in `default`, `dontAsk`, or `plan` mode. Even then, Claude Code never applies a `"bypassPermissions"` value. A subagent runs in `bypassPermissions` mode only when the parent session itself does. The `bypassPermissions` exception requires Claude Code v2.1.267 or later.
+  **Subagent inheritance:** A subagent runs in the parent session's permission mode unless you set `permissionMode` on its [`AgentDefinition`](/docs/en/agent-sdk/typescript#agentdefinition) and the parent session is in `default`, `dontAsk`, or `plan` mode. Even then, Claude Code never applies a `"bypassPermissions"` value, and applies an `"auto"` value only when [auto mode is available](/docs/en/permission-modes#eliminate-prompts-with-auto-mode) to that subagent. A subagent runs in `bypassPermissions` mode only when the parent session itself does. The `bypassPermissions` exception requires Claude Code v2.1.267 or later.
 
   Subagents may have different system prompts and less constrained behavior than your main agent, so inheriting `bypassPermissions` grants them full, autonomous system access. The [actions no mode auto-approves](/docs/en/permission-modes#actions-no-mode-auto-approves) still apply.
 </Warning>
@@ -136,7 +144,7 @@ You can set the permission mode once when starting a query, or change it dynamic
 
 <Tabs>
   <Tab title="At query time">
-    Pass `permission_mode` (Python) or `permissionMode` (TypeScript) when creating a query. This mode applies for the entire session unless changed dynamically.
+    Pass `permission_mode` (Python) or `permissionMode` (TypeScript) when creating a query.
 
     <CodeGroup>
       ```python Python theme={null}
@@ -257,13 +265,13 @@ Both apply only to paths inside the working directory or `additionalDirectories`
 
 #### Don't ask mode (`dontAsk`)
 
-Converts any permission prompt into a denial, without calling `canUseTool`. Tools pre-approved by `allowed_tools`, `settings.json` allow rules, or a hook run as normal, and so do calls that need no approval in `default` mode, such as file reads inside your working directories and calls to `Agent`. Connector tools [your organization set to `ask`](/docs/en/mcp#organization-controls-on-connector-tools), tools that require user interaction, and `rm` and `rmdir` removals targeting a [critical path](/docs/en/permission-modes#critical-paths) are denied even when an allow rule matches. A `PreToolUse` hook allow doesn't clear a critical-path removal either.
+Converts any permission prompt into a denial, without calling `canUseTool`. Tools pre-approved by `allowed_tools`, `settings.json` allow rules, or a hook run as normal, and so do calls that need no approval in `default` mode, such as file reads inside your working directories and calls to `Agent`. Connector tools [your organization set to `ask`](/docs/en/mcp#organization-controls-on-connector-tools), tools that require user interaction, [reads from network paths](/docs/en/permissions#network-paths), and `rm` and `rmdir` removals targeting a [critical path](/docs/en/permission-modes#critical-paths) are denied even when an allow rule matches. A `PreToolUse` hook allow doesn't clear a critical-path removal or a read from a network path either.
 
 **Use when:** you want a fixed, explicit tool surface for a headless agent and prefer a hard deny over silent reliance on `canUseTool` being absent.
 
 #### Bypass permissions mode (`bypassPermissions`)
 
-Auto-approves tool uses without prompting, except the cases listed in the warning below. Hooks still execute and can block operations if needed.
+Auto-approves tool uses without prompting, except the cases listed in the warning below. Hooks still execute and can block operations if needed. On Linux and macOS, Claude Code refuses to start in this mode as root or under `sudo` outside a [recognized sandbox](/docs/en/permission-modes#skip-all-checks-with-bypasspermissions-mode), and the query fails before the first turn.
 
 <Warning>
   Use with extreme caution. Claude has full system access in this mode. Only use in controlled environments where you trust all possible operations.
@@ -279,13 +287,24 @@ Auto-approves tool uses without prompting, except the cases listed in the warnin
 
 Claude explores the codebase and produces a plan without editing your source files. Read-only tools run as they do in the `default` permission mode.
 
-File edits are never auto-approved in plan mode, even when an allow rule matches. They prompt through your `canUseTool` callback instead. On Claude Code v2.1.212 or later, shell commands that modify files, such as `touch` and `rm`, reach your `canUseTool` callback the same way.
+File edits are never auto-approved in plan mode, even when an allow rule matches or a `PreToolUse` hook returns `allow`. They prompt through your `canUseTool` callback instead. On Claude Code v2.1.212 or later, shell commands that modify files, such as `touch` and `rm`, reach your `canUseTool` callback the same way.
 
-If you set `allowDangerouslySkipPermissions: true` alongside `permissionMode: 'plan'`, file edits and shell commands that modify files still reach your `canUseTool` callback. The option lets you switch to `bypassPermissions` later with `setPermissionMode()`.
+In the TypeScript SDK, if you set `allowDangerouslySkipPermissions: true` alongside `permissionMode: 'plan'`, file edits and shell commands that modify files still reach your `canUseTool` callback. The option lets you switch to `bypassPermissions` later with `setPermissionMode()`.
 
 Claude may use `AskUserQuestion` to clarify requirements before finalizing the plan. See [Handle approvals and user input](/docs/en/agent-sdk/user-input#handle-clarifying-questions) for handling these prompts.
 
 **Use when:** you want Claude to propose changes without executing them, such as during code review or when you need to approve changes before they're made.
+
+#### Auto mode (`auto`)
+
+A classifier model reviews actions such as shell commands and network requests before they run, and allows or blocks each one it reviews. For the models and providers auto mode requires and the order it evaluates actions in, see [Eliminate permission prompts with auto mode](/docs/en/permission-modes#eliminate-prompts-with-auto-mode).
+
+If you switch a session that's in auto mode to a model that auto mode doesn't support, using [`set_model()`](/docs/en/agent-sdk/python#claudesdkclient), [`setModel()`](/docs/en/agent-sdk/typescript#query-object), or [`applyFlagSettings()`](/docs/en/agent-sdk/typescript#applyflagsettings), the session changes to `default` mode:
+
+* **What you see**: a `system` message with subtype `status` and `permissionMode` set to `"default"`, which the TypeScript SDK types as [`SDKStatusMessage`](/docs/en/agent-sdk/typescript#sdkstatusmessage). From then on, calls that need approval and match no allow rule reach your `canUseTool` callback.
+* **To return to auto mode**: switch to a supported model, then call `set_permission_mode("auto")` or `setPermissionMode("auto")`. If you switch the model back without making that call, the session stays in `default` mode. While the unsupported model is active, the call fails with `Cannot set permission mode to auto: auto mode unavailable for this model`.
+
+The change to `default` mode after a `set_model()`, `setModel()`, or `applyFlagSettings()` call requires Claude Code v2.1.299 or later.
 
 ## Related resources
 

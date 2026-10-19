@@ -74,7 +74,9 @@ The agent connects to the documentation server, searches for information about h
 
 You can configure MCP servers in code when calling `query()`, or in a `.mcp.json` file loaded via [`settingSources`](#from-a-config-file).
 
-### In code
+<span id="in-code" />
+
+### Add a server in code
 
 Pass MCP servers directly in the `mcpServers` option. This example starts a local filesystem MCP server for `/Users/me/projects`. Replace that path with a directory on your machine:
 
@@ -129,7 +131,9 @@ Pass MCP servers directly in the `mcpServers` option. This example starts a loca
   ```
 </CodeGroup>
 
-### From a config file
+<span id="from-a-config-file" />
+
+### Add a server from a config file
 
 Create a `.mcp.json` file at your project root. The file is picked up when the `project` setting source is enabled, which it is for default `query()` options. If you set `settingSources` explicitly, include `"project"` for this file to load. Replace `/Users/me/projects` with a directory on your machine:
 
@@ -148,11 +152,11 @@ Create a `.mcp.json` file at your project root. The file is picked up when the `
 
 Claude Code registers the servers you pass in `options.mcpServers` at startup and emits the [init message](#error-handling) once the first-turn wait, if any, resolves. Whether each `options.mcpServers` server delays the first turn, and when it connects, depends on its type:
 
-| Server type                                                                            | Delays the first turn?                                 | First-turn wait timeout                                                                     |
-| :------------------------------------------------------------------------------------- | :----------------------------------------------------- | :------------------------------------------------------------------------------------------ |
-| stdio server, or HTTP/SSE server without a cached tool list                            | Yes, until it connects                                 | [`MCP_TIMEOUT`](/docs/en/env-vars), 30 seconds by default; the connection fails at that deadline |
-| Remote server with a cached tool list, saved by Claude Code from a previous connection | No; the cached tools are available from the first turn | None; connects on its first tool call, and that deferred connect has its own timeout        |
-| In-process [SDK server](#sdk-mcp-servers)                                              | Yes, until it connects and lists its tools             | None; the connect and tool listing requests each have their own timeout                     |
+| Server type | Delays the first turn? | First-turn wait timeout |
+| :- | :- | :- |
+| stdio server, or HTTP/SSE server without a cached tool list | Yes, until it connects | [`MCP_TIMEOUT`](/docs/en/env-vars), 30 seconds by default; the connection fails at that deadline |
+| Remote server with a cached tool list, saved by Claude Code from a previous connection | No; the cached tools are available from the first turn | None; connects on its first tool call, and that deferred connect has its own timeout |
+| In-process [SDK server](#sdk-mcp-servers) | Yes, until it connects and lists its tools | [`MCP_TIMEOUT`](/docs/en/env-vars), 30 seconds by default, per connect attempt; the connection fails at that deadline |
 
 Servers loaded from [settings files](#from-a-config-file) such as `.mcp.json` or from plugins commonly show `pending` in the init message. When `options.mcpServers` holds a stdio, HTTP, or SSE server, the first turn waits for these pending servers too, up to `MCP_TIMEOUT`. When `options.mcpServers` is empty or holds only SDK servers, the first turn waits up to 2 seconds instead:
 
@@ -178,7 +182,16 @@ MCP tools require explicit permission before Claude can use them. Without permis
 
 ### Tool naming convention
 
-MCP tools follow the naming pattern `mcp__<server-name>__<tool-name>`. For example, a GitHub server named `"github"` with a `list_issues` tool becomes `mcp__github__list_issues`.
+MCP tools are named `mcp__<server-name>__<tool-name>`, where `<server-name>` is the name you register the server under, such as its key in `mcpServers`.
+
+Characters in the server name such as `.` and spaces are replaced by `_`. This table shows the full name of a `list_issues` tool for two server keys:
+
+| Key in `mcpServers` | Full tool name |
+| :- | :- |
+| `github` | `mcp__github__list_issues` |
+| `my.server` | `mcp__my_server__list_issues` |
+
+Use the full tool names in `allowedTools` and in [MCP permission rules](/docs/en/permissions#mcp). For a server that a [plugin](/docs/en/agent-sdk/plugins) provides, `<server-name>` takes the [plugin-scoped form](/docs/en/mcp#plugin-provided-mcp-servers) and starts with `plugin_`.
 
 ### Auto-approve with allowedTools
 
@@ -279,7 +292,7 @@ MCP servers communicate with your agent using different transport protocols. Che
 
 ### stdio servers
 
-Local processes that communicate via stdin/stdout. Use this for MCP servers you run on the same machine. For the `.mcp.json` form, use the same fields shown at [From a config file](#from-a-config-file). In code, pass the command and its arguments. Replace `/Users/me/projects` with a directory on your machine:
+Local processes that communicate via stdin/stdout. Use this for MCP servers you run on the same machine. For the `.mcp.json` form, use the same fields shown at [Add a server from a config file](#from-a-config-file). In code, pass the command and its arguments. Replace `/Users/me/projects` with a directory on your machine:
 
 <CodeGroup>
   ```typescript TypeScript hidelines={1,-1} theme={null}
@@ -807,7 +820,7 @@ Check for `"failed"` or `"needs-auth"` to detect servers that won't be usable:
 
 A remote server's status can also change after it reports `"connected"`. When the connection to it drops mid-session, Claude Code moves the server back to `"pending"` while [reconnecting](/docs/en/mcp#automatic-reconnection). A later `mcpServerStatus()` call in TypeScript, or [`ClaudeSDKClient.get_mcp_status()`](/docs/en/agent-sdk/python#methods) in Python, can then report `"pending"` for a server you saw connected earlier, with no configuration change on your side.
 
-After five reconnection attempts fail, the server reports `"failed"`, or `"needs-auth"` when it needs authorizing again. To retry manually, call [`reconnectMcpServer()`](/docs/en/agent-sdk/typescript#methods) in TypeScript or [`ClaudeSDKClient.reconnect_mcp_server()`](/docs/en/agent-sdk/python#methods) in Python.
+After five reconnection attempts fail, the server reports `"failed"`, or `"needs-auth"` when it needs authorizing again. A `"failed"` HTTP or SSE server can still return to `"connected"` without a call from you, because Claude Code keeps [retrying in the background](/docs/en/mcp#mid-session-drops-of-a-remote-server) after a transient error. To retry manually, call [`reconnectMcpServer()`](/docs/en/agent-sdk/typescript#methods) in TypeScript or [`ClaudeSDKClient.reconnect_mcp_server()`](/docs/en/agent-sdk/python#methods) in Python.
 
 ## Troubleshooting
 
@@ -869,6 +882,18 @@ If Claude sees tools but doesn't use them, check that you've granted permission 
   ```
 </CodeGroup>
 
+### A tool is missing from an SDK MCP server
+
+In the TypeScript SDK, when a tool's input schema can't be converted to JSON Schema, the server you created with [`createSdkMcpServer()`](/docs/en/agent-sdk/typescript#createsdkmcpserver) leaves that tool out when it lists its tools. The SDK emits a warning at that point. Under Node.js the warning is a process warning with code `CLAUDE_SDK_MCP_TOOL_SCHEMA_UNCONVERTIBLE`, and it starts with this text:
+
+```text theme={null}
+Tool "<name>" on SDK MCP server "<server>" was left out of the server's tool list, because its input schema cannot be converted to JSON Schema
+```
+
+The rest of the warning gives the conversion error's message when it has one, then says what to check and change.
+
+Before TypeScript Agent SDK v0.3.286, one unconvertible schema made the server's whole tool listing fail without this warning, so none of that server's tools reached Claude.
+
 ### Connection timeouts
 
 MCP server connections time out after 30 seconds by default. To change how long a running tool call may take, set [`MCP_TOOL_TIMEOUT`](/docs/en/env-vars). If your server takes longer to start, the connection fails. Raise the connection limit with the [`MCP_TIMEOUT`](/docs/en/env-vars) environment variable, in milliseconds. For servers that need more startup time, also consider:
@@ -881,9 +906,9 @@ In TypeScript, you can set the tool-call limit for a single [SDK MCP server](#sd
 
 ### Tool output exceeds maximum allowed tokens
 
-The SDK applies the same MCP output limit as Claude Code. When a tool result with no image content is larger than 25,000 tokens, Claude Code saves the output to a file and replaces the tool result with an error message that names the file path, so the agent can read the output back in portions.
+The SDK applies the same MCP output limits as Claude Code. When a successful tool result with no image content is larger than 25,000 tokens, Claude Code saves the output to a file and replaces the tool result with an error message that names the file path, so the agent can read the output back in portions.
 
-Raise the limit with the [`MAX_MCP_OUTPUT_TOKENS`](/docs/en/env-vars) environment variable. See [MCP output limits and warnings](/docs/en/mcp#mcp-output-limits-and-warnings) for the full behavior, including how a server can declare a higher per-tool limit with the `anthropic/maxResultSizeChars` annotation.
+To change the token limit, set the [`MAX_MCP_OUTPUT_TOKENS`](/docs/en/env-vars) environment variable. Unless the tool declares `anthropic/maxResultSizeChars`, a successful text result longer than 50,000 characters is saved to a file regardless of the token limit. See [MCP output limits and warnings](/docs/en/mcp#mcp-output-limits-and-warnings) for the full behavior, including how a server declares that annotation.
 
 ## Related resources
 

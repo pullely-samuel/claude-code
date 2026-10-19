@@ -48,20 +48,11 @@ Create a routine from the web at [claude.ai/code/routines](https://claude.ai/cod
 
 The creation form sets up the routine's prompt, repositories, environment, connectors, and triggers.
 
-Routines run autonomously as full Claude Code cloud sessions: there is no permission-mode picker, and the session runs shell commands, uses [skills](/docs/en/skills) committed to the cloned repository, and calls any connectors you include, all without stopping for approval apart from some [artifact](/docs/en/artifacts) actions.
+Routines run autonomously as full Claude Code cloud sessions: there is no permission-mode picker, and the session runs shell commands, uses [skills](/docs/en/skills) committed to the cloned repository, and calls any connectors you include, all without stopping for approval apart from some [artifact actions](#when-a-run-publishes-an-artifact-without-asking).
 
 What a routine can reach is determined by the repositories you select, the [environment's](/docs/en/cloud-environments) network access and variables, and the connectors you include. Scope each of those to what the routine actually needs.
 
-When the routine's schedule or **Run now** starts a run, Claude republishes an existing artifact without asking only when all of these hold:
-
-* You can edit the artifact and it belongs to your own organization
-* The artifact isn't shared publicly, and isn't shared with specific people or your organization with the latest version chosen as the version viewers see
-* The publish carries only the page, with no supporting files or anything else added, and doesn't force over a newer version
-* The page holds no grant that reaches beyond the page, such as [connector calls](/docs/en/artifacts#pull-live-data-with-mcp-connectors)
-
-In every other case, including publishing a new artifact, Claude asks first. When a routine's job is to keep a page current, give it an artifact you already published.
-
-Routines belong to your individual claude.ai account. They are not shared with teammates, and they count against your account's daily run allowance. Anything a routine does through your connected GitHub identity or connectors appears as you: commits and pull requests carry your GitHub user, and Slack messages, Linear tickets, or other connector actions use your linked accounts for those services.
+Routines belong to your individual claude.ai account. They are not shared with teammates, and their runs count against your account's [usage and limits](#usage-and-limits). Anything a routine does through your connected GitHub identity or connectors appears as you: commits and pull requests carry your GitHub user, and Slack messages, Linear tickets, or other connector actions use your linked accounts for those services.
 
 ### Create from the web
 
@@ -79,14 +70,14 @@ Routines belong to your individual claude.ai account. They are not shared with t
   </Step>
 
   <Step title="Select repositories">
-    Add one or more GitHub repositories for Claude to work in. Each repository is cloned at the start of a run, starting from the default branch. Claude creates `claude/`-prefixed branches for its changes.
+    Add one or more GitHub repositories for Claude to work in. Each repository is cloned at the start of a run. Claude creates `claude/`-prefixed branches for its changes.
   </Step>
 
   <Step title="Select an environment">
     Pick a [cloud environment](/docs/en/cloud-environments) for the routine. Environments control what the cloud session has access to:
 
     * **Network access**: set the level of internet access available during each run
-    * **Environment variables**: provide values Claude can use during each run. They're [visible to anyone who uses the environment](/docs/en/cloud-environments#what-carries-over-from-your-setup), so on Pro and Max plans, store keys for the APIs Claude calls during a run as [API credentials](/docs/en/cloud-environments#add-api-credentials) instead. That section also lists the requests that never get a credential
+    * **Environment variables**: provide values Claude can use during each run. They're [visible to anyone who uses the environment](/docs/en/cloud-environments#what-carries-over-from-your-setup), so in an Anthropic-hosted environment, store keys for the APIs Claude calls during a run as [network secrets](/docs/en/cloud-environments#add-network-secrets) instead. That section also lists the requests that never get a secret
     * **Setup script**: install dependencies and tools the routine needs. The result is [cached](/docs/en/cloud-environments#environment-caching), so the script doesn't re-run on every session
 
     A **Default** environment is provided with **Trusted** network access, which allows only the [default allowlist](/docs/en/cloud-environments#default-allowed-domains) of package registries, cloud provider APIs, container registries, and common development domains through the session's network. Connectors you add to the routine reach their services through Anthropic's servers, so they don't need allowlist changes. If your routine needs to reach your own services directly, or a domain outside that list, edit the environment's [network access](/docs/en/cloud-environments#network-access) before running. To use a separate environment, [create one](/docs/en/cloud-environments#configure-your-environment) first.
@@ -97,7 +88,7 @@ Routines belong to your individual claude.ai account. They are not shared with t
 
     <Tabs>
       <Tab title="Schedule">
-        Pick a preset frequency for a recurring run, or schedule a single one-off run at a specific timestamp. See [Add a schedule trigger](#add-a-schedule-trigger) for timezone handling, stagger, custom cron intervals, and one-off runs.
+        Pick a preset frequency for a recurring run, or schedule a single one-off run at a specific timestamp. See [Add a schedule trigger](#add-a-schedule-trigger) for timezone handling, late starts, custom cron intervals, and one-off runs.
       </Tab>
 
       <Tab title="GitHub event">
@@ -139,7 +130,7 @@ A routine starts when one of its triggers matches. You can attach any combinatio
 
 A schedule trigger runs the routine on a recurring cadence, or once at a specific future time. Pick a preset frequency in the **Select a trigger** section: hourly, daily, weekdays, or weekly. Times are entered in your local zone and converted automatically, so the routine runs at that wall-clock time regardless of where the cloud infrastructure is located.
 
-Runs may start a few minutes after the scheduled time due to stagger. The offset is consistent for each routine.
+If you schedule a run exactly on the hour, such as 9:00, it can start several minutes late. To start close to the scheduled time, pick a few minutes past the hour, for example 9:07.
 
 For a custom interval such as every two hours or the first of each month, pick the closest preset in the form, then run `/schedule update` in the CLI to set a specific cron expression. The minimum interval is one hour; expressions that run more frequently are rejected.
 
@@ -159,13 +150,13 @@ Create a one-off run from the CLI by describing the time in natural language. Cl
 
 The same local-to-UTC conversion as recurring schedules applies to one-off timestamps.
 
-One-off runs do not count against the daily routine run cap. See [Usage and limits](#usage-and-limits) for details.
+One-off runs count against the same hourly limit as other scheduled runs. See [Usage and limits](#usage-and-limits) for details.
 
 ### Add an API trigger
 
 An API trigger gives a routine a dedicated HTTP endpoint. POSTing to the endpoint with the routine's bearer token starts a new session and returns a session URL. Use this to wire Claude Code into alerting systems, deploy pipelines, internal tools, or anywhere you can make an authenticated HTTP request.
 
-API triggers are added to an existing routine from the web. The CLI cannot currently create or revoke tokens.
+API triggers are added to an existing routine from the web. The CLI can't currently create, regenerate, or delete tokens.
 
 <Steps>
   <Step title="Open the routine for editing">
@@ -185,7 +176,10 @@ API triggers are added to an existing routine from the web. The CLI cannot curre
   </Step>
 </Steps>
 
-Each routine has its own token, scoped to triggering that routine only. To rotate or revoke it, return to the same modal and click **Regenerate** or **Revoke**.
+Each routine has its own token, scoped to triggering that routine only. To turn off API access or rotate the token, return to the same modal:
+
+* **Turn off API access**: click **Delete token**, the trash icon next to **Regenerate**
+* **Rotate the token**: click **Regenerate**
 
 #### Trigger a routine
 
@@ -233,7 +227,7 @@ The `/fire` endpoint is available to claude.ai users only and is not part of the
 A GitHub trigger starts a new session automatically when a matching event occurs on a connected repository. Claude Code doesn't reuse sessions across events, so two PR updates produce two independent sessions.
 
 <Note>
-  During the research preview, GitHub webhook events are subject to per-routine and per-account hourly caps. Events beyond the limit are dropped until the window resets. See your current limits at [claude.ai/code/routines](https://claude.ai/code/routines).
+  GitHub webhook events are subject to per-routine and per-account hourly caps. Events beyond the limit are dropped until the window resets.
 </Note>
 
 The Claude GitHub App must be installed on the repository you want to subscribe to, whichever surface you configure the trigger from.
@@ -263,25 +257,25 @@ The Claude GitHub App must be installed on the repository you want to subscribe 
 
 GitHub triggers can subscribe to either of the following event categories. Within each category you can pick a specific action, such as `pull_request.opened`, or react to all actions in the category.
 
-| Event        | Triggers when                                                                 |
-| :----------- | :---------------------------------------------------------------------------- |
+| Event | Triggers when |
+| :- | :- |
 | Pull request | A PR is opened, closed, assigned, labeled, synchronized, or otherwise updated |
-| Release      | A release is created, published, edited, or deleted                           |
+| Release | A release is created, published, edited, or deleted |
 
 #### Filter pull requests
 
 Use filters to narrow which pull requests start a new session. All filter conditions must match for the routine to trigger. The available filter fields are:
 
-| Filter      | Matches                          |
-| :---------- | :------------------------------- |
-| Author      | PR author's GitHub username      |
-| Title       | PR title text                    |
-| Body        | PR description text              |
-| Base branch | Branch the PR targets            |
-| Head branch | Branch the PR comes from         |
-| Labels      | Labels applied to the PR         |
-| Is draft    | Whether the PR is in draft state |
-| Is merged   | Whether the PR has been merged   |
+| Filter | Matches |
+| :- | :- |
+| Author | PR author's GitHub username |
+| Title | PR title text |
+| Body | PR description text |
+| Base branch | Branch the PR targets |
+| Head branch | Branch the PR comes from |
+| Labels | Labels applied to the PR |
+| Is draft | Whether the PR is in draft state |
+| Is merged | Whether the PR has been merged |
 
 Each filter pairs a field with an operator: equals, contains, starts with, is one of, is not one of, or matches regex.
 
@@ -322,17 +316,13 @@ You can also ask about a routine's run history, for example `/schedule why did m
 
 ### Repositories and branch permissions
 
-Routines need GitHub access to clone repositories. When you create a routine from the CLI with `/schedule`, Claude checks whether your account has GitHub access for the repository you ran it from and, if it doesn't, adds a setup note naming how to grant it. See [GitHub authentication options](/docs/en/claude-code-on-the-web#github-authentication-options) for the two ways to grant access.
+Routines need GitHub access to clone repositories. When you create a routine from the CLI with `/schedule`, Claude checks whether your account has GitHub access for the repository you ran it from and, if it doesn't, adds a setup note naming how to grant it. See [GitHub authentication options](/docs/en/claude-code-on-the-web#github-authentication-options) for the two ways to grant access. On Team and Enterprise plans, an [Owner](/docs/en/server-managed-settings#access-control) of your Claude organization has to turn on each method before you can use it; see [Connect GitHub](/docs/en/web-quickstart#connect-github).
 
 If your GitHub connection is missing or expired when a run is due, the routine skips runs until you reconnect, for up to 72 hours. Reconnect GitHub within that window and the routine resumes on its own. After 72 hours without a connection, the routine turns off, and you turn it back on after reconnecting GitHub.
 
-Each repository you add is cloned on every run. Claude starts from the repository's default branch unless your prompt specifies otherwise.
+Each repository you add is cloned on every run. Claude starts from the repository's default branch unless your prompt specifies otherwise. If a [GitHub pull request event](#add-a-github-trigger) triggers the run and the pull request's repository is the first repository in the routine, that repository starts from the pull request's head commit instead.
 
-Claude pushes its work to branches prefixed with `claude/`, which are always accepted. When your prompt directs Claude to push to another branch, Claude Code checks the push first and rejects it if any of the following is true:
-
-* The branch is protected on GitHub
-* Someone else has an open pull request from that branch
-* The branch carries commits authored by someone other than you
+Claude pushes its work to a branch prefixed with `claude/` unless your prompt directs it to push to another branch. To control which branches a run can push to, use branch protection rules or rulesets on GitHub. For runs on Anthropic-managed infrastructure, and for self-hosted runs that push through [Anthropic's git proxy](/docs/en/self-hosted-environments-deploy#use-the-anthropic-git-proxy), GitHub applies them to the GitHub access you connected, so a rule that access can bypass doesn't block a run's push. A self-hosted run that pushes with the git credentials your deployment provides is checked against those instead. See [Configure git](/docs/en/self-hosted-environments-deploy#configure-git).
 
 ### Connectors
 
@@ -343,6 +333,24 @@ Connectors are the [claude.ai integrations](/docs/en/mcp#use-mcp-servers-from-cl
 When you create a routine, all of your currently connected connectors are included by default. Remove any that aren't needed to limit which tools Claude has access to during the run. You can also add connectors directly from the routine form.
 
 To manage or add connectors outside of the routine form, visit [claude.ai/customize/connectors](https://claude.ai/customize/connectors) or use `/schedule update` in the CLI.
+
+### When a run publishes an artifact without asking
+
+When a routine's schedule or **Run now** starts a run, Claude can publish a new [artifact](/docs/en/artifacts) without asking. The new artifact is visible only to you until you [share it](/docs/en/artifacts#share-an-artifact). If the publish declares runtime capabilities for the page, such as [connector calls](/docs/en/artifacts#pull-live-data-with-mcp-connectors) or [file downloads](/docs/en/artifacts#offer-a-file-download), Claude asks first.
+
+In those runs, Claude republishes an existing artifact without asking only when all of these hold:
+
+* You can edit the artifact and it belongs to your own organization
+* If the publish carries more than the page, such as supporting files, you own the artifact
+* The artifact isn't shared publicly
+* If the artifact is shared with specific people or your organization, its viewers don't automatically see each new version
+* The publish doesn't force over a newer version
+* The publish doesn't declare runtime capabilities for the page
+* The existing page holds no grant that reaches beyond the page, such as [connector calls](/docs/en/artifacts#pull-live-data-with-mcp-connectors)
+
+In every other case, including a run that an API or GitHub trigger starts, Claude asks first.
+
+When a routine's job is to keep a page current, give it an artifact you already published.
 
 ### Environments and network access
 
@@ -366,7 +374,7 @@ To allow additional domains on one of your own environments, follow these steps.
   </Step>
 
   <Step title="Change the network access level">
-    In the **Update cloud environment** dialog, change **Network access** to **Custom** and enter your domains in **Allowed domains**. Check **Also include default list of common package managers** to keep the [default allowlist](/docs/en/cloud-environments#default-allowed-domains) alongside your custom domains. Select **Full** instead for unrestricted access.
+    In the **Edit cloud environment** dialog, change **Network access** to **Custom** and enter your domains in **Allowed domains**. Check **Also include default list of common package managers** to keep the [default allowlist](/docs/en/cloud-environments#default-allowed-domains) alongside your custom domains. Select **Full** instead for unrestricted access.
   </Step>
 
   <Step title="Save">
@@ -378,11 +386,21 @@ See [Network access](/docs/en/cloud-environments#network-access) for details on 
 
 ## Usage and limits
 
-Routines draw down subscription usage the same way interactive sessions do. In addition to the standard subscription limits, routines have a daily cap on how many runs can start per account. See your current consumption and remaining daily routine runs at [claude.ai/code/routines](https://claude.ai/code/routines) or [claude.ai/settings/usage](https://claude.ai/settings/usage).
+Routines draw down subscription usage the same way interactive sessions do. See your current consumption at [claude.ai/settings/usage](https://claude.ai/settings/usage).
 
-When a routine hits the daily cap or your subscription usage limit, organizations with usage credits turned on can keep running routines on metered overage. Without usage credits, additional runs are rejected until the window resets. Turn on usage credits at [claude.ai/settings/usage](https://claude.ai/settings/usage). On Team and Enterprise plans, an admin turns them on for the organization at [claude.ai/admin-settings/usage](https://claude.ai/admin-settings/usage).
+Separately from subscription usage, each way of starting a run has an hourly limit:
 
-One-off runs do not count against the daily routine cap. They draw down your regular subscription usage like any other session.
+| Action | Limit | Counted for | Over the limit |
+| :- | :- | :- | :- |
+| Scheduled runs, including one-off runs | 100 per hour | Your account | The run waits until the limit resets |
+| **Run now**, API fires, and setting a one-off routine to run again | 30 per hour | Each routine, one count shared by all three | The action fails until the limit resets |
+| **Run now** and setting a one-off routine to run again | 100 per hour | Your account | Same |
+| API fires | 100 per hour | Your account, counted separately from **Run now** | Same |
+| GitHub events | See [Add a GitHub trigger](#add-a-github-trigger) | | |
+
+None of these hourly limits has overage.
+
+When a routine hits your subscription usage limit, organizations with usage credits turned on can keep running routines on metered overage. Without usage credits, additional runs are rejected until your usage window resets. Turn on usage credits at [claude.ai/settings/usage](https://claude.ai/settings/usage). On Team and Enterprise plans, an admin turns them on for the organization at [claude.ai/admin-settings/usage](https://claude.ai/admin-settings/usage).
 
 While your subscription is paused, your routines are put on hold and don't run. Once your subscription is active again, turn them back on.
 

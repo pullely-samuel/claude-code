@@ -24,12 +24,12 @@ Pressing Enter submits your message. To add a line break without submitting, pre
 
 In most terminals you can also press Shift+Enter, but support varies by terminal emulator:
 
-| Terminal                                                                                           | Shift+Enter for newline                                     |
-| :------------------------------------------------------------------------------------------------- | :---------------------------------------------------------- |
-| Ghostty, Kitty, iTerm2, WezTerm, Warp, Apple Terminal, Windows Terminal                            | Works without setup                                         |
+| Terminal | Shift+Enter for newline |
+| :- | :- |
+| Ghostty, Kitty, iTerm2, WezTerm, Warp, Apple Terminal, Windows Terminal | Works without setup |
 | Other terminals that support the kitty keyboard protocol, such as foot and Alacritty 0.16 or later | Works without setup. Requires Claude Code v2.1.269 or later |
-| VS Code, Cursor, Devin Desktop, Alacritty before 0.16, Zed                                         | Run `/terminal-setup` once                                  |
-| gnome-terminal, JetBrains IDEs such as PyCharm and Android Studio                                  | Not available; use Ctrl+J or `\` then Enter                 |
+| VS Code, Cursor, Devin Desktop, Alacritty before 0.16, Zed | Run `/terminal-setup` once |
+| gnome-terminal, JetBrains IDEs such as PyCharm and Android Studio | Not available; use Ctrl+J or `\` then Enter |
 
 For VS Code, Cursor, Devin Desktop, Alacritty before 0.16, and Zed, `/terminal-setup` writes a Shift+Enter keybinding into the terminal's configuration file. On the first run you see a confirmation such as `Installed VSCode terminal Shift+Enter key binding`. Existing bindings are left in place; if you see a message such as `VSCode terminal Shift+Enter key binding already configured`, no change was made. Run `/terminal-setup` directly in the host terminal rather than inside tmux or screen, since it needs to write to the host terminal's configuration.
 
@@ -54,7 +54,7 @@ Some Claude Code shortcuts use the Option key, such as Option+Enter for a newlin
 
     If you accepted Claude Code's first-run terminal setup prompt, this is already done. That prompt runs `/terminal-setup` for you, which enables Option as Meta and turns off the audible bell in your Apple Terminal profile.
 
-    In [screen reader mode](/docs/en/accessibility), `/terminal-setup` leaves the bell setting unchanged so the terminal bell stays audible. Before v2.1.211, `/terminal-setup` turned the bell off even in screen reader mode. If an earlier run turned the bell off, turn it back on under Settings → Profiles → Advanced → "Audible bell".
+    In [screen reader mode](/docs/en/accessibility), `/terminal-setup` leaves the bell setting unchanged so the terminal bell stays audible. If an earlier run turned the bell off, turn it back on under Settings → Profiles → Advanced → "Audible bell".
   </Tab>
 
   <Tab title="iTerm2">
@@ -114,6 +114,17 @@ The example below plays a system sound on macOS. The linked guide has desktop no
 }
 ```
 
+## See session status in your terminal
+
+If your terminal implements the OSC 7501 Program Status Protocol, it can show whether each interactive Claude Code session is working, waiting on you, or done, which helps when you run long tasks or several sessions at once. There is nothing to turn on in Claude Code. To find out whether your terminal implements the protocol and where it shows the status, check its documentation.
+
+If it does and you see no status for a session, check for each of these causes:
+
+* **Claude Code version**: status reporting requires Claude Code v2.1.295 or later. Run `claude --version` in your shell to check.
+* **tmux**: inside tmux, Claude Code checks tmux for support instead of your terminal, and [`allow-passthrough`](#configure-tmux) has no effect on that. Start the session outside tmux.
+* **Background session**: a [background session](/docs/en/agent-view) doesn't report its status to your terminal, even while you're attached to it. Agent view shows its status instead.
+* **[`CLAUDE_CODE_DISABLE_TERMINAL_TITLE`](/docs/en/env-vars#variables)**: if you set this variable to `1`, Claude Code doesn't check for support or report status. Unset it.
+
 ## Configure tmux
 
 When Claude Code runs inside tmux, by default Shift+Enter submits instead of inserting a newline, and desktop notifications and the [progress bar](/docs/en/settings-reference#terminalprogressbarenabled) never reach the outer terminal. Add these lines to `~/.tmux.conf`, then run `tmux source-file ~/.tmux.conf` to apply them to the running server:
@@ -140,15 +151,15 @@ To customize what appears at the bottom of the interface, configure a [custom st
 
 ### Create a custom theme
 
-In addition to the built-in presets, `/theme` lists any custom themes you have defined and any themes contributed by installed [plugins](/docs/en/plugins-reference#themes). Select **New custom theme…** at the end of the list to create one interactively: you name the theme, then pick individual color tokens to override. Press `Ctrl+E` while a custom theme is highlighted to edit it.
+In addition to the built-in presets, `/theme` lists any custom themes you have defined and any themes contributed by installed [plugins](/docs/en/plugins/components#themes-and-output-styles). Select **New custom theme…** at the end of the list to create one interactively: you name the theme, then pick individual color tokens to override. Press `Ctrl+E` while a custom theme is highlighted to edit it.
 
 Each custom theme is a JSON file in `~/.claude/themes/`. The filename without the `.json` extension is the theme's slug, and selecting the theme stores `custom:<slug>` as your theme preference. The file has three optional fields:
 
-| Field       | Type   | Description                                                                                                                                     |
-| :---------- | :----- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`      | string | Display label shown in `/theme`. Defaults to the filename slug                                                                                  |
-| `base`      | string | Built-in preset the theme starts from: `dark`, `light`, `dark-daltonized`, `light-daltonized`, `dark-ansi`, or `light-ansi`. Defaults to `dark` |
-| `overrides` | object | Map of color token names to color values. Tokens not listed here fall through to the base preset                                                |
+| Field | Type | Description |
+| :- | :- | :- |
+| `name` | string | Display label shown in `/theme`. Defaults to the filename slug |
+| `base` | string | Built-in preset the theme starts from: `dark`, `light`, `dark-daltonized`, `light-daltonized`, `dark-ansi`, or `light-ansi`. Defaults to `dark` |
+| `overrides` | object | Map of color token names to color values. Tokens not listed here fall through to the base preset |
 
 Color values accept `#rrggbb`, `#rgb`, `rgb(r,g,b)`, `ansi256(n)`, or `ansi:<name>` where `<name>` is one of the 16 standard ANSI color names such as `red` or `cyanBright`. Unknown tokens and invalid color values are ignored, so a typo cannot break rendering.
 
@@ -191,76 +202,77 @@ The reference below covers the tokens you can set in `overrides`. The interactiv
 
   Control the primary brand accent and the foreground text shades used throughout the interface.
 
-  | Token         | Controls                                                         |
-  | :------------ | :--------------------------------------------------------------- |
-  | `claude`      | Primary brand accent, used for the spinner and assistant label   |
-  | `text`        | Default foreground text                                          |
+  | Token | Controls |
+  | :- | :- |
+  | `claude` | Primary brand accent, used for the spinner and assistant label |
+  | `text` | Default foreground text |
   | `inverseText` | Text drawn on top of a colored background, such as status badges |
-  | `inactive`    | Secondary text such as hints, timestamps, and disabled items     |
-  | `subtle`      | Faint borders and de-emphasized secondary text                   |
-  | `suggestion`  | Autocomplete suggestions and selection highlight in pickers      |
-  | `permission`  | Dialog borders, including permission prompts and pickers         |
-  | `remember`    | Memory and `CLAUDE.md` indicators                                |
+  | `inactive` | Secondary text such as hints, timestamps, and disabled items |
+  | `subtle` | Faint borders and de-emphasized secondary text |
+  | `suggestion` | Autocomplete suggestions and selection highlight in pickers |
+  | `permission` | Dialog borders, including permission prompts and pickers |
+  | `remember` | Memory and `CLAUDE.md` indicators |
 
   #### Status colors
 
   Signal success, failure, and warning states across messages and indicators.
 
-  | Token     | Controls                                                |
-  | :-------- | :------------------------------------------------------ |
-  | `success` | Success messages and passing checks                     |
-  | `error`   | Error messages and failures                             |
+  | Token | Controls |
+  | :- | :- |
+  | `success` | Success messages and passing checks |
+  | `error` | Error messages and failures |
   | `warning` | Warnings, caution messages, and the auto mode indicator |
-  | `merged`  | Merged pull request status                              |
+  | `merged` | Merged pull request status |
 
   #### Input box and mode indicators
 
   Set the input box border color and the accent shown while a permission mode or indicator is active.
 
-  | Token          | Controls                                                                                                                                                                             |
-  | :------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `promptBorder` | Input box border                                                                                                                                                                     |
-  | `planMode`     | Plan mode accent, plan messages, and plan-mode dialogs                                                                                                                               |
-  | `autoAccept`   | Accept-edits mode accent                                                                                                                                                             |
-  | `bashBorder`   | Input box border when entering a `!` shell command                                                                                                                                   |
-  | `ide`          | IDE connection indicator                                                                                                                                                             |
-  | `fastMode`     | Fast mode indicator                                                                                                                                                                  |
-  | `effortUltra`  | The `ultracode` tag on the input box border while [ultracode](/docs/en/model-config#adjust-effort-level) is on. Your override of this color takes effect on Claude Code v2.1.239 or later |
+  | Token | Controls |
+  | :- | :- |
+  | `promptBorder` | Input box border |
+  | `planMode` | Plan mode accent, plan messages, and plan-mode dialogs |
+  | `autoAccept` | Accept-edits mode accent |
+  | `bashBorder` | Input box border when entering a `!` shell command |
+  | `ide` | IDE connection indicator |
+  | `fastMode` | Fast mode indicator |
+  | `effortUltra` | The `ultracode` tag on the input box border while [ultracode](/docs/en/model-config#adjust-effort-level) is on. Your override of this color takes effect on Claude Code v2.1.239 or later |
 
   #### Diff rendering
 
   Color added and removed code in file edits and reviews.
 
-  | Token               | Controls                                                                      |
-  | :------------------ | :---------------------------------------------------------------------------- |
-  | `diffAdded`         | Background of added lines                                                     |
-  | `diffRemoved`       | Background of removed lines                                                   |
-  | `diffAddedDimmed`   | Background of added lines in the dimmed diff shown after you reject an edit   |
+  | Token | Controls |
+  | :- | :- |
+  | `diffAdded` | Background of added lines |
+  | `diffRemoved` | Background of removed lines |
+  | `diffAddedDimmed` | Background of added lines in the dimmed diff shown after you reject an edit |
   | `diffRemovedDimmed` | Background of removed lines in the dimmed diff shown after you reject an edit |
-  | `diffAddedWord`     | Word-level highlight within an added line                                     |
-  | `diffRemovedWord`   | Word-level highlight within a removed line                                    |
+  | `diffAddedWord` | Word-level highlight within an added line |
+  | `diffRemovedWord` | Word-level highlight within a removed line |
 
   #### Fullscreen mode
 
-  Claude Code paints `userMessageBackground`, `bashMessageBackgroundColor`, and `memoryBackgroundColor` in both the default and fullscreen renderers. It uses `userMessageBackgroundHover` and `selectionBg` only in [fullscreen rendering mode](/docs/en/fullscreen).
+  Claude Code uses `userMessageBackgroundHover`, `selectionBg`, and `composerSidebarBackground` only in [fullscreen rendering mode](/docs/en/fullscreen). It paints `userMessageBackground`, `bashMessageBackgroundColor`, and `memoryBackgroundColor` in both the default and fullscreen renderers.
 
-  | Token                        | Controls                                                      |
-  | :--------------------------- | :------------------------------------------------------------ |
-  | `userMessageBackground`      | Background behind your messages in the transcript             |
-  | `userMessageBackgroundHover` | Background behind a message while hovered or expanded         |
+  | Token | Controls |
+  | :- | :- |
+  | `userMessageBackground` | Background behind your messages in the transcript |
+  | `userMessageBackgroundHover` | Background behind a message while hovered or expanded |
   | `bashMessageBackgroundColor` | Background behind `!` shell command entries in the transcript |
-  | `memoryBackgroundColor`      | Background behind `#` memory entries in the transcript        |
-  | `selectionBg`                | Background of text selected with the mouse                    |
+  | `memoryBackgroundColor` | Background behind `#` memory entries in the transcript |
+  | `selectionBg` | Background of text selected with the mouse |
+  | `composerSidebarBackground` | Background of the panel beside the conversation, such as the [diff panel](/docs/en/fullscreen#watch-your-changes-in-the-diff-panel) or a [mod's pane](/docs/en/plugins/mods/interface) |
 
   #### Usage meter and speaker labels
 
   Adjust the bar shown in the `/usage` view and the labels that distinguish your messages from Claude's.
 
-  | Token              | Controls                                          |
-  | :----------------- | :------------------------------------------------ |
-  | `rate_limit_fill`  | Filled portion of the usage meter                 |
-  | `rate_limit_empty` | Unfilled portion of the usage meter               |
-  | `briefLabelYou`    | Color of the `You` label on your messages         |
+  | Token | Controls |
+  | :- | :- |
+  | `rate_limit_fill` | Filled portion of the usage meter |
+  | `rate_limit_empty` | Unfilled portion of the usage meter |
+  | `briefLabelYou` | Color of the `You` label on your messages |
   | `briefLabelClaude` | Color of the `Claude` label on assistant messages |
 
   #### Shimmer variants and subagent colors
@@ -307,20 +319,32 @@ Run `/tui fullscreen` to switch and save the preference. Your conversation relau
   ```
 </CodeGroup>
 
+## Cap response width in wide terminals
+
+In a wide terminal, each line of prose in Claude's responses runs the full width of the window. To wrap the prose at a set number of columns instead, set [`maxProseWidth`](/docs/en/settings-reference#maxprosewidth) in your settings.
+
 ## Paste large content
 
-When you paste more than 800 characters or more than three lines into the prompt, Claude Code collapses the input to a placeholder such as `[Pasted text #1 +120 lines]` so the input box stays usable. In a terminal window shorter than 12 rows the line limit drops, so Claude Code collapses a three-line paste at 11 rows and any multi-line paste at 10 rows or fewer. Claude Code still sends the full content when you submit.
+When you paste more than 800 characters or more than three lines into the prompt, Claude Code collapses the input to a placeholder such as `[Pasted text #1 +120 lines]` so the input box stays usable, and still sends the full content when you submit. For very large inputs such as entire files or long logs, write the content to a file and ask Claude to read it instead of pasting. The conversation transcript stays readable and Claude can refer to the file by path in later turns. The VS Code integrated terminal can also drop characters from very large pastes before they reach Claude Code, so use a file there.
 
-When you delete with a word or line shortcut such as `Ctrl+W` or `Ctrl+K`, or with a vim delete through an `f`/`t` motion such as `df]`, and the deleted range reaches inside a placeholder, Claude Code removes the placeholder whole. You can paste the deletion back to restore it, with [`Ctrl+Y`](/docs/en/interactive-mode#text-editing) after a word or line shortcut, or with [`p` in NORMAL mode](/docs/en/interactive-mode#editing-normal-mode) after a vim delete.
+If the paste carries [invisible Unicode characters](/docs/en/interactive-mode#invisible-characters-in-prompts), Claude Code removes them when you press Enter and puts the cleaned prompt back in the input box for you to send with another Enter.
 
-Claude Code keeps the collapsed content under `~/.claude/paste-cache/`, so when you recall a prompt from [command history](/docs/en/interactive-mode#command-history) and resubmit it, Claude Code sends the full pasted content again, including in a later session, until the retention sweep removes the cache file.
+### How Claude treats pasted text
 
-Claude Code deletes cache files older than [`cleanupPeriodDays`](/docs/en/settings-reference#cleanupperioddays), following the [retention sweep rules](/docs/en/claude-directory#cleaned-up-automatically), so a recalled prompt can reference pasted text that no longer exists. When you submit such a prompt, Claude Code never sends the literal `[Pasted text #N]` string, and shows a notification naming the missing paste:
+When you submit, Claude sees the content behind each `[Pasted text #N]` placeholder marked as text you pasted from somewhere else rather than typed. Claude is told that a paste can contain instructions you didn't write, and to follow instructions inside it only where the message you typed asks it to. In sessions that don't [fetch feature flags](/docs/en/env-vars#features-that-need-feature-flag-fetching), pastes aren't marked.
+
+### Delete and restore a collapsed paste
+
+When you delete with a word or line shortcut such as `Ctrl+W` or `Ctrl+K`, or with a vim delete through an `f`/`t` motion such as `df]`, and the deleted range reaches inside a `[Pasted text #N]` placeholder, Claude Code removes the placeholder whole. To restore it, paste the deletion back with [`Ctrl+Y`](/docs/en/interactive-mode#text-editing) after a word or line shortcut, or with [`p` in NORMAL mode](/docs/en/interactive-mode#editing-normal-mode) after a vim delete.
+
+### Recall a prompt that had pasted text
+
+Claude Code keeps the content behind each `[Pasted text #N]` placeholder under `~/.claude/paste-cache/`, so when you recall a prompt from [command history](/docs/en/interactive-mode#command-history) and resubmit it, the full pasted content is sent again, including in a later session.
+
+Cache files older than [`cleanupPeriodDays`](/docs/en/settings-reference#cleanupperioddays) are deleted under the [retention sweep rules](/docs/en/claude-directory#cleaned-up-automatically), so a recalled prompt can reference pasted text that no longer exists. When you submit such a prompt, Claude Code never sends the literal `[Pasted text #N]` string, and shows a notification naming the missing paste:
 
 * In a plain prompt with text remaining, Claude Code removes the placeholder and sends the remaining text.
 * In a [shell mode](/docs/en/interactive-mode#shell-mode-with-prefix) command or a `/` command, where the removal would change what runs, and in any prompt the removal leaves empty, Claude Code cancels the submission and keeps the original text in the input, with the placeholder still in it. Delete the placeholder or edit the command, then resubmit.
-
-The VS Code integrated terminal can drop characters from very large pastes before they reach Claude Code, so prefer file-based workflows there. For very large inputs such as entire files or long logs, write the content to a file and ask Claude to read it instead of pasting. This keeps the conversation transcript readable and lets Claude reference the file by path in later turns.
 
 ## Edit prompts with Vim keybindings
 

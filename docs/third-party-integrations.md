@@ -84,9 +84,9 @@ Organizations can deploy Claude Code through Anthropic directly or through a clo
 
 For most organizations, Claude for Teams or Claude for Enterprise provides the best experience. Team members get access to both Claude Code and Claude on the web with a single subscription, centralized billing, and no infrastructure setup required.
 
-**Claude for Teams** is self-service and includes collaboration features, admin tools, and billing management. Best for smaller teams that need to get started quickly.
+**Claude for Teams** is self-service and includes collaboration features, admin tools, SSO, billing management, and [server-managed settings](/docs/en/server-managed-settings) for organization-wide Claude Code configuration. Best for smaller teams that need to get started quickly.
 
-**Claude for Enterprise** adds SSO and domain capture, role-based permissions, compliance API access, and managed policy settings for deploying organization-wide Claude Code configurations. Best for larger organizations with security and compliance requirements.
+**Claude for Enterprise** adds domain capture, role-based permissions, and compliance API access. Best for larger organizations with security and compliance requirements.
 
 Learn more about [Team plans](https://support.claude.com/en/articles/9266767-what-is-the-team-plan) and [Enterprise plans](https://support.claude.com/en/articles/9797531-what-is-the-enterprise-plan).
 
@@ -120,7 +120,7 @@ If your organization has specific infrastructure requirements, compare the optio
 
     <tr>
       <td>Billing</td>
-      <td><strong>Teams:</strong> \$150/seat (Premium) with PAYG available<br /><strong>Enterprise:</strong> <a href="https://claude.com/contact-sales?utm_source=claude_code&utm_medium=docs&utm_content=third_party_enterprise">Contact Sales</a></td>
+      <td><strong>Teams:</strong> per-seat subscription with PAYG available, see <a href="https://claude.com/pricing?utm_source=claude_code&utm_medium=docs&utm_content=third_party_pricing#team-&-enterprise">pricing</a><br /><strong>Enterprise:</strong> <a href="https://claude.com/contact-sales?utm_source=claude_code&utm_medium=docs&utm_content=third_party_enterprise">Contact Sales</a></td>
       <td>PAYG</td>
       <td>PAYG through AWS</td>
       <td>PAYG through AWS Marketplace</td>
@@ -219,11 +219,11 @@ If your organization uses [customer-managed encryption keys](https://platform.cl
 
 ### Invest in documentation and memory
 
-We strongly recommend investing in documentation so that Claude Code understands your codebase. Organizations can deploy CLAUDE.md files at multiple levels. See [where CLAUDE.md files can live](/docs/en/memory#choose-where-to-put-claude-md-files) and [how to deploy an organization-wide CLAUDE.md](/docs/en/memory#deploy-organization-wide-claude-md).
+Invest in documentation so that Claude Code understands your codebase. Organizations can deploy CLAUDE.md files at multiple levels. See [where CLAUDE.md files can live](/docs/en/memory#choose-where-to-put-claude-md-files) and [how to deploy an organization-wide CLAUDE.md](/docs/en/memory#deploy-organization-wide-claude-md).
 
 ### Simplify deployment
 
-If you have a custom development environment, we find that creating a "one click" way to install Claude Code is key to growing adoption across an organization.
+If you have a custom development environment, creating a "one click" way to install Claude Code is key to growing adoption across an organization.
 
 ### Start with guided usage
 
@@ -237,11 +237,13 @@ If you deploy through [Amazon Bedrock](/docs/en/amazon-bedrock), [Google Cloud's
 
 Security teams can configure managed permissions for what Claude Code is and is not allowed to do, which cannot be overwritten by local configuration. [Learn more](/docs/en/security).
 
+To limit which of these deployment options a managed machine may use, set [`allowedProviders`](/docs/en/settings-reference#allowedproviders) in managed settings. For example, `["bedrock"]` allows Amazon Bedrock and nothing else; a Bedrock fleet that also enables the Mantle endpoint lists `"mantle"` too. The entry says which endpoint variables also need a managed `env` pin. Requires Claude Code v2.1.285 or later.
+
 <h3 id="leverage-mcp-for-integrations">
   Use MCP for integrations
 </h3>
 
-MCP is a great way to give Claude Code more information, such as connecting to ticket management systems or error logs. We recommend that one central team configures MCP servers and checks a `.mcp.json` configuration into the codebase so that all users benefit. [Learn more](/docs/en/mcp).
+MCP is a great way to give Claude Code more information, such as connecting to ticket management systems or error logs. Have one central team configure MCP servers and check a `.mcp.json` configuration into the codebase so that all users benefit. [Learn more](/docs/en/mcp).
 
 ## Next steps
 
