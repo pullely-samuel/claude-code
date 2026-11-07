@@ -28,7 +28,7 @@
 - [Manage sessions](sessions.md): Name, resume, branch, and switch between Claude Code conversations. Covers `--continue`, `--resume`, `--from-pr`, the `/resume` picker, session naming, exporting transcripts, and where transcripts are stored.
 - [Common workflows](common-workflows.md): Step-by-step guides for exploring codebases, fixing bugs, refactoring, testing, and other everyday tasks with Claude Code.
 - [Prompt library](prompt-library.md): Copy-paste prompts for Claude Code, tagged by task and role.
-- [Best practices for Claude Code](best-practices.md): Tips and patterns for getting the most out of Claude Code, from configuring your environment to scaling across parallel sessions.
+- [Best practices for Claude Code](best-practices.md): Get more out of Claude Code: tell Claude what it can't see, give it a check to run, and enforce the rules that can't have exceptions.
 
 #### Platforms and integrations
 
@@ -40,14 +40,14 @@
 - [Let Claude use your computer from the CLI](computer-use.md): Enable computer use in the Claude Code CLI so Claude can open apps, click, type, and see your screen on macOS. Test native apps, debug visual issues, and automate GUI-only tools without leaving your terminal.
 - [Use Claude Code in VS Code](vs-code.md): Install and configure the Claude Code extension for VS Code. Get AI coding assistance with inline diffs, @-mentions, plan review, and keyboard shortcuts.
 - [JetBrains IDEs](jetbrains.md): Use Claude Code with JetBrains IDEs including IntelliJ, PyCharm, WebStorm, and more
-- [Claude Code in Slack](slack.md): Delegate coding tasks from Slack. This earlier version answers channel mentions only from Pro and Max accounts in workspaces not connected to Claude Tag.
+- [Claude Code in Slack](slack.md): Delegate coding tasks from Slack. This earlier version answers mentions only from Pro, Max, and Ultra accounts in workspaces not connected to Claude Tag.
 - [Claude Tag](claude-tag.md): Bring Claude into your team's Slack channels with Claude Tag and find its setup and usage documentation on claude.com.
 
 ##### Claude Code in the cloud
 
 - [Get started with Claude Code in the cloud](web-quickstart.md): Run Claude Code in the cloud from your browser or phone. Connect a GitHub repository, submit a task, and review the PR without local setup.
 - [Use Claude Code in the cloud](claude-code-on-the-web.md): Run Claude Code sessions in the cloud from your browser, phone, Desktop app, or terminal, move them with `--cloud` and `--teleport`, and auto-fix pull requests.
-- [Automate work with routines](routines.md): Put Claude Code on autopilot. Define routines that run on a schedule, trigger on API calls, or react to GitHub events from cloud infrastructure.
+- [Automate work with scheduled tasks](routines.md): Put Claude Code on autopilot. Create scheduled tasks, formerly routines, that run in the cloud on a schedule, on API calls, or on GitHub events.
 
 ##### Claude Code on desktop
 
@@ -56,7 +56,7 @@
 - [Claude Desktop on Linux (beta)](desktop-linux.md): Install and update the Claude desktop app on Ubuntu and Debian
 - [Claude Code Desktop in WSL](desktop-wsl.md): Run Code sessions inside a WSL 2 distribution on Windows
 - [Schedule recurring tasks in Claude Code Desktop](desktop-scheduled-tasks.md): Set up scheduled tasks in Claude Code Desktop to run Claude automatically on a recurring basis for daily code reviews, dependency audits, or morning briefings.
-- [Test iOS apps in the simulator](desktop-ios-simulator.md): Claude Code Desktop opens your app in the iOS Simulator pane when Claude builds, runs, or checks it, with a separate simulator for each session.
+- [Test iOS apps in the simulator](desktop-ios-simulator.md): Claude Code Desktop opens your app in the iOS Simulator pane when Claude builds, runs, or checks it.
 
 #### Code review and pull requests
 
@@ -186,7 +186,7 @@
 #### Use plugins
 
 - [Install and manage plugins](plugins/install.md): Install Claude Code plugins from a marketplace on any surface you use, choose an install scope, and update or remove them later.
-- [Anthropic's marketplaces](plugins/anthropic-marketplaces.md): Anthropic's official, community, and demo plugin marketplaces for Claude Code: their names, repositories, how you add each, and where to browse their plugins.
+- [Anthropic's marketplaces](plugins/anthropic-marketplaces.md): Anthropic's official and community plugin marketplaces for Claude Code: their names, repositories, how you add each, and where to browse their plugins.
 - [Code intelligence plugins](plugins/code-intelligence.md): Install a language server plugin so Claude sees type errors after edits and navigates code by symbol, and answer the LSP plugin recommendation dialog.
 - [Plugin security and trust](plugins/security.md): Decide whether to trust a plugin before you install it, from what a plugin can do on your machine to how to review one and remove it.
 

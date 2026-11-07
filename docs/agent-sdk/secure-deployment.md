@@ -20,12 +20,12 @@ Defense in depth is still good practice though. For example, if an agent process
 
 ## Built-in security features
 
-Claude Code includes several security features that address common concerns. See the [security documentation](/docs/en/security) for full details.
+Claude Code includes several security features that address common concerns. See the [security documentation](https://code.claude.com/docs/en/security.md) for full details.
 
-* **Permissions system**: Every tool and bash command can be configured to allow, block, or prompt the user for approval. Use glob patterns to create rules like "allow all npm commands" or "block any command with sudo". Organizations can set policies that apply across all users. See [permissions](/docs/en/permissions).
-* **Command parsing for permissions**: Before executing bash commands, Claude Code parses them into an AST and matches the result against your permission rules. Commands that cannot be parsed cleanly, or that do not match an allow rule, require explicit approval. A small set of constructs such as `eval` always require approval regardless of allow rules. This is a permission gate, not a sandbox; apart from built-in safety checks such as the [critical-path check](/docs/en/permission-modes#critical-paths) on `rm` and `rmdir` and the [protected paths](/docs/en/permission-modes#protected-paths) list, it does not infer whether a command is dangerous from its target path or effects.
+* **Permissions system**: Permission rules decide whether a tool call runs, is blocked, or asks for approval first. For the forms a Bash rule misses and how rules combine with permission modes, see [What a Bash rule doesn't match](https://code.claude.com/docs/en/permissions.md#bash-rule-limits) and [Configure permissions](https://code.claude.com/docs/en/agent-sdk/permissions.md). Administrators can also set rules in [managed settings](https://code.claude.com/docs/en/permissions.md#managed-settings).
+* **Critical-path removals**: With the permission mode set to `default`, an `rm` or `rmdir` command recognized as removing your working directory or another [critical path](https://code.claude.com/docs/en/permission-modes.md#critical-paths) needs approval. A matching allow rule doesn't skip that approval. This is a permission gate, not a sandbox. To control what the agent can write, use [filesystem controls](#filesystem-configuration).
 * **Web search summarization**: Search results are summarized rather than passing raw content directly into the context, reducing the risk of prompt injection from malicious web content.
-* **Sandbox mode**: Bash commands can run in a sandboxed environment that restricts filesystem and network access. See the [sandboxing documentation](/docs/en/sandboxing) for details.
+* **Sandbox mode**: Bash commands can run in a sandboxed environment that restricts filesystem and network access. See the [sandboxing documentation](https://code.claude.com/docs/en/sandboxing.md) for details.
 
 ## Security principles
 
@@ -63,9 +63,9 @@ The right combination depends on your threat model and operational requirements.
 
 Different isolation technologies offer different tradeoffs between security strength, performance, and operational complexity.
 
-<Info>
-  In all of these configurations, Claude Code (or your Agent SDK application) runs inside the isolation boundary (the sandbox, container, or VM). The security controls described below restrict what the agent can access from within that boundary.
-</Info>
+> [!NOTE]
+>
+> In all of these configurations, Claude Code (or your Agent SDK application) runs inside the isolation boundary (the sandbox, container, or VM). The security controls described below restrict what the agent can access from within that boundary.
 
 | Technology | Isolation strength | Performance overhead | Complexity |
 | - | - | - | - |
@@ -83,22 +83,20 @@ The main advantage is simplicity: no Docker configuration, container images, or 
 **How it works:**
 
 * **Filesystem**: Uses OS primitives (`bubblewrap` on Linux, `sandbox-exec` on macOS) to restrict read/write access to configured paths
-* **Network**: Removes network namespace (Linux) or uses Seatbelt profiles (macOS) to route network traffic through a built-in proxy
+* **Network**: Runs commands in their own network namespace (Linux) or under a Seatbelt profile (macOS) and routes their traffic through a built-in proxy that allows the configured domains. A connection to an outside host that skips the proxy fails.
 * **Configuration**: JSON-based allowlists for domains and filesystem paths
 
 **Setup:**
 
-```bash theme={null}
-npm install @anthropic-ai/sandbox-runtime
-```
-
-Then create a configuration file specifying allowed paths and domains.
+For the install, configuration, and launch steps, see [Set up and launch the runtime](https://code.claude.com/docs/en/sandbox-environments.md#set-up-and-launch-the-runtime).
 
 **Security considerations:**
 
 1. **Same-host kernel**: Unlike VMs, sandboxed processes share the host kernel. A kernel vulnerability could theoretically enable escape. For some threat models this is acceptable, but if you need kernel-level isolation, use gVisor or a separate VM.
 
-2. **No TLS inspection**: The proxy allowlists domains based on the client-supplied hostname and does not terminate or inspect encrypted traffic. Code running inside the sandbox can potentially use [domain fronting](https://en.wikipedia.org/wiki/Domain_fronting) or similar techniques to reach hosts outside the allowlist. If your threat model requires stronger guarantees, configure a [TLS-terminating proxy](#traffic-forwarding). See the [sandboxing security limitations](/docs/en/sandboxing#security-limitations) for more detail. Separately, if the agent has permissive credentials for an allowed domain, ensure it cannot use that domain to trigger other network requests or to exfiltrate data.
+2. **No TLS inspection**: By default, the proxy allowlists domains based on the client-supplied hostname and doesn't terminate or inspect encrypted traffic. Code running inside the sandbox can potentially use [domain fronting](https://en.wikipedia.org/wiki/Domain_fronting) or similar techniques to reach hosts outside the allowlist. If your threat model requires stronger guarantees, use a TLS-terminating proxy that inspects traffic, as [Traffic forwarding](#traffic-forwarding) describes. For more information, see the [sandboxing security limitations](https://code.claude.com/docs/en/sandboxing.md#security-limitations).
+
+3. **Credentials for allowed domains**: If the agent has permissive credentials for an allowed domain, ensure it cannot use that domain to trigger other network requests or to exfiltrate data.
 
 For many single-developer and CI/CD use cases, sandbox-runtime raises the bar significantly with minimal setup. The sections below cover containers and VMs for deployments requiring stronger isolation.
 
@@ -135,7 +133,7 @@ Here's what each option does:
 | `--security-opt seccomp=...` | Restricts available syscalls; Docker's default blocks \~44, custom profiles can block more |
 | `--read-only` | Makes the container's root filesystem immutable, preventing the agent from persisting changes |
 | `--tmpfs /tmp:...` | Provides a writable temporary directory that's cleared when the container stops |
-| `--network none` | Removes all network interfaces; the agent communicates through the mounted Unix socket below |
+| `--network none` | Cuts the container off from external networks |
 | `--memory 2g` | Limits memory usage to prevent resource exhaustion |
 | `--pids-limit 100` | Limits process count to prevent fork bombs |
 | `--user 1000:1000` | Runs as a non-root user |
@@ -144,9 +142,13 @@ Here's what each option does:
 
 **Unix socket architecture:**
 
-With `--network none`, the container has no network interfaces at all. The only way for the agent to reach the outside world is through the mounted Unix socket, which connects to a proxy running on the host. This proxy can enforce domain allowlists, inject credentials, and log all traffic.
+With `--network none`, a DNS lookup or a direct connection to another host fails inside the container. To let code in the container reach other hosts, run a proxy on the host and mount its Unix socket into the container. If you point `ANTHROPIC_BASE_URL` or `HTTP_PROXY` at a port on `localhost`, as [Configuring Claude Code to use a proxy](#configuring-claude-code-to-use-a-proxy) shows, relay that port inside the container to the socket.
 
-This is the same architecture used by [sandbox-runtime](https://github.com/anthropics/sandbox-runtime). Even if the agent is compromised via prompt injection, it cannot exfiltrate data to arbitrary servers. It can only communicate through the proxy, which controls what domains are reachable. For more details, see the [Claude Code sandboxing blog post](https://www.anthropic.com/engineering/claude-code-sandboxing).
+You can set up this proxy to enforce domain allowlists, inject credentials, and log all traffic.
+
+> [!WARNING]
+>
+> Within your proxy's allowlist, the agent can send data to any allowed domain. Allow only the domains the agent needs.
 
 **Additional hardening options:**
 
@@ -281,9 +283,9 @@ This approach handles any HTTP-based service without writing custom tools, but a
 
 Note that not all programs respect `HTTP_PROXY`/`HTTPS_PROXY`. Most tools (curl, pip, npm, git) do, but some may bypass these variables and connect directly. For example, Node.js `fetch()` ignores these variables by default; in Node 24+ you can set `NODE_USE_ENV_PROXY=1` to enable support. To cover tools that ignore these variables, you can use [proxychains](https://github.com/haad/proxychains) to intercept network calls, or configure iptables to redirect outbound traffic to a transparent proxy.
 
-<Info>
-  A **transparent proxy** intercepts traffic at the network level, so the client doesn't need to be configured to use it. Regular proxies require clients to explicitly connect and speak HTTP CONNECT or SOCKS. Transparent proxies (like Squid or mitmproxy in transparent mode) can handle raw redirected TCP connections.
-</Info>
+> [!NOTE]
+>
+> A **transparent proxy** intercepts traffic at the network level, so the client doesn't need to be configured to use it. Regular proxies require clients to explicitly connect and speak HTTP CONNECT or SOCKS. Transparent proxies (like Squid or mitmproxy in transparent mode) can handle raw redirected TCP connections.
 
 Both approaches still require the TLS-terminating proxy and trusted CA certificate. They just ensure traffic actually reaches the proxy.
 
@@ -299,24 +301,24 @@ When the agent needs to analyze code but not modify it, mount the directory read
 docker run -v /path/to/code:/workspace:ro agent-image
 ```
 
-<Warning>
-  Even read-only access to a code directory can expose credentials. Common files to exclude or sanitize before mounting:
-
-  | File | Risk |
-  | - | - |
-  | `.env`, `.env.local` | API keys, database passwords, secrets |
-  | `~/.git-credentials` | Git passwords/tokens in plaintext |
-  | `~/.aws/credentials` | AWS access keys |
-  | `~/.config/gcloud/application_default_credentials.json` | Google Cloud ADC tokens |
-  | `~/.azure/` | Azure CLI credentials |
-  | `~/.docker/config.json` | Docker registry auth tokens |
-  | `~/.kube/config` | Kubernetes cluster credentials |
-  | `.npmrc`, `.pypirc` | Package registry tokens |
-  | `*-service-account.json` | GCP service account keys |
-  | `*.pem`, `*.key` | Private keys |
-
-  Consider copying only the source files needed, or using `.dockerignore`-style filtering.
-</Warning>
+> [!WARNING]
+>
+> Even read-only access to a code directory can expose credentials. Common files to exclude or sanitize before mounting:
+>
+> | File | Risk |
+> | - | - |
+> | `.env`, `.env.local` | API keys, database passwords, secrets |
+> | `~/.git-credentials` | Git passwords/tokens in plaintext |
+> | `~/.aws/credentials` | AWS access keys |
+> | `~/.config/gcloud/application_default_credentials.json` | Google Cloud ADC tokens |
+> | `~/.azure/` | Azure CLI credentials |
+> | `~/.docker/config.json` | Docker registry auth tokens |
+> | `~/.kube/config` | Kubernetes cluster credentials |
+> | `.npmrc`, `.pypirc` | Package registry tokens |
+> | `*-service-account.json` | GCP service account keys |
+> | `*.pem`, `*.key` | Private keys |
+>
+> Consider copying only the source files needed, or using `.dockerignore`-style filtering.
 
 ### Writable locations
 
@@ -336,9 +338,9 @@ If you want to review changes before persisting them, an overlay filesystem lets
 
 ## Further reading
 
-* [Claude Code security documentation](/docs/en/security)
-* [Hosting the Agent SDK](/docs/en/agent-sdk/hosting)
-* [Handling permissions](/docs/en/agent-sdk/permissions)
+* [Claude Code security documentation](https://code.claude.com/docs/en/security.md)
+* [Hosting the Agent SDK](https://code.claude.com/docs/en/agent-sdk/hosting.md)
+* [Handling permissions](https://code.claude.com/docs/en/agent-sdk/permissions.md)
 * [Sandbox runtime](https://github.com/anthropics/sandbox-runtime)
 * [The Lethal Trifecta for AI Agents](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/)
 * [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
